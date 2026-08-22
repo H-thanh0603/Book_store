@@ -1,0 +1,698 @@
+// Phase 1 schema — Bookstore & Lifestyle Retail Management System
+// Money: BIGINT minor units (VND integer). Time: UTC. No product.stock — inventory is SKU+Location.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Org / Stores ──────────────────────────────────────────────
+
+model Organization {
+  id        String  @id @default(uuid())
+  name      String
+  regions   Region[]
+}
+
+model Region {
+  id     String  @id @default(uuid())
+  name   String
+  orgId  String
+  org    Organization @relation(fields: [orgId], references: [id])
+  stores Store[]
+}
+
+model Store {
+  id       String  @id @default(uuid())
+  code     String  @unique
+  name     String
+  regionId String
+  region   Region  @relation(fields: [regionId], references: [id])
+  active   Boolean @default(true)
+  stockLocations StockLocation[]
+  posTerminals   PosTerminal[]
+  userRoles      UserRole[]
+  promotions     PromotionStore[]
+  orders         Order[]
+}
+
+model Warehouse {
+  id       String @id @default(uuid())
+  name     String
+  isCentral Boolean @default(false)
+  stockLocations StockLocation[]
+  purchaseOrders PurchaseOrder[]
+}
+
+model StockLocation {
+  id         String  @id @default(uuid())
+  name       String
+  type       String  // STORE_STOCKROOM | STORE_SHELF | WAREHOUSE
+  storeId    String?
+  store      Store?  @relation(fields: [storeId], references: [id])
+  warehouseId String?
+  warehouse  Warehouse? @relation(fields: [warehouseId], references: [id])
+  parentId   String?
+  parent     StockLocation? @relation("LocTree", fields: [parentId], references: [id])
+  children   StockLocation[] @relation("LocTree")
+  active     Boolean @default(true)
+  balances   InventoryBalance[]
+  movements  InventoryMovement[]
+  transfersOut StockTransfer[] @relation("FromLoc")
+  transfersIn  StockTransfer[] @relation("ToLoc")
+  @@index([storeId])
+}
+
+// ── Auth / RBAC ───────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  active       Boolean  @default(true)
+  roles        UserRole[]
+  sessions     Session[]
+  auditLogs    AuditLog[]
+}
+
+model Role {
+  id          String  @id @default(uuid())
+  name        String  @unique // cashier, sales, warehouse, store_manager, purchasing, marketing, accountant, admin, owner
+  permissions RolePermission[]
+  users       UserRole[]
+}
+
+model Permission {
+  id    String @id @default(uuid())
+  code  String @unique // e.g. pos.refund, inventory.adjust
+  roles RolePermission[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  storeId String? // scope: null = all stores
+  user   User @relation(fields: [userId], references: [id])
+  role   Role @relation(fields: [roleId], references: [id])
+  store  Store? @relation(fields: [storeId], references: [id])
+  @@id([userId, roleId])
+  @@unique([userId, roleId, storeId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+  @@id([roleId, permissionId])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([userId])
+}
+
+// ── Catalog ───────────────────────────────────────────────────
+
+model Category {
+  id        String @id @default(uuid())
+  name      String
+  parentId  String?
+  parent    Category? @relation("CatTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CatTree")
+  attributes AttributeDefinition[]
+  products  Product[]
+  promotions Promotion[]
+}
+
+model AttributeDefinition {
+  id         String @id @default(uuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  code       String
+  label      String
+  type       String // text | integer | enum | multi_select | relation
+  enumValues String[]
+  required   Boolean @default(false)
+  values     AttributeValue[]
+  @@unique([categoryId, code])
+}
+
+model Brand {
+  id       String @id @default(uuid())
+  name     String @unique
+  products Product[]
+}
+
+model Author {
+  id       String @id @default(uuid())
+  name     String
+  products Product[]
+}
+
+model Publisher {
+  id       String @id @default(uuid())
+  name     String
+  products Product[]
+}
+
+enum ProductStatus {
+  draft
+  active
+  inactive
+  discontinued
+  out_of_print
+  preorder
+  archived
+}
+
+model Product {
+  id          String @id @default(uuid())
+  name        String
+  status      ProductStatus @default(draft)
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  brandId     String?
+  brand       Brand? @relation(fields: [brandId], references: [id])
+  authorId    String?
+  author      Author? @relation(fields: [authorId], references: [id])
+  publisherId String?
+  publisher   Publisher? @relation(fields: [publisherId], references: [id])
+  description String?
+  dimensions  String?
+  weightGrams Int?
+  taxRate     Decimal @db.Decimal(5, 4) @default(0)
+  variants    ProductVariant[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([name])
+  @@index([categoryId])
+}
+
+model ProductVariant {
+  id        String @id @default(uuid())
+  sku       String @unique
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  name      String // e.g. "Black 20L"
+  attributes AttributeValue[]
+  barcodes  ProductBarcode[]
+  prices    Price[]
+  balances  InventoryBalance[]
+  movements InventoryMovement[]
+  poItems   PurchaseOrderItem[]
+  receiptItems GoodsReceiptItem[]
+  transferItems StockTransferItem[]
+  orderItems OrderItem[]
+  posItems  PosTransactionItem[]
+  bundleItems BundleItem[] @relation("component")
+  bundles   BundleItem[] @relation("bundle")
+  active    Boolean @default(true)
+  createdAt DateTime @default(now())
+}
+
+model ProductBarcode {
+  barcode   String @id
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  type      String // EAN13 | ISBN | INTERNAL | SUPPLIER
+}
+
+model AttributeValue {
+  id         String @id @default(uuid())
+  variantId  String
+  variant    ProductVariant @relation(fields: [variantId], references: [id])
+  definitionId String
+  definition AttributeDefinition @relation(fields: [definitionId], references: [id])
+  value      String
+  @@unique([variantId, definitionId])
+}
+
+// ── Pricing ───────────────────────────────────────────────────
+
+model PriceList {
+  id   String @id @default(uuid())
+  name String @unique // RETAIL | MEMBER | ONLINE | STORE:<code>
+  kind String // retail | member | online | store
+  prices Price[]
+}
+
+model Price {
+  id         String @id @default(uuid())
+  variantId  String
+  variant    ProductVariant @relation(fields: [variantId], references: [id])
+  priceListId String
+  priceList  PriceList @relation(fields: [priceListId], references: [id])
+  amount     BigInt // minor units
+  validFrom  DateTime @default(now())
+  validTo    DateTime?
+  @@unique([variantId, priceListId, validFrom])
+}
+
+// ── Inventory ─────────────────────────────────────────────────
+
+model InventoryBalance {
+  id          String @id @default(uuid())
+  variantId   String
+  variant     ProductVariant @relation(fields: [variantId], references: [id])
+  locationId  String
+  location    StockLocation @relation(fields: [locationId], references: [id])
+  onHand      Int @default(0)
+  reserved    Int @default(0)
+  inTransit   Int @default(0)
+  damaged     Int @default(0)
+  lastCountAt DateTime?
+  @@unique([variantId, locationId])
+  @@index([locationId])
+}
+
+enum MovementType {
+  PURCHASE_RECEIPT
+  SALE
+  RETURN
+  TRANSFER_OUT
+  TRANSFER_IN
+  STOCK_ADJUSTMENT
+  DAMAGED
+  LOST
+  RESERVATION
+  RESERVATION_RELEASE
+}
+
+model InventoryMovement {
+  id          String @id @default(uuid())
+  variantId   String
+  variant     ProductVariant @relation(fields: [variantId], references: [id])
+  locationId  String
+  location    StockLocation @relation(fields: [locationId], references: [id])
+  type        MovementType
+  quantity    Int // signed
+  balanceAfter Int
+  refType     String? // pos_transaction | goods_receipt | stock_transfer | return | stock_adjustment
+  refId       String?
+  userId      String?
+  createdAt   DateTime @default(now())
+  @@index([variantId, locationId])
+  @@index([createdAt])
+}
+
+// ── Suppliers / Purchasing ────────────────────────────────────
+
+model Supplier {
+  id           String @id @default(uuid())
+  code         String @unique
+  name         String
+  taxCode      String?
+  contactName  String?
+  phone        String?
+  email        String?
+  address      String?
+  paymentTerms String? // e.g. NET30
+  leadTimeDays Int @default(7)
+  active       Boolean @default(true)
+  purchaseOrders PurchaseOrder[]
+}
+
+enum PoStatus {
+  draft
+  pending_approval
+  approved
+  sent
+  partially_received
+  received
+  cancelled
+  closed
+}
+
+model PurchaseOrder {
+  id          String @id @default(uuid())
+  number      String @unique // PO-2026-000001
+  supplierId  String
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  status      PoStatus @default(draft)
+  expectedDate DateTime?
+  orderedBy   String?
+  approvedBy  String?
+  items       PurchaseOrderItem[]
+  receipts    GoodsReceipt[]
+  createdAt   DateTime @default(now())
+  @@index([status])
+}
+
+model PurchaseOrderItem {
+  id        String @id @default(uuid())
+  poId      String
+  po        PurchaseOrder @relation(fields: [poId], references: [id])
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  quantity  Int
+  unitCost  BigInt
+  receivedQty Int @default(0)
+}
+
+model GoodsReceipt {
+  id        String @id @default(uuid())
+  number    String @unique // GRN-2026-000001
+  poId      String
+  po        PurchaseOrder @relation(fields: [poId], references: [id])
+  receivedBy String
+  receivedAt DateTime @default(now())
+  items     GoodsReceiptItem[]
+}
+
+model GoodsReceiptItem {
+  id          String @id @default(uuid())
+  receiptId   String
+  receipt     GoodsReceipt @relation(fields: [receiptId], references: [id])
+  variantId   String
+  variant     ProductVariant @relation(fields: [variantId], references: [id])
+  quantity    Int
+  damagedQty  Int @default(0)
+}
+
+// ── Stock Transfer ────────────────────────────────────────────
+
+enum TransferStatus {
+  DRAFT
+  REQUESTED
+  APPROVED
+  PICKING
+  IN_TRANSIT
+  RECEIVED
+  COMPLETED
+  CANCELLED
+}
+
+model StockTransfer {
+  id          String @id @default(uuid())
+  number      String @unique // TRF-2026-000001
+  fromLocationId String
+  fromLocation StockLocation @relation("FromLoc", fields: [fromLocationId], references: [id])
+  toLocationId String
+  toLocation  StockLocation @relation("ToLoc", fields: [toLocationId], references: [id])
+  status      TransferStatus @default(DRAFT)
+  requestedBy String
+  approvedBy  String?
+  items       StockTransferItem[]
+  createdAt   DateTime @default(now())
+  @@index([status])
+}
+
+model StockTransferItem {
+  id        String @id @default(uuid())
+  transferId String
+  transfer  StockTransfer @relation(fields: [transferId], references: [id])
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  quantity  Int
+  receivedQty Int @default(0)
+}
+
+// ── Customers / Loyalty ───────────────────────────────────────
+
+model Customer {
+  id        String @id @default(uuid())
+  code      String @unique // CUS-000001
+  name      String
+  phone     String @unique
+  email     String?
+  birthday  DateTime?
+  address   String?
+  loyalty   LoyaltyAccount?
+  orders    Order[]
+  posTransactions PosTransaction[]
+}
+
+model LoyaltyAccount {
+  id         String @id @default(uuid())
+  customerId String @unique
+  customer   Customer @relation(fields: [customerId], references: [id])
+  points     Int @default(0)
+  tier       String @default("Member") // Member | Silver | Gold | Platinum
+  transactions LoyaltyTransaction[]
+}
+
+model LoyaltyTransaction {
+  id        String @id @default(uuid())
+  accountId String
+  account   LoyaltyAccount @relation(fields: [accountId], references: [id])
+  points    Int // signed
+  balanceAfter Int
+  type      String // EARN | REDEEM | ADJUST | EXPIRE
+  refType   String?
+  refId     String?
+  createdAt DateTime @default(now())
+}
+
+// ── Promotions ────────────────────────────────────────────────
+
+enum PromoType {
+  percentage
+  fixed
+  buy_x_get_y
+}
+
+enum PromoChannel {
+  POS
+  WEB
+  ALL
+}
+
+model Promotion {
+  id          String @id @default(uuid())
+  name        String
+  type        PromoType
+  value       BigInt // percent (0-100) or fixed minor units
+  buyQty      Int? // for buy_x_get_y
+  getQty      Int?
+  categoryId  String? // scope: category
+  category    Category? @relation(fields: [categoryId], references: [id])
+  minQty      Int @default(0) // min quantity of scoped items to trigger
+  channel     PromoChannel @default(ALL)
+  stackable   Boolean @default(false)
+  usageLimit  Int?
+  usedCount   Int @default(0)
+  memberOnly  Boolean @default(false)
+  priority    Int @default(0)
+  active      Boolean @default(true)
+  startAt     DateTime @default(now())
+  endAt       DateTime?
+  stores      PromotionStore[]
+}
+
+model PromotionStore {
+  promotionId String
+  storeId     String
+  promotion Promotion @relation(fields: [promotionId], references: [id])
+  store     Store @relation(fields: [storeId], references: [id])
+  @@id([promotionId, storeId])
+}
+model Bundle {
+  id     String @id @default(uuid())
+  sku    String @unique
+  name   String
+  price  BigInt
+  active Boolean @default(true)
+  items  BundleItem[]
+}
+
+model BundleItem {
+  id        String @id @default(uuid())
+  bundleId  String
+  bundle    Bundle @relation(fields: [bundleId], references: [id])
+  variantId String
+  variant   ProductVariant @relation("bundle", fields: [variantId], references: [id])
+  componentId String
+  component ProductVariant @relation("component", fields: [componentId], references: [id])
+  quantity  Int
+}
+
+// ── Orders (omnichannel) ──────────────────────────────────────
+
+enum OrderStatus {
+  NEW
+  CONFIRMED
+  ALLOCATED
+  PICKING
+  PACKED
+  READY
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum OrderType {
+  delivery
+  pickup
+  ship_from_store
+}
+
+model Order {
+  id          String @id @default(uuid())
+  number      String @unique // ORD-2026-000001
+  channel     String // POS | WEB | APP | MARKETPLACE | CALL_CENTER
+  type        OrderType
+  storeId     String?
+  store       Store? @relation(fields: [storeId], references: [id])
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  status      OrderStatus @default(NEW)
+  subtotal    BigInt
+  discountTotal BigInt @default(0)
+  total       BigInt
+  items       OrderItem[]
+  statusHistory OrderStatusHistory[]
+  createdAt   DateTime @default(now())
+  @@index([status])
+  @@index([customerId])
+}
+
+model OrderItem {
+  id        String @id @default(uuid())
+  orderId   String
+  order     Order @relation(fields: [orderId], references: [id])
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  quantity  Int
+  unitPrice BigInt
+  discount  BigInt @default(0)
+}
+
+model OrderStatusHistory {
+  id        String @id @default(uuid())
+  orderId   String
+  order     Order @relation(fields: [orderId], references: [id])
+  fromStatus String?
+  toStatus  OrderStatus
+  userId    String?
+  createdAt DateTime @default(now())
+}
+
+// ── POS ───────────────────────────────────────────────────────
+
+model PosTerminal {
+  id      String @id @default(uuid())
+  storeId String
+  store   Store @relation(fields: [storeId], references: [id])
+  name    String
+  active  Boolean @default(true)
+  shifts  PosShift[]
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+model PosShift {
+  id          String @id @default(uuid())
+  terminalId  String
+  terminal    PosTerminal @relation(fields: [terminalId], references: [id])
+  cashierId   String
+  status      ShiftStatus @default(OPEN)
+  openingCash BigInt
+  closingCash BigInt?
+  expectedCash BigInt?
+  variance    BigInt?
+  openedAt    DateTime @default(now())
+  closedAt    DateTime?
+  transactions PosTransaction[]
+  @@index([status])
+}
+
+enum PosTxStatus {
+  COMPLETED
+  CANCELLED
+  RETURNED
+}
+
+model PosTransaction {
+  id          String @id @default(uuid())
+  number      String @unique // TXN-2026-000001
+  shiftId     String
+  shift       PosShift @relation(fields: [shiftId], references: [id])
+  storeId     String
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  status      PosTxStatus @default(COMPLETED)
+  subtotal    BigInt
+  discountTotal BigInt @default(0)
+  total       BigInt
+  loyaltyEarned Int @default(0)
+  loyaltyRedeemed Int @default(0)
+  items       PosTransactionItem[]
+  payments    Payment[]
+  createdAt   DateTime @default(now())
+  @@index([shiftId])
+}
+
+model PosTransactionItem {
+  id        String @id @default(uuid())
+  txId      String
+  tx        PosTransaction @relation(fields: [txId], references: [id])
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  quantity  Int
+  unitPrice BigInt
+  discount  BigInt @default(0)
+  promoId   String?
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  QR
+  E_WALLET
+  STORE_CREDIT
+}
+
+model Payment {
+  id        String @id @default(uuid())
+  txId      String
+  tx        PosTransaction @relation(fields: [txId], references: [id])
+  method    PaymentMethod
+  amount    BigInt
+  idempotencyKey String? @unique
+  createdAt DateTime @default(now())
+}
+
+// ── Audit ─────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String @id @default(uuid())
+  actorId   String?
+  actor     User? @relation(fields: [actorId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  storeId   String?
+  ip        String?
+  createdAt DateTime @default(now())
+  @@index([entity, entityId])
+  @@index([actorId])
+}
+
+// ── Config / Counters ─────────────────────────────────────────
+
+model SystemConfig {
+  key   String @id
+  value Json
+}
+
+model SequenceCounter {
+  key   String @id // e.g. ORD-2026
+  value Int
+}
