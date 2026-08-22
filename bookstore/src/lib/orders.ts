@@ -1,0 +1,91 @@
+import { prisma } from "./db";
+import { fail, nextBusinessNumber } from "./api";
+import { applyMovement } from "./inventory";
+import { evaluatePromotions, mergeLineDiscounts, type CartLine } from "./promotions";
+import { OrderType } from "../generated/prisma/client";
+
+export type CreateOrderInput = {
+  channel: "WEB" | "APP" | "MARKETPLACE" | "CALL_CENTER";
+  type?: keyof typeof OrderType;
+  storeId?: string | null;
+  customerId: string;
+  locationId?: string | null;
+  couponCode?: string | null;
+  items: { variantId: string; quantity: number }[];
+};
+
+export async function createReservedOrder(input: CreateOrderInput, actorId?: string) {
+  if (!["WEB", "APP", "MARKETPLACE", "CALL_CENTER"].includes(input.channel))
+    fail(400, "VALIDATION", "Invalid order channel");
+  if (input.type && !Object.values(OrderType).includes(input.type))
+    fail(400, "VALIDATION", "Invalid order type");
+  if (typeof input.customerId !== "string" || !input.customerId || !Array.isArray(input.items) || input.items.length === 0)
+    fail(400, "VALIDATION", "customerId and items required");
+  if (input.storeId != null && typeof input.storeId !== "string") fail(400, "VALIDATION", "Invalid storeId");
+  if (input.locationId != null && typeof input.locationId !== "string") fail(400, "VALIDATION", "Invalid locationId");
+  if (input.couponCode != null && typeof input.couponCode !== "string") fail(400, "VALIDATION", "Invalid couponCode");
+  if (new Set(input.items.map((item) => item.variantId)).size !== input.items.length)
+    fail(400, "VALIDATION", "A variant may appear only once");
+  for (const item of input.items)
+    if (typeof item.variantId !== "string" || !item.variantId || !Number.isInteger(item.quantity) || item.quantity <= 0)
+      fail(400, "VALIDATION", "Each item needs a variantId and positive integer quantity");
+
+  const variants = await prisma.productVariant.findMany({
+    where: { id: { in: input.items.map((item) => item.variantId) }, active: true },
+    include: {
+      product: true,
+      prices: {
+        where: { priceList: { kind: { in: ["online", "retail"] } }, OR: [{ validTo: null }, { validTo: { gt: new Date() } }] },
+        include: { priceList: true }, orderBy: { validFrom: "desc" },
+      },
+    },
+  });
+  if (variants.length !== input.items.length) fail(404, "NOT_FOUND", "Unknown or inactive variant in order");
+
+  const lines: CartLine[] = input.items.map((item) => {
+    const variant = variants.find((candidate) => candidate.id === item.variantId)!;
+    const unitPrice = variant.prices.find((price) => price.priceList.kind === "online")?.amount
+      ?? variant.prices.find((price) => price.priceList.kind === "retail")?.amount ?? 0n;
+    return {
+      variantId: variant.id, productId: variant.productId, categoryId: variant.product.categoryId,
+      quantity: item.quantity, unitPrice,
+    };
+  });
+  const applied = await evaluatePromotions({
+    lines, storeId: input.storeId, channel: "WEB", customerId: input.customerId, couponCode: input.couponCode,
+  });
+  const discounts = mergeLineDiscounts(applied, lines);
+  const subtotal = lines.reduce((sum, line) => sum + line.unitPrice * BigInt(line.quantity), 0n);
+
+  return prisma.$transaction(async (tx) => {
+    const location = await tx.stockLocation.findFirst({
+      where: input.locationId
+        ? { id: input.locationId, active: true }
+        : input.storeId
+          ? { storeId: input.storeId, type: "STORE_STOCKROOM", active: true }
+          : { type: "WAREHOUSE", active: true },
+    });
+    if (!location) fail(400, "VALIDATION", "No fulfillment location");
+
+    const order = await tx.order.create({
+      data: {
+        number: await nextBusinessNumber("ORD"), channel: input.channel, type: input.type ?? "delivery",
+        storeId: input.storeId ?? null, customerId: input.customerId, status: "CONFIRMED",
+        subtotal, discountTotal: discounts.total, total: subtotal - discounts.total,
+        items: { create: lines.map((line) => ({
+          variantId: line.variantId, quantity: line.quantity, unitPrice: line.unitPrice,
+          discount: discounts.byVariant.get(line.variantId) ?? 0n,
+        })) },
+        statusHistory: { create: { fromStatus: null, toStatus: "CONFIRMED", userId: actorId } },
+      },
+      include: { items: true },
+    });
+    for (const line of lines) await applyMovement(tx, {
+      variantId: line.variantId, locationId: location.id, type: "RESERVATION",
+      quantityDelta: 0, reservedDelta: line.quantity, refType: "order", refId: order.id, userId: actorId,
+    });
+    for (const promo of applied)
+      await tx.promotion.update({ where: { id: promo.promoId }, data: { usedCount: { increment: 1 } } });
+    return order;
+  });
+}

@@ -454,7 +454,11 @@ export const ModelName = {
   InventoryCountItem: 'InventoryCountItem',
   AuditLog: 'AuditLog',
   SystemConfig: 'SystemConfig',
-  SequenceCounter: 'SequenceCounter'
+  SequenceCounter: 'SequenceCounter',
+  ReplenishmentSuggestion: 'ReplenishmentSuggestion',
+  IntegrationJob: 'IntegrationJob',
+  WarehouseTask: 'WarehouseTask',
+  LossAlert: 'LossAlert'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -470,7 +474,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "organization" | "region" | "store" | "warehouse" | "stockLocation" | "user" | "role" | "permission" | "userRole" | "rolePermission" | "session" | "category" | "attributeDefinition" | "brand" | "author" | "publisher" | "product" | "productVariant" | "productBarcode" | "attributeValue" | "priceList" | "price" | "inventoryBalance" | "inventoryMovement" | "supplier" | "purchaseOrder" | "purchaseOrderItem" | "goodsReceipt" | "goodsReceiptItem" | "stockTransfer" | "stockTransferItem" | "customer" | "loyaltyAccount" | "loyaltyTransaction" | "promotion" | "promotionStore" | "bundle" | "bundleItem" | "order" | "orderItem" | "orderStatusHistory" | "posTerminal" | "posShift" | "posTransaction" | "posTransactionItem" | "payment" | "shipment" | "return" | "returnItem" | "giftCard" | "giftCardTransaction" | "supplierReturn" | "supplierReturnItem" | "inventoryCount" | "inventoryCountItem" | "auditLog" | "systemConfig" | "sequenceCounter"
+    modelProps: "organization" | "region" | "store" | "warehouse" | "stockLocation" | "user" | "role" | "permission" | "userRole" | "rolePermission" | "session" | "category" | "attributeDefinition" | "brand" | "author" | "publisher" | "product" | "productVariant" | "productBarcode" | "attributeValue" | "priceList" | "price" | "inventoryBalance" | "inventoryMovement" | "supplier" | "purchaseOrder" | "purchaseOrderItem" | "goodsReceipt" | "goodsReceiptItem" | "stockTransfer" | "stockTransferItem" | "customer" | "loyaltyAccount" | "loyaltyTransaction" | "promotion" | "promotionStore" | "bundle" | "bundleItem" | "order" | "orderItem" | "orderStatusHistory" | "posTerminal" | "posShift" | "posTransaction" | "posTransactionItem" | "payment" | "shipment" | "return" | "returnItem" | "giftCard" | "giftCardTransaction" | "supplierReturn" | "supplierReturnItem" | "inventoryCount" | "inventoryCountItem" | "auditLog" | "systemConfig" | "sequenceCounter" | "replenishmentSuggestion" | "integrationJob" | "warehouseTask" | "lossAlert"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -4766,6 +4770,302 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ReplenishmentSuggestion: {
+      payload: Prisma.$ReplenishmentSuggestionPayload<ExtArgs>
+      fields: Prisma.ReplenishmentSuggestionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ReplenishmentSuggestionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplenishmentSuggestionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ReplenishmentSuggestionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplenishmentSuggestionPayload>
+        }
+        findFirst: {
+          args: Prisma.ReplenishmentSuggestionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplenishmentSuggestionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ReplenishmentSuggestionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplenishmentSuggestionPayload>
+        }
+        findMany: {
+          args: Prisma.ReplenishmentSuggestionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplenishmentSuggestionPayload>[]
+        }
+        create: {
+          args: Prisma.ReplenishmentSuggestionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplenishmentSuggestionPayload>
+        }
+        createMany: {
+          args: Prisma.ReplenishmentSuggestionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ReplenishmentSuggestionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplenishmentSuggestionPayload>[]
+        }
+        delete: {
+          args: Prisma.ReplenishmentSuggestionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplenishmentSuggestionPayload>
+        }
+        update: {
+          args: Prisma.ReplenishmentSuggestionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplenishmentSuggestionPayload>
+        }
+        deleteMany: {
+          args: Prisma.ReplenishmentSuggestionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ReplenishmentSuggestionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ReplenishmentSuggestionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplenishmentSuggestionPayload>[]
+        }
+        upsert: {
+          args: Prisma.ReplenishmentSuggestionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplenishmentSuggestionPayload>
+        }
+        aggregate: {
+          args: Prisma.ReplenishmentSuggestionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateReplenishmentSuggestion>
+        }
+        groupBy: {
+          args: Prisma.ReplenishmentSuggestionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ReplenishmentSuggestionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ReplenishmentSuggestionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ReplenishmentSuggestionCountAggregateOutputType> | number
+        }
+      }
+    }
+    IntegrationJob: {
+      payload: Prisma.$IntegrationJobPayload<ExtArgs>
+      fields: Prisma.IntegrationJobFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.IntegrationJobFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationJobPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.IntegrationJobFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationJobPayload>
+        }
+        findFirst: {
+          args: Prisma.IntegrationJobFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationJobPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.IntegrationJobFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationJobPayload>
+        }
+        findMany: {
+          args: Prisma.IntegrationJobFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationJobPayload>[]
+        }
+        create: {
+          args: Prisma.IntegrationJobCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationJobPayload>
+        }
+        createMany: {
+          args: Prisma.IntegrationJobCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.IntegrationJobCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationJobPayload>[]
+        }
+        delete: {
+          args: Prisma.IntegrationJobDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationJobPayload>
+        }
+        update: {
+          args: Prisma.IntegrationJobUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationJobPayload>
+        }
+        deleteMany: {
+          args: Prisma.IntegrationJobDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.IntegrationJobUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.IntegrationJobUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationJobPayload>[]
+        }
+        upsert: {
+          args: Prisma.IntegrationJobUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationJobPayload>
+        }
+        aggregate: {
+          args: Prisma.IntegrationJobAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateIntegrationJob>
+        }
+        groupBy: {
+          args: Prisma.IntegrationJobGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IntegrationJobGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.IntegrationJobCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IntegrationJobCountAggregateOutputType> | number
+        }
+      }
+    }
+    WarehouseTask: {
+      payload: Prisma.$WarehouseTaskPayload<ExtArgs>
+      fields: Prisma.WarehouseTaskFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.WarehouseTaskFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WarehouseTaskPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.WarehouseTaskFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WarehouseTaskPayload>
+        }
+        findFirst: {
+          args: Prisma.WarehouseTaskFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WarehouseTaskPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.WarehouseTaskFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WarehouseTaskPayload>
+        }
+        findMany: {
+          args: Prisma.WarehouseTaskFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WarehouseTaskPayload>[]
+        }
+        create: {
+          args: Prisma.WarehouseTaskCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WarehouseTaskPayload>
+        }
+        createMany: {
+          args: Prisma.WarehouseTaskCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.WarehouseTaskCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WarehouseTaskPayload>[]
+        }
+        delete: {
+          args: Prisma.WarehouseTaskDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WarehouseTaskPayload>
+        }
+        update: {
+          args: Prisma.WarehouseTaskUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WarehouseTaskPayload>
+        }
+        deleteMany: {
+          args: Prisma.WarehouseTaskDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.WarehouseTaskUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.WarehouseTaskUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WarehouseTaskPayload>[]
+        }
+        upsert: {
+          args: Prisma.WarehouseTaskUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WarehouseTaskPayload>
+        }
+        aggregate: {
+          args: Prisma.WarehouseTaskAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWarehouseTask>
+        }
+        groupBy: {
+          args: Prisma.WarehouseTaskGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WarehouseTaskGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.WarehouseTaskCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WarehouseTaskCountAggregateOutputType> | number
+        }
+      }
+    }
+    LossAlert: {
+      payload: Prisma.$LossAlertPayload<ExtArgs>
+      fields: Prisma.LossAlertFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LossAlertFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LossAlertPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LossAlertFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LossAlertPayload>
+        }
+        findFirst: {
+          args: Prisma.LossAlertFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LossAlertPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LossAlertFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LossAlertPayload>
+        }
+        findMany: {
+          args: Prisma.LossAlertFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LossAlertPayload>[]
+        }
+        create: {
+          args: Prisma.LossAlertCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LossAlertPayload>
+        }
+        createMany: {
+          args: Prisma.LossAlertCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LossAlertCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LossAlertPayload>[]
+        }
+        delete: {
+          args: Prisma.LossAlertDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LossAlertPayload>
+        }
+        update: {
+          args: Prisma.LossAlertUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LossAlertPayload>
+        }
+        deleteMany: {
+          args: Prisma.LossAlertDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LossAlertUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LossAlertUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LossAlertPayload>[]
+        }
+        upsert: {
+          args: Prisma.LossAlertUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LossAlertPayload>
+        }
+        aggregate: {
+          args: Prisma.LossAlertAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLossAlert>
+        }
+        groupBy: {
+          args: Prisma.LossAlertGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LossAlertGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LossAlertCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LossAlertCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -5501,6 +5801,77 @@ export const SequenceCounterScalarFieldEnum = {
 export type SequenceCounterScalarFieldEnum = (typeof SequenceCounterScalarFieldEnum)[keyof typeof SequenceCounterScalarFieldEnum]
 
 
+export const ReplenishmentSuggestionScalarFieldEnum = {
+  id: 'id',
+  variantId: 'variantId',
+  locationId: 'locationId',
+  averageDailySales: 'averageDailySales',
+  availableQty: 'availableQty',
+  incomingQty: 'incomingQty',
+  safetyStock: 'safetyStock',
+  leadTimeDays: 'leadTimeDays',
+  recommendedQty: 'recommendedQty',
+  status: 'status',
+  rationale: 'rationale',
+  generatedAt: 'generatedAt'
+} as const
+
+export type ReplenishmentSuggestionScalarFieldEnum = (typeof ReplenishmentSuggestionScalarFieldEnum)[keyof typeof ReplenishmentSuggestionScalarFieldEnum]
+
+
+export const IntegrationJobScalarFieldEnum = {
+  id: 'id',
+  provider: 'provider',
+  kind: 'kind',
+  externalId: 'externalId',
+  idempotencyKey: 'idempotencyKey',
+  status: 'status',
+  payload: 'payload',
+  result: 'result',
+  attempts: 'attempts',
+  error: 'error',
+  createdAt: 'createdAt',
+  completedAt: 'completedAt'
+} as const
+
+export type IntegrationJobScalarFieldEnum = (typeof IntegrationJobScalarFieldEnum)[keyof typeof IntegrationJobScalarFieldEnum]
+
+
+export const WarehouseTaskScalarFieldEnum = {
+  id: 'id',
+  number: 'number',
+  type: 'type',
+  status: 'status',
+  locationId: 'locationId',
+  refType: 'refType',
+  refId: 'refId',
+  assignedTo: 'assignedTo',
+  priority: 'priority',
+  notes: 'notes',
+  createdAt: 'createdAt',
+  completedAt: 'completedAt'
+} as const
+
+export type WarehouseTaskScalarFieldEnum = (typeof WarehouseTaskScalarFieldEnum)[keyof typeof WarehouseTaskScalarFieldEnum]
+
+
+export const LossAlertScalarFieldEnum = {
+  id: 'id',
+  rule: 'rule',
+  severity: 'severity',
+  status: 'status',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  message: 'message',
+  evidence: 'evidence',
+  detectedAt: 'detectedAt',
+  reviewedAt: 'reviewedAt',
+  reviewedBy: 'reviewedBy'
+} as const
+
+export type LossAlertScalarFieldEnum = (typeof LossAlertScalarFieldEnum)[keyof typeof LossAlertScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -5857,6 +6228,76 @@ export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$Prisma
 
 
 /**
+ * Reference to a field of type 'SuggestionStatus'
+ */
+export type EnumSuggestionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SuggestionStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'SuggestionStatus[]'
+ */
+export type ListEnumSuggestionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SuggestionStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'IntegrationJobStatus'
+ */
+export type EnumIntegrationJobStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IntegrationJobStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'IntegrationJobStatus[]'
+ */
+export type ListEnumIntegrationJobStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IntegrationJobStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'WarehouseTaskType'
+ */
+export type EnumWarehouseTaskTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WarehouseTaskType'>
+    
+
+
+/**
+ * Reference to a field of type 'WarehouseTaskType[]'
+ */
+export type ListEnumWarehouseTaskTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WarehouseTaskType[]'>
+    
+
+
+/**
+ * Reference to a field of type 'WarehouseTaskStatus'
+ */
+export type EnumWarehouseTaskStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WarehouseTaskStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'WarehouseTaskStatus[]'
+ */
+export type ListEnumWarehouseTaskStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WarehouseTaskStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'LossAlertStatus'
+ */
+export type EnumLossAlertStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LossAlertStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'LossAlertStatus[]'
+ */
+export type ListEnumLossAlertStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LossAlertStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -6078,6 +6519,10 @@ export type GlobalOmitConfig = {
   auditLog?: Prisma.AuditLogOmit
   systemConfig?: Prisma.SystemConfigOmit
   sequenceCounter?: Prisma.SequenceCounterOmit
+  replenishmentSuggestion?: Prisma.ReplenishmentSuggestionOmit
+  integrationJob?: Prisma.IntegrationJobOmit
+  warehouseTask?: Prisma.WarehouseTaskOmit
+  lossAlert?: Prisma.LossAlertOmit
 }
 
 /* Types for Logging */

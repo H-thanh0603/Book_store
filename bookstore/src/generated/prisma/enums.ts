@@ -175,3 +175,51 @@ export const InventoryCountStatus = {
 } as const
 
 export type InventoryCountStatus = (typeof InventoryCountStatus)[keyof typeof InventoryCountStatus]
+
+
+export const SuggestionStatus = {
+  OPEN: 'OPEN',
+  ACCEPTED: 'ACCEPTED',
+  DISMISSED: 'DISMISSED'
+} as const
+
+export type SuggestionStatus = (typeof SuggestionStatus)[keyof typeof SuggestionStatus]
+
+
+export const IntegrationJobStatus = {
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  SUCCEEDED: 'SUCCEEDED',
+  FAILED: 'FAILED'
+} as const
+
+export type IntegrationJobStatus = (typeof IntegrationJobStatus)[keyof typeof IntegrationJobStatus]
+
+
+export const WarehouseTaskType = {
+  PICK: 'PICK',
+  PACK: 'PACK',
+  PUTAWAY: 'PUTAWAY',
+  CYCLE_COUNT: 'CYCLE_COUNT'
+} as const
+
+export type WarehouseTaskType = (typeof WarehouseTaskType)[keyof typeof WarehouseTaskType]
+
+
+export const WarehouseTaskStatus = {
+  OPEN: 'OPEN',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED'
+} as const
+
+export type WarehouseTaskStatus = (typeof WarehouseTaskStatus)[keyof typeof WarehouseTaskStatus]
+
+
+export const LossAlertStatus = {
+  OPEN: 'OPEN',
+  REVIEWED: 'REVIEWED',
+  DISMISSED: 'DISMISSED'
+} as const
+
+export type LossAlertStatus = (typeof LossAlertStatus)[keyof typeof LossAlertStatus]

@@ -307,3 +307,23 @@ export type SystemConfig = Prisma.SystemConfigModel
  * 
  */
 export type SequenceCounter = Prisma.SequenceCounterModel
+/**
+ * Model ReplenishmentSuggestion
+ * 
+ */
+export type ReplenishmentSuggestion = Prisma.ReplenishmentSuggestionModel
+/**
+ * Model IntegrationJob
+ * 
+ */
+export type IntegrationJob = Prisma.IntegrationJobModel
+/**
+ * Model WarehouseTask
+ * 
+ */
+export type WarehouseTask = Prisma.WarehouseTaskModel
+/**
+ * Model LossAlert
+ * 
+ */
+export type LossAlert = Prisma.LossAlertModel

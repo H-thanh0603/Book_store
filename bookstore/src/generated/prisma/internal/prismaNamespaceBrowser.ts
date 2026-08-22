@@ -108,7 +108,11 @@ export const ModelName = {
   InventoryCountItem: 'InventoryCountItem',
   AuditLog: 'AuditLog',
   SystemConfig: 'SystemConfig',
-  SequenceCounter: 'SequenceCounter'
+  SequenceCounter: 'SequenceCounter',
+  ReplenishmentSuggestion: 'ReplenishmentSuggestion',
+  IntegrationJob: 'IntegrationJob',
+  WarehouseTask: 'WarehouseTask',
+  LossAlert: 'LossAlert'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -821,6 +825,77 @@ export const SequenceCounterScalarFieldEnum = {
 } as const
 
 export type SequenceCounterScalarFieldEnum = (typeof SequenceCounterScalarFieldEnum)[keyof typeof SequenceCounterScalarFieldEnum]
+
+
+export const ReplenishmentSuggestionScalarFieldEnum = {
+  id: 'id',
+  variantId: 'variantId',
+  locationId: 'locationId',
+  averageDailySales: 'averageDailySales',
+  availableQty: 'availableQty',
+  incomingQty: 'incomingQty',
+  safetyStock: 'safetyStock',
+  leadTimeDays: 'leadTimeDays',
+  recommendedQty: 'recommendedQty',
+  status: 'status',
+  rationale: 'rationale',
+  generatedAt: 'generatedAt'
+} as const
+
+export type ReplenishmentSuggestionScalarFieldEnum = (typeof ReplenishmentSuggestionScalarFieldEnum)[keyof typeof ReplenishmentSuggestionScalarFieldEnum]
+
+
+export const IntegrationJobScalarFieldEnum = {
+  id: 'id',
+  provider: 'provider',
+  kind: 'kind',
+  externalId: 'externalId',
+  idempotencyKey: 'idempotencyKey',
+  status: 'status',
+  payload: 'payload',
+  result: 'result',
+  attempts: 'attempts',
+  error: 'error',
+  createdAt: 'createdAt',
+  completedAt: 'completedAt'
+} as const
+
+export type IntegrationJobScalarFieldEnum = (typeof IntegrationJobScalarFieldEnum)[keyof typeof IntegrationJobScalarFieldEnum]
+
+
+export const WarehouseTaskScalarFieldEnum = {
+  id: 'id',
+  number: 'number',
+  type: 'type',
+  status: 'status',
+  locationId: 'locationId',
+  refType: 'refType',
+  refId: 'refId',
+  assignedTo: 'assignedTo',
+  priority: 'priority',
+  notes: 'notes',
+  createdAt: 'createdAt',
+  completedAt: 'completedAt'
+} as const
+
+export type WarehouseTaskScalarFieldEnum = (typeof WarehouseTaskScalarFieldEnum)[keyof typeof WarehouseTaskScalarFieldEnum]
+
+
+export const LossAlertScalarFieldEnum = {
+  id: 'id',
+  rule: 'rule',
+  severity: 'severity',
+  status: 'status',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  message: 'message',
+  evidence: 'evidence',
+  detectedAt: 'detectedAt',
+  reviewedAt: 'reviewedAt',
+  reviewedBy: 'reviewedBy'
+} as const
+
+export type LossAlertScalarFieldEnum = (typeof LossAlertScalarFieldEnum)[keyof typeof LossAlertScalarFieldEnum]
 
 
 export const SortOrder = {
