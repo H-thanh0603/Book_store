@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
-import { apiError, ok, fail } from "@/lib/api";
+import { apiError, ok, fail, toMoney } from "@/lib/api";
 import { completeSale, openShift, closeShift } from "@/lib/pos";
 
 // POST /api/pos  { action: "open_shift"|"close_shift"|"sale", ... }
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
         fail(400, "VALIDATION", "terminalId and openingCash required");
       const { getAuth } = await import("@/lib/auth");
       const auth = (await getAuth())!;
-      const shift = await openShift(body.terminalId, auth.userId, BigInt(body.openingCash));
+      const shift = await openShift(body.terminalId, auth.userId, toMoney(body.openingCash, "openingCash"));
       return ok({ shiftId: shift.id });
     }
 
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
         fail(400, "VALIDATION", "shiftId and closingCash required");
       const { getAuth } = await import("@/lib/auth");
       const auth = (await getAuth())!;
-      const shift = await closeShift(body.shiftId, BigInt(body.closingCash), auth.userId);
+      const shift = await closeShift(body.shiftId, toMoney(body.closingCash, "closingCash"), auth.userId);
       return ok({
         expectedCash: Number(shift.expectedCash),
         closingCash: Number(shift.closingCash),
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         customerId: body.customerId ?? null,
         redeemPoints: body.redeemPoints,
         payments: body.payments.map((p: any) => ({
-          method: p.method, amount: BigInt(p.amount), idempotencyKey: p.idempotencyKey,
+          method: p.method, amount: toMoney(p.amount, "payment.amount"), idempotencyKey: p.idempotencyKey,
         })),
       });
       // audit

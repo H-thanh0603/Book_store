@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
-import { apiError, ok, fail, nextBusinessNumber } from "@/lib/api";
+import { apiError, ok, fail, nextBusinessNumber, toMoney } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { MovementType, PoStatus } from "@/generated/prisma/client";
 
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
             create: body.items.map((i: any) => ({
               variantId: i.variantId,
               quantity: i.quantity,
-              unitCost: BigInt(i.unitCost),
+              unitCost: toMoney(i.unitCost, "unitCost"),
             })),
           },
         },

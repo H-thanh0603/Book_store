@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
-import { apiError, ok, fail, nextBusinessNumber } from "@/lib/api";
+import { apiError, ok, fail, nextBusinessNumber, toMoney } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 
 // POST /api/orders — create order (WEB/APP), reserve stock at store/warehouse
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         if (!v) fail(404, "NOT_FOUND", `Unknown variant ${i.variantId}`);
         return { variantId: v.id, quantity: i.quantity, unitPrice: v.prices[0]?.amount ?? 0n };
       });
-      const subtotal = lines.reduce((s: bigint, l: any) => s + l.unitPrice * BigInt(l.quantity), 0n);
+      const subtotal = lines.reduce((s: bigint, l: any) => s + l.unitPrice * toMoney(l.quantity, "quantity"), 0n);
       const total = subtotal;
 
       const location = await tx.stockLocation.findFirst({

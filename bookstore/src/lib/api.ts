@@ -14,6 +14,16 @@ export function apiError(err: unknown) {
   return NextResponse.json({ code, message: e.message }, { status });
 }
 
+/**
+ * Parse a JSON money field (VND — integer, minor units) into bigint.
+ * Rejects non-numbers, negatives, non-integers so BigInt() never throws.
+ */
+export function toMoney(v: unknown, field: string): bigint {
+  if (typeof v !== "number" || !Number.isFinite(v) || !Number.isInteger(v) || v < 0)
+    fail(400, "VALIDATION", `${field} must be a non-negative integer`);
+  return BigInt(v);
+}
+
 export function fail(status: number, code: string, message: string, details?: unknown): never {
   throw Object.assign(new Error(message), { status, code, details });
 }

@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
             });
           }
         }
-        if (to === "RECEIVED" || to === "COMPLETED") {
+        if (to === "RECEIVED") {
           for (const item of trf.items) {
             await applyMovement(tx, {
               variantId: item.variantId, locationId: trf.toLocationId,
