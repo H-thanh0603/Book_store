@@ -35,6 +35,14 @@ export async function POST(req: NextRequest) {
     if (body.action === "sale") {
       if (!Array.isArray(body.items) || body.items.length === 0)
         fail(400, "VALIDATION", "items required");
+      for (const i of body.items)
+        if (!i.variantId || !Number.isInteger(i.quantity) || i.quantity <= 0)
+          fail(400, "VALIDATION", "each item needs variantId and positive integer quantity");
+      if (!Array.isArray(body.payments) || body.payments.length === 0)
+        fail(400, "VALIDATION", "payments required");
+      for (const p of body.payments)
+        if (!p.method || !Number.isFinite(p.amount) || p.amount < 0)
+          fail(400, "VALIDATION", "each payment needs method and non-negative amount");
       await requirePermission("pos.sell", body.storeId);
       const { getAuth } = await import("@/lib/auth");
       const auth = (await getAuth())!;

@@ -24,22 +24,22 @@ export async function GET() {
         prisma.customer.count(),
         // low stock: available <= 5 at any store location
         prisma.$queryRaw<{ sku: string; name: string; loc: string; available: number }[]>`
-          SELECT v.sku, p.name, l.name AS loc, (b.on_hand - b.reserved) AS available
-          FROM inventory_balances b
-          JOIN ProductVariant v ON v.id = b.variant_id
-          JOIN Product p ON p.id = v.product_id
-          JOIN StockLocation l ON l.id = b.location_id
-          WHERE l.store_id IS NOT NULL AND (b.on_hand - b.reserved) <= 5
-          ORDER BY (b.on_hand - b.reserved) ASC LIMIT 20`,
+          SELECT v.sku, p.name, l.name AS loc, (b."onHand" - b.reserved) AS available
+          FROM "InventoryBalance" b
+          JOIN "ProductVariant" v ON v.id = b."variantId"
+          JOIN "Product" p ON p.id = v."productId"
+          JOIN "StockLocation" l ON l.id = b."locationId"
+          WHERE l."storeId" IS NOT NULL AND (b."onHand" - b.reserved) <= 5
+          ORDER BY (b."onHand" - b.reserved) ASC LIMIT 20`,
         // top products MTD by revenue
         prisma.$queryRaw<{ name: string; units: number; revenue: string }[]>`
-          SELECT p.name, SUM(i.quantity) AS units, SUM(i.quantity * i.unit_price)::text AS revenue
-          FROM PosTransactionItem i
-          JOIN PosTransaction t ON t.id = i.tx_id
-          JOIN ProductVariant v ON v.id = i.variant_id
-          JOIN Product p ON p.id = v.product_id
-          WHERE t.status = 'COMPLETED' AND t.created_at >= ${startOfMonth}
-          GROUP BY p.name ORDER BY SUM(i.quantity * i.unit_price) DESC LIMIT 10`,
+          SELECT p.name, SUM(i.quantity) AS units, SUM(i.quantity * i."unitPrice")::text AS revenue
+          FROM "PosTransactionItem" i
+          JOIN "PosTransaction" t ON t.id = i."txId"
+          JOIN "ProductVariant" v ON v.id = i."variantId"
+          JOIN "Product" p ON p.id = v."productId"
+          WHERE t.status = 'COMPLETED' AND t."createdAt" >= ${startOfMonth}
+          GROUP BY p.name ORDER BY SUM(i.quantity * i."unitPrice") DESC LIMIT 10`,
         prisma.posTransaction.findMany({
           take: 10, orderBy: { createdAt: "desc" },
           include: { shift: { include: { terminal: { include: { store: true } } } } },

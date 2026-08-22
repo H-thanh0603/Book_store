@@ -32,33 +32,32 @@ export async function applyMovement(
     refType, refId, userId, allowNegative = false,
   } = args;
 
-  // ponytail: single UPDATE ... RETURNING is the atomic path; no ORM read-modify-write race.
-  const rows = await tx.$queryRaw<{ id: string; on_hand: number; reserved: number; in_transit: number }[]>`
-    INSERT INTO inventory_balances (id, variant_id, location_id, on_hand, reserved, in_transit, damaged)
+  const rows = await tx.$queryRaw<{ id: string }[]>`
+    INSERT INTO "InventoryBalance" (id, "variantId", "locationId", "onHand", reserved, "inTransit", damaged)
     VALUES (gen_random_uuid()::text, ${variantId}, ${locationId}, 0, 0, 0, 0)
-    ON CONFLICT (variant_id, location_id) DO NOTHING
+    ON CONFLICT ("variantId", "locationId") DO NOTHING
   `;
-  const updated = await tx.$queryRaw<{ on_hand: number; reserved: number; in_transit: number }[]>`
-    UPDATE inventory_balances
-    SET on_hand = on_hand + ${quantityDelta},
+  const updated = await tx.$queryRaw<{ onHand: number; reserved: number; inTransit: number }[]>`
+    UPDATE "InventoryBalance"
+    SET "onHand" = "onHand" + ${quantityDelta},
         reserved = reserved + ${reservedDelta},
-        in_transit = in_transit + ${inTransitDelta},
+        "inTransit" = "inTransit" + ${inTransitDelta},
         damaged = damaged + ${damagedDelta}
-    WHERE variant_id = ${variantId} AND location_id = ${locationId}
-    RETURNING on_hand, reserved, in_transit
+    WHERE "variantId" = ${variantId} AND "locationId" = ${locationId}
+    RETURNING "onHand", reserved, "inTransit"
   `;
   const bal = updated[0];
   if (!bal) fail(500, "INTERNAL", "Balance row missing");
-  if (!allowNegative && bal.on_hand < 0) {
+  if (!allowNegative && bal.onHand < 0) {
     fail(409, "INSUFFICIENT_STOCK", "Insufficient available stock", {
-      variantId, locationId, requested: -quantityDelta, available: bal.on_hand - quantityDelta,
+      variantId, locationId, requested: -quantityDelta, available: bal.onHand - quantityDelta,
     });
   }
 
   await tx.inventoryMovement.create({
     data: {
       variantId, locationId, type, quantity: quantityDelta,
-      balanceAfter: bal.on_hand,
+      balanceAfter: bal.onHand,
       refType, refId, userId,
     },
   });
