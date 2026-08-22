@@ -15,7 +15,9 @@ function parseItems(raw: unknown): PoItemInput[] {
       fail(400, "VALIDATION", "Each item needs a variantId");
     if (!Number.isInteger(item.quantity) || (item.quantity as number) <= 0)
       fail(400, "VALIDATION", "quantity must be a positive integer");
-    return { variantId: item.variantId, quantity: item.quantity as number };
+    // keep unitCost/damagedQty — the create branch validates unitCost via toMoney
+    return { variantId: item.variantId, quantity: item.quantity as number,
+      unitCost: item.unitCost ?? null, damagedQty: typeof item.damagedQty === "number" ? item.damagedQty : undefined };
   });
 }
 
