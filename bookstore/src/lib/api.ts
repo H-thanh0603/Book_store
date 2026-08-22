@@ -42,3 +42,19 @@ export async function nextBusinessNumber(prefix: string): Promise<string> {
   });
   return `${prefix}-${year}-${String(counter.value).padStart(6, "0")}`;
 }
+
+// ponytail: in-memory cache, refresh only on miss. No TTL — config changes are rare;
+// restart server to pick up a changed value. Swap for DB-listen/period refresh if needed.
+const configCache = new Map<string, unknown>();
+
+/**
+ * Read a SystemConfig JSON value (spec §101). Falls back to `fallback` when the
+ * row is missing so callers never crash on an un-seeded key.
+ */
+export async function getSystemConfig<T>(key: string, fallback: T): Promise<T> {
+  if (configCache.has(key)) return configCache.get(key) as T;
+  const row = await prisma.systemConfig.findUnique({ where: { key } });
+  const value = (row?.value as T) ?? fallback;
+  configCache.set(key, value);
+  return value;
+}

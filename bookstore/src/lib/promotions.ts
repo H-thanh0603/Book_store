@@ -26,6 +26,7 @@ export async function evaluatePromotions(args: {
   storeId?: string | null;
   channel: keyof typeof PromoChannel;
   customerId?: string | null;
+  couponCode?: string | null;
 }): Promise<AppliedPromo[]> {
   const now = new Date();
   const promos = await prisma.promotion.findMany({
@@ -44,6 +45,7 @@ export async function evaluatePromotions(args: {
     if (p.stores.length > 0 && (!args.storeId || !p.stores.some((s) => s.storeId === args.storeId)))
       return false;
     if (p.memberOnly && !args.customerId) return false;
+    if (p.code && p.code.toUpperCase() !== args.couponCode?.trim().toUpperCase()) return false;
     if (p.usageLimit !== null && p.usedCount >= p.usageLimit) return false;
     return true;
   });

@@ -200,6 +200,9 @@ export type ProductVariantWhereInput = {
   receiptItems?: Prisma.GoodsReceiptItemListRelationFilter
   transferItems?: Prisma.StockTransferItemListRelationFilter
   orderItems?: Prisma.OrderItemListRelationFilter
+  returnItems?: Prisma.ReturnItemListRelationFilter
+  supplierReturnItems?: Prisma.SupplierReturnItemListRelationFilter
+  inventoryCountItems?: Prisma.InventoryCountItemListRelationFilter
   posItems?: Prisma.PosTransactionItemListRelationFilter
   bundleItems?: Prisma.BundleItemListRelationFilter
   bundles?: Prisma.BundleItemListRelationFilter
@@ -222,6 +225,9 @@ export type ProductVariantOrderByWithRelationInput = {
   receiptItems?: Prisma.GoodsReceiptItemOrderByRelationAggregateInput
   transferItems?: Prisma.StockTransferItemOrderByRelationAggregateInput
   orderItems?: Prisma.OrderItemOrderByRelationAggregateInput
+  returnItems?: Prisma.ReturnItemOrderByRelationAggregateInput
+  supplierReturnItems?: Prisma.SupplierReturnItemOrderByRelationAggregateInput
+  inventoryCountItems?: Prisma.InventoryCountItemOrderByRelationAggregateInput
   posItems?: Prisma.PosTransactionItemOrderByRelationAggregateInput
   bundleItems?: Prisma.BundleItemOrderByRelationAggregateInput
   bundles?: Prisma.BundleItemOrderByRelationAggregateInput
@@ -247,6 +253,9 @@ export type ProductVariantWhereUniqueInput = Prisma.AtLeast<{
   receiptItems?: Prisma.GoodsReceiptItemListRelationFilter
   transferItems?: Prisma.StockTransferItemListRelationFilter
   orderItems?: Prisma.OrderItemListRelationFilter
+  returnItems?: Prisma.ReturnItemListRelationFilter
+  supplierReturnItems?: Prisma.SupplierReturnItemListRelationFilter
+  inventoryCountItems?: Prisma.InventoryCountItemListRelationFilter
   posItems?: Prisma.PosTransactionItemListRelationFilter
   bundleItems?: Prisma.BundleItemListRelationFilter
   bundles?: Prisma.BundleItemListRelationFilter
@@ -292,6 +301,9 @@ export type ProductVariantCreateInput = {
   receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
@@ -313,6 +325,9 @@ export type ProductVariantUncheckedCreateInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
@@ -334,6 +349,9 @@ export type ProductVariantUpdateInput = {
   receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
@@ -355,6 +373,9 @@ export type ProductVariantUncheckedUpdateInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
@@ -638,6 +659,48 @@ export type ProductVariantUpdateOneRequiredWithoutPosItemsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ProductVariantUpdateToOneWithWhereWithoutPosItemsInput, Prisma.ProductVariantUpdateWithoutPosItemsInput>, Prisma.ProductVariantUncheckedUpdateWithoutPosItemsInput>
 }
 
+export type ProductVariantCreateNestedOneWithoutReturnItemsInput = {
+  create?: Prisma.XOR<Prisma.ProductVariantCreateWithoutReturnItemsInput, Prisma.ProductVariantUncheckedCreateWithoutReturnItemsInput>
+  connectOrCreate?: Prisma.ProductVariantCreateOrConnectWithoutReturnItemsInput
+  connect?: Prisma.ProductVariantWhereUniqueInput
+}
+
+export type ProductVariantUpdateOneRequiredWithoutReturnItemsNestedInput = {
+  create?: Prisma.XOR<Prisma.ProductVariantCreateWithoutReturnItemsInput, Prisma.ProductVariantUncheckedCreateWithoutReturnItemsInput>
+  connectOrCreate?: Prisma.ProductVariantCreateOrConnectWithoutReturnItemsInput
+  upsert?: Prisma.ProductVariantUpsertWithoutReturnItemsInput
+  connect?: Prisma.ProductVariantWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ProductVariantUpdateToOneWithWhereWithoutReturnItemsInput, Prisma.ProductVariantUpdateWithoutReturnItemsInput>, Prisma.ProductVariantUncheckedUpdateWithoutReturnItemsInput>
+}
+
+export type ProductVariantCreateNestedOneWithoutSupplierReturnItemsInput = {
+  create?: Prisma.XOR<Prisma.ProductVariantCreateWithoutSupplierReturnItemsInput, Prisma.ProductVariantUncheckedCreateWithoutSupplierReturnItemsInput>
+  connectOrCreate?: Prisma.ProductVariantCreateOrConnectWithoutSupplierReturnItemsInput
+  connect?: Prisma.ProductVariantWhereUniqueInput
+}
+
+export type ProductVariantUpdateOneRequiredWithoutSupplierReturnItemsNestedInput = {
+  create?: Prisma.XOR<Prisma.ProductVariantCreateWithoutSupplierReturnItemsInput, Prisma.ProductVariantUncheckedCreateWithoutSupplierReturnItemsInput>
+  connectOrCreate?: Prisma.ProductVariantCreateOrConnectWithoutSupplierReturnItemsInput
+  upsert?: Prisma.ProductVariantUpsertWithoutSupplierReturnItemsInput
+  connect?: Prisma.ProductVariantWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ProductVariantUpdateToOneWithWhereWithoutSupplierReturnItemsInput, Prisma.ProductVariantUpdateWithoutSupplierReturnItemsInput>, Prisma.ProductVariantUncheckedUpdateWithoutSupplierReturnItemsInput>
+}
+
+export type ProductVariantCreateNestedOneWithoutInventoryCountItemsInput = {
+  create?: Prisma.XOR<Prisma.ProductVariantCreateWithoutInventoryCountItemsInput, Prisma.ProductVariantUncheckedCreateWithoutInventoryCountItemsInput>
+  connectOrCreate?: Prisma.ProductVariantCreateOrConnectWithoutInventoryCountItemsInput
+  connect?: Prisma.ProductVariantWhereUniqueInput
+}
+
+export type ProductVariantUpdateOneRequiredWithoutInventoryCountItemsNestedInput = {
+  create?: Prisma.XOR<Prisma.ProductVariantCreateWithoutInventoryCountItemsInput, Prisma.ProductVariantUncheckedCreateWithoutInventoryCountItemsInput>
+  connectOrCreate?: Prisma.ProductVariantCreateOrConnectWithoutInventoryCountItemsInput
+  upsert?: Prisma.ProductVariantUpsertWithoutInventoryCountItemsInput
+  connect?: Prisma.ProductVariantWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ProductVariantUpdateToOneWithWhereWithoutInventoryCountItemsInput, Prisma.ProductVariantUpdateWithoutInventoryCountItemsInput>, Prisma.ProductVariantUncheckedUpdateWithoutInventoryCountItemsInput>
+}
+
 export type ProductVariantCreateWithoutProductInput = {
   id?: string
   sku: string
@@ -653,6 +716,9 @@ export type ProductVariantCreateWithoutProductInput = {
   receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
@@ -673,6 +739,9 @@ export type ProductVariantUncheckedCreateWithoutProductInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
@@ -731,6 +800,9 @@ export type ProductVariantCreateWithoutBarcodesInput = {
   receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
@@ -751,6 +823,9 @@ export type ProductVariantUncheckedCreateWithoutBarcodesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
@@ -787,6 +862,9 @@ export type ProductVariantUpdateWithoutBarcodesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
@@ -807,6 +885,9 @@ export type ProductVariantUncheckedUpdateWithoutBarcodesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
@@ -827,6 +908,9 @@ export type ProductVariantCreateWithoutAttributesInput = {
   receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
@@ -847,6 +931,9 @@ export type ProductVariantUncheckedCreateWithoutAttributesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
@@ -883,6 +970,9 @@ export type ProductVariantUpdateWithoutAttributesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
@@ -903,6 +993,9 @@ export type ProductVariantUncheckedUpdateWithoutAttributesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
@@ -923,6 +1016,9 @@ export type ProductVariantCreateWithoutPricesInput = {
   receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
@@ -943,6 +1039,9 @@ export type ProductVariantUncheckedCreateWithoutPricesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
@@ -979,6 +1078,9 @@ export type ProductVariantUpdateWithoutPricesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
@@ -999,6 +1101,9 @@ export type ProductVariantUncheckedUpdateWithoutPricesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
@@ -1019,6 +1124,9 @@ export type ProductVariantCreateWithoutBalancesInput = {
   receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
@@ -1039,6 +1147,9 @@ export type ProductVariantUncheckedCreateWithoutBalancesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
@@ -1075,6 +1186,9 @@ export type ProductVariantUpdateWithoutBalancesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
@@ -1095,6 +1209,9 @@ export type ProductVariantUncheckedUpdateWithoutBalancesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
@@ -1115,6 +1232,9 @@ export type ProductVariantCreateWithoutMovementsInput = {
   receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
@@ -1135,6 +1255,9 @@ export type ProductVariantUncheckedCreateWithoutMovementsInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
@@ -1171,6 +1294,9 @@ export type ProductVariantUpdateWithoutMovementsInput = {
   receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
@@ -1191,6 +1317,9 @@ export type ProductVariantUncheckedUpdateWithoutMovementsInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
@@ -1211,6 +1340,9 @@ export type ProductVariantCreateWithoutPoItemsInput = {
   receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
@@ -1231,6 +1363,9 @@ export type ProductVariantUncheckedCreateWithoutPoItemsInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
@@ -1267,6 +1402,9 @@ export type ProductVariantUpdateWithoutPoItemsInput = {
   receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
@@ -1287,6 +1425,9 @@ export type ProductVariantUncheckedUpdateWithoutPoItemsInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
@@ -1307,6 +1448,9 @@ export type ProductVariantCreateWithoutReceiptItemsInput = {
   poItems?: Prisma.PurchaseOrderItemCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
@@ -1327,6 +1471,9 @@ export type ProductVariantUncheckedCreateWithoutReceiptItemsInput = {
   poItems?: Prisma.PurchaseOrderItemUncheckedCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
@@ -1363,6 +1510,9 @@ export type ProductVariantUpdateWithoutReceiptItemsInput = {
   poItems?: Prisma.PurchaseOrderItemUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
@@ -1383,6 +1533,9 @@ export type ProductVariantUncheckedUpdateWithoutReceiptItemsInput = {
   poItems?: Prisma.PurchaseOrderItemUncheckedUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
@@ -1403,6 +1556,9 @@ export type ProductVariantCreateWithoutTransferItemsInput = {
   poItems?: Prisma.PurchaseOrderItemCreateNestedManyWithoutVariantInput
   receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
@@ -1423,6 +1579,9 @@ export type ProductVariantUncheckedCreateWithoutTransferItemsInput = {
   poItems?: Prisma.PurchaseOrderItemUncheckedCreateNestedManyWithoutVariantInput
   receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
@@ -1459,6 +1618,9 @@ export type ProductVariantUpdateWithoutTransferItemsInput = {
   poItems?: Prisma.PurchaseOrderItemUpdateManyWithoutVariantNestedInput
   receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
@@ -1479,6 +1641,9 @@ export type ProductVariantUncheckedUpdateWithoutTransferItemsInput = {
   poItems?: Prisma.PurchaseOrderItemUncheckedUpdateManyWithoutVariantNestedInput
   receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
@@ -1500,6 +1665,9 @@ export type ProductVariantCreateWithoutBundlesInput = {
   receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
 }
@@ -1520,6 +1688,9 @@ export type ProductVariantUncheckedCreateWithoutBundlesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
 }
@@ -1545,6 +1716,9 @@ export type ProductVariantCreateWithoutBundleItemsInput = {
   receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
   bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
 }
@@ -1565,6 +1739,9 @@ export type ProductVariantUncheckedCreateWithoutBundleItemsInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
   bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
 }
@@ -1601,6 +1778,9 @@ export type ProductVariantUpdateWithoutBundlesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
 }
@@ -1621,6 +1801,9 @@ export type ProductVariantUncheckedUpdateWithoutBundlesInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
 }
@@ -1652,6 +1835,9 @@ export type ProductVariantUpdateWithoutBundleItemsInput = {
   receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
   bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
 }
@@ -1672,6 +1858,9 @@ export type ProductVariantUncheckedUpdateWithoutBundleItemsInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
 }
@@ -1691,6 +1880,9 @@ export type ProductVariantCreateWithoutOrderItemsInput = {
   poItems?: Prisma.PurchaseOrderItemCreateNestedManyWithoutVariantInput
   receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
@@ -1711,6 +1903,9 @@ export type ProductVariantUncheckedCreateWithoutOrderItemsInput = {
   poItems?: Prisma.PurchaseOrderItemUncheckedCreateNestedManyWithoutVariantInput
   receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
@@ -1747,6 +1942,9 @@ export type ProductVariantUpdateWithoutOrderItemsInput = {
   poItems?: Prisma.PurchaseOrderItemUpdateManyWithoutVariantNestedInput
   receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
@@ -1767,6 +1965,9 @@ export type ProductVariantUncheckedUpdateWithoutOrderItemsInput = {
   poItems?: Prisma.PurchaseOrderItemUncheckedUpdateManyWithoutVariantNestedInput
   receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
@@ -1788,6 +1989,9 @@ export type ProductVariantCreateWithoutPosItemsInput = {
   receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
 }
@@ -1808,6 +2012,9 @@ export type ProductVariantUncheckedCreateWithoutPosItemsInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
   transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
   bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
   bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
 }
@@ -1844,6 +2051,9 @@ export type ProductVariantUpdateWithoutPosItemsInput = {
   receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
 }
@@ -1864,6 +2074,333 @@ export type ProductVariantUncheckedUpdateWithoutPosItemsInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
+  bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
+  bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
+}
+
+export type ProductVariantCreateWithoutReturnItemsInput = {
+  id?: string
+  sku: string
+  name: string
+  active?: boolean
+  createdAt?: Date | string
+  product: Prisma.ProductCreateNestedOneWithoutVariantsInput
+  attributes?: Prisma.AttributeValueCreateNestedManyWithoutVariantInput
+  barcodes?: Prisma.ProductBarcodeCreateNestedManyWithoutVariantInput
+  prices?: Prisma.PriceCreateNestedManyWithoutVariantInput
+  balances?: Prisma.InventoryBalanceCreateNestedManyWithoutVariantInput
+  movements?: Prisma.InventoryMovementCreateNestedManyWithoutVariantInput
+  poItems?: Prisma.PurchaseOrderItemCreateNestedManyWithoutVariantInput
+  receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
+  transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
+  orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
+  posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
+  bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
+  bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
+}
+
+export type ProductVariantUncheckedCreateWithoutReturnItemsInput = {
+  id?: string
+  sku: string
+  productId: string
+  name: string
+  active?: boolean
+  createdAt?: Date | string
+  attributes?: Prisma.AttributeValueUncheckedCreateNestedManyWithoutVariantInput
+  barcodes?: Prisma.ProductBarcodeUncheckedCreateNestedManyWithoutVariantInput
+  prices?: Prisma.PriceUncheckedCreateNestedManyWithoutVariantInput
+  balances?: Prisma.InventoryBalanceUncheckedCreateNestedManyWithoutVariantInput
+  movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutVariantInput
+  poItems?: Prisma.PurchaseOrderItemUncheckedCreateNestedManyWithoutVariantInput
+  receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
+  transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
+  orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
+  posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
+  bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
+  bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
+}
+
+export type ProductVariantCreateOrConnectWithoutReturnItemsInput = {
+  where: Prisma.ProductVariantWhereUniqueInput
+  create: Prisma.XOR<Prisma.ProductVariantCreateWithoutReturnItemsInput, Prisma.ProductVariantUncheckedCreateWithoutReturnItemsInput>
+}
+
+export type ProductVariantUpsertWithoutReturnItemsInput = {
+  update: Prisma.XOR<Prisma.ProductVariantUpdateWithoutReturnItemsInput, Prisma.ProductVariantUncheckedUpdateWithoutReturnItemsInput>
+  create: Prisma.XOR<Prisma.ProductVariantCreateWithoutReturnItemsInput, Prisma.ProductVariantUncheckedCreateWithoutReturnItemsInput>
+  where?: Prisma.ProductVariantWhereInput
+}
+
+export type ProductVariantUpdateToOneWithWhereWithoutReturnItemsInput = {
+  where?: Prisma.ProductVariantWhereInput
+  data: Prisma.XOR<Prisma.ProductVariantUpdateWithoutReturnItemsInput, Prisma.ProductVariantUncheckedUpdateWithoutReturnItemsInput>
+}
+
+export type ProductVariantUpdateWithoutReturnItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sku?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  product?: Prisma.ProductUpdateOneRequiredWithoutVariantsNestedInput
+  attributes?: Prisma.AttributeValueUpdateManyWithoutVariantNestedInput
+  barcodes?: Prisma.ProductBarcodeUpdateManyWithoutVariantNestedInput
+  prices?: Prisma.PriceUpdateManyWithoutVariantNestedInput
+  balances?: Prisma.InventoryBalanceUpdateManyWithoutVariantNestedInput
+  movements?: Prisma.InventoryMovementUpdateManyWithoutVariantNestedInput
+  poItems?: Prisma.PurchaseOrderItemUpdateManyWithoutVariantNestedInput
+  receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
+  transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
+  orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
+  posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
+  bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
+  bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
+}
+
+export type ProductVariantUncheckedUpdateWithoutReturnItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sku?: Prisma.StringFieldUpdateOperationsInput | string
+  productId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  attributes?: Prisma.AttributeValueUncheckedUpdateManyWithoutVariantNestedInput
+  barcodes?: Prisma.ProductBarcodeUncheckedUpdateManyWithoutVariantNestedInput
+  prices?: Prisma.PriceUncheckedUpdateManyWithoutVariantNestedInput
+  balances?: Prisma.InventoryBalanceUncheckedUpdateManyWithoutVariantNestedInput
+  movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutVariantNestedInput
+  poItems?: Prisma.PurchaseOrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
+  transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
+  orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
+  posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
+  bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
+  bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
+}
+
+export type ProductVariantCreateWithoutSupplierReturnItemsInput = {
+  id?: string
+  sku: string
+  name: string
+  active?: boolean
+  createdAt?: Date | string
+  product: Prisma.ProductCreateNestedOneWithoutVariantsInput
+  attributes?: Prisma.AttributeValueCreateNestedManyWithoutVariantInput
+  barcodes?: Prisma.ProductBarcodeCreateNestedManyWithoutVariantInput
+  prices?: Prisma.PriceCreateNestedManyWithoutVariantInput
+  balances?: Prisma.InventoryBalanceCreateNestedManyWithoutVariantInput
+  movements?: Prisma.InventoryMovementCreateNestedManyWithoutVariantInput
+  poItems?: Prisma.PurchaseOrderItemCreateNestedManyWithoutVariantInput
+  receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
+  transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
+  orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemCreateNestedManyWithoutVariantInput
+  posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
+  bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
+  bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
+}
+
+export type ProductVariantUncheckedCreateWithoutSupplierReturnItemsInput = {
+  id?: string
+  sku: string
+  productId: string
+  name: string
+  active?: boolean
+  createdAt?: Date | string
+  attributes?: Prisma.AttributeValueUncheckedCreateNestedManyWithoutVariantInput
+  barcodes?: Prisma.ProductBarcodeUncheckedCreateNestedManyWithoutVariantInput
+  prices?: Prisma.PriceUncheckedCreateNestedManyWithoutVariantInput
+  balances?: Prisma.InventoryBalanceUncheckedCreateNestedManyWithoutVariantInput
+  movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutVariantInput
+  poItems?: Prisma.PurchaseOrderItemUncheckedCreateNestedManyWithoutVariantInput
+  receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
+  transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
+  orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedCreateNestedManyWithoutVariantInput
+  posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
+  bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
+  bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
+}
+
+export type ProductVariantCreateOrConnectWithoutSupplierReturnItemsInput = {
+  where: Prisma.ProductVariantWhereUniqueInput
+  create: Prisma.XOR<Prisma.ProductVariantCreateWithoutSupplierReturnItemsInput, Prisma.ProductVariantUncheckedCreateWithoutSupplierReturnItemsInput>
+}
+
+export type ProductVariantUpsertWithoutSupplierReturnItemsInput = {
+  update: Prisma.XOR<Prisma.ProductVariantUpdateWithoutSupplierReturnItemsInput, Prisma.ProductVariantUncheckedUpdateWithoutSupplierReturnItemsInput>
+  create: Prisma.XOR<Prisma.ProductVariantCreateWithoutSupplierReturnItemsInput, Prisma.ProductVariantUncheckedCreateWithoutSupplierReturnItemsInput>
+  where?: Prisma.ProductVariantWhereInput
+}
+
+export type ProductVariantUpdateToOneWithWhereWithoutSupplierReturnItemsInput = {
+  where?: Prisma.ProductVariantWhereInput
+  data: Prisma.XOR<Prisma.ProductVariantUpdateWithoutSupplierReturnItemsInput, Prisma.ProductVariantUncheckedUpdateWithoutSupplierReturnItemsInput>
+}
+
+export type ProductVariantUpdateWithoutSupplierReturnItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sku?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  product?: Prisma.ProductUpdateOneRequiredWithoutVariantsNestedInput
+  attributes?: Prisma.AttributeValueUpdateManyWithoutVariantNestedInput
+  barcodes?: Prisma.ProductBarcodeUpdateManyWithoutVariantNestedInput
+  prices?: Prisma.PriceUpdateManyWithoutVariantNestedInput
+  balances?: Prisma.InventoryBalanceUpdateManyWithoutVariantNestedInput
+  movements?: Prisma.InventoryMovementUpdateManyWithoutVariantNestedInput
+  poItems?: Prisma.PurchaseOrderItemUpdateManyWithoutVariantNestedInput
+  receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
+  transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
+  orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
+  posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
+  bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
+  bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
+}
+
+export type ProductVariantUncheckedUpdateWithoutSupplierReturnItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sku?: Prisma.StringFieldUpdateOperationsInput | string
+  productId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  attributes?: Prisma.AttributeValueUncheckedUpdateManyWithoutVariantNestedInput
+  barcodes?: Prisma.ProductBarcodeUncheckedUpdateManyWithoutVariantNestedInput
+  prices?: Prisma.PriceUncheckedUpdateManyWithoutVariantNestedInput
+  balances?: Prisma.InventoryBalanceUncheckedUpdateManyWithoutVariantNestedInput
+  movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutVariantNestedInput
+  poItems?: Prisma.PurchaseOrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
+  transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
+  orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
+  posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
+  bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
+  bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
+}
+
+export type ProductVariantCreateWithoutInventoryCountItemsInput = {
+  id?: string
+  sku: string
+  name: string
+  active?: boolean
+  createdAt?: Date | string
+  product: Prisma.ProductCreateNestedOneWithoutVariantsInput
+  attributes?: Prisma.AttributeValueCreateNestedManyWithoutVariantInput
+  barcodes?: Prisma.ProductBarcodeCreateNestedManyWithoutVariantInput
+  prices?: Prisma.PriceCreateNestedManyWithoutVariantInput
+  balances?: Prisma.InventoryBalanceCreateNestedManyWithoutVariantInput
+  movements?: Prisma.InventoryMovementCreateNestedManyWithoutVariantInput
+  poItems?: Prisma.PurchaseOrderItemCreateNestedManyWithoutVariantInput
+  receiptItems?: Prisma.GoodsReceiptItemCreateNestedManyWithoutVariantInput
+  transferItems?: Prisma.StockTransferItemCreateNestedManyWithoutVariantInput
+  orderItems?: Prisma.OrderItemCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemCreateNestedManyWithoutVariantInput
+  posItems?: Prisma.PosTransactionItemCreateNestedManyWithoutVariantInput
+  bundleItems?: Prisma.BundleItemCreateNestedManyWithoutComponentInput
+  bundles?: Prisma.BundleItemCreateNestedManyWithoutVariantInput
+}
+
+export type ProductVariantUncheckedCreateWithoutInventoryCountItemsInput = {
+  id?: string
+  sku: string
+  productId: string
+  name: string
+  active?: boolean
+  createdAt?: Date | string
+  attributes?: Prisma.AttributeValueUncheckedCreateNestedManyWithoutVariantInput
+  barcodes?: Prisma.ProductBarcodeUncheckedCreateNestedManyWithoutVariantInput
+  prices?: Prisma.PriceUncheckedCreateNestedManyWithoutVariantInput
+  balances?: Prisma.InventoryBalanceUncheckedCreateNestedManyWithoutVariantInput
+  movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutVariantInput
+  poItems?: Prisma.PurchaseOrderItemUncheckedCreateNestedManyWithoutVariantInput
+  receiptItems?: Prisma.GoodsReceiptItemUncheckedCreateNestedManyWithoutVariantInput
+  transferItems?: Prisma.StockTransferItemUncheckedCreateNestedManyWithoutVariantInput
+  orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVariantInput
+  returnItems?: Prisma.ReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedCreateNestedManyWithoutVariantInput
+  posItems?: Prisma.PosTransactionItemUncheckedCreateNestedManyWithoutVariantInput
+  bundleItems?: Prisma.BundleItemUncheckedCreateNestedManyWithoutComponentInput
+  bundles?: Prisma.BundleItemUncheckedCreateNestedManyWithoutVariantInput
+}
+
+export type ProductVariantCreateOrConnectWithoutInventoryCountItemsInput = {
+  where: Prisma.ProductVariantWhereUniqueInput
+  create: Prisma.XOR<Prisma.ProductVariantCreateWithoutInventoryCountItemsInput, Prisma.ProductVariantUncheckedCreateWithoutInventoryCountItemsInput>
+}
+
+export type ProductVariantUpsertWithoutInventoryCountItemsInput = {
+  update: Prisma.XOR<Prisma.ProductVariantUpdateWithoutInventoryCountItemsInput, Prisma.ProductVariantUncheckedUpdateWithoutInventoryCountItemsInput>
+  create: Prisma.XOR<Prisma.ProductVariantCreateWithoutInventoryCountItemsInput, Prisma.ProductVariantUncheckedCreateWithoutInventoryCountItemsInput>
+  where?: Prisma.ProductVariantWhereInput
+}
+
+export type ProductVariantUpdateToOneWithWhereWithoutInventoryCountItemsInput = {
+  where?: Prisma.ProductVariantWhereInput
+  data: Prisma.XOR<Prisma.ProductVariantUpdateWithoutInventoryCountItemsInput, Prisma.ProductVariantUncheckedUpdateWithoutInventoryCountItemsInput>
+}
+
+export type ProductVariantUpdateWithoutInventoryCountItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sku?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  product?: Prisma.ProductUpdateOneRequiredWithoutVariantsNestedInput
+  attributes?: Prisma.AttributeValueUpdateManyWithoutVariantNestedInput
+  barcodes?: Prisma.ProductBarcodeUpdateManyWithoutVariantNestedInput
+  prices?: Prisma.PriceUpdateManyWithoutVariantNestedInput
+  balances?: Prisma.InventoryBalanceUpdateManyWithoutVariantNestedInput
+  movements?: Prisma.InventoryMovementUpdateManyWithoutVariantNestedInput
+  poItems?: Prisma.PurchaseOrderItemUpdateManyWithoutVariantNestedInput
+  receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
+  transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
+  orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
+  bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
+  bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
+}
+
+export type ProductVariantUncheckedUpdateWithoutInventoryCountItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sku?: Prisma.StringFieldUpdateOperationsInput | string
+  productId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  attributes?: Prisma.AttributeValueUncheckedUpdateManyWithoutVariantNestedInput
+  barcodes?: Prisma.ProductBarcodeUncheckedUpdateManyWithoutVariantNestedInput
+  prices?: Prisma.PriceUncheckedUpdateManyWithoutVariantNestedInput
+  balances?: Prisma.InventoryBalanceUncheckedUpdateManyWithoutVariantNestedInput
+  movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutVariantNestedInput
+  poItems?: Prisma.PurchaseOrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
+  transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
+  orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
 }
@@ -1891,6 +2428,9 @@ export type ProductVariantUpdateWithoutProductInput = {
   receiptItems?: Prisma.GoodsReceiptItemUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUpdateManyWithoutVariantNestedInput
@@ -1911,6 +2451,9 @@ export type ProductVariantUncheckedUpdateWithoutProductInput = {
   receiptItems?: Prisma.GoodsReceiptItemUncheckedUpdateManyWithoutVariantNestedInput
   transferItems?: Prisma.StockTransferItemUncheckedUpdateManyWithoutVariantNestedInput
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVariantNestedInput
+  returnItems?: Prisma.ReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  supplierReturnItems?: Prisma.SupplierReturnItemUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryCountItems?: Prisma.InventoryCountItemUncheckedUpdateManyWithoutVariantNestedInput
   posItems?: Prisma.PosTransactionItemUncheckedUpdateManyWithoutVariantNestedInput
   bundleItems?: Prisma.BundleItemUncheckedUpdateManyWithoutComponentNestedInput
   bundles?: Prisma.BundleItemUncheckedUpdateManyWithoutVariantNestedInput
@@ -1939,6 +2482,9 @@ export type ProductVariantCountOutputType = {
   receiptItems: number
   transferItems: number
   orderItems: number
+  returnItems: number
+  supplierReturnItems: number
+  inventoryCountItems: number
   posItems: number
   bundleItems: number
   bundles: number
@@ -1954,6 +2500,9 @@ export type ProductVariantCountOutputTypeSelect<ExtArgs extends runtime.Types.Ex
   receiptItems?: boolean | ProductVariantCountOutputTypeCountReceiptItemsArgs
   transferItems?: boolean | ProductVariantCountOutputTypeCountTransferItemsArgs
   orderItems?: boolean | ProductVariantCountOutputTypeCountOrderItemsArgs
+  returnItems?: boolean | ProductVariantCountOutputTypeCountReturnItemsArgs
+  supplierReturnItems?: boolean | ProductVariantCountOutputTypeCountSupplierReturnItemsArgs
+  inventoryCountItems?: boolean | ProductVariantCountOutputTypeCountInventoryCountItemsArgs
   posItems?: boolean | ProductVariantCountOutputTypeCountPosItemsArgs
   bundleItems?: boolean | ProductVariantCountOutputTypeCountBundleItemsArgs
   bundles?: boolean | ProductVariantCountOutputTypeCountBundlesArgs
@@ -2035,6 +2584,27 @@ export type ProductVariantCountOutputTypeCountOrderItemsArgs<ExtArgs extends run
 /**
  * ProductVariantCountOutputType without action
  */
+export type ProductVariantCountOutputTypeCountReturnItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ReturnItemWhereInput
+}
+
+/**
+ * ProductVariantCountOutputType without action
+ */
+export type ProductVariantCountOutputTypeCountSupplierReturnItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SupplierReturnItemWhereInput
+}
+
+/**
+ * ProductVariantCountOutputType without action
+ */
+export type ProductVariantCountOutputTypeCountInventoryCountItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.InventoryCountItemWhereInput
+}
+
+/**
+ * ProductVariantCountOutputType without action
+ */
 export type ProductVariantCountOutputTypeCountPosItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.PosTransactionItemWhereInput
 }
@@ -2071,6 +2641,9 @@ export type ProductVariantSelect<ExtArgs extends runtime.Types.Extensions.Intern
   receiptItems?: boolean | Prisma.ProductVariant$receiptItemsArgs<ExtArgs>
   transferItems?: boolean | Prisma.ProductVariant$transferItemsArgs<ExtArgs>
   orderItems?: boolean | Prisma.ProductVariant$orderItemsArgs<ExtArgs>
+  returnItems?: boolean | Prisma.ProductVariant$returnItemsArgs<ExtArgs>
+  supplierReturnItems?: boolean | Prisma.ProductVariant$supplierReturnItemsArgs<ExtArgs>
+  inventoryCountItems?: boolean | Prisma.ProductVariant$inventoryCountItemsArgs<ExtArgs>
   posItems?: boolean | Prisma.ProductVariant$posItemsArgs<ExtArgs>
   bundleItems?: boolean | Prisma.ProductVariant$bundleItemsArgs<ExtArgs>
   bundles?: boolean | Prisma.ProductVariant$bundlesArgs<ExtArgs>
@@ -2118,6 +2691,9 @@ export type ProductVariantInclude<ExtArgs extends runtime.Types.Extensions.Inter
   receiptItems?: boolean | Prisma.ProductVariant$receiptItemsArgs<ExtArgs>
   transferItems?: boolean | Prisma.ProductVariant$transferItemsArgs<ExtArgs>
   orderItems?: boolean | Prisma.ProductVariant$orderItemsArgs<ExtArgs>
+  returnItems?: boolean | Prisma.ProductVariant$returnItemsArgs<ExtArgs>
+  supplierReturnItems?: boolean | Prisma.ProductVariant$supplierReturnItemsArgs<ExtArgs>
+  inventoryCountItems?: boolean | Prisma.ProductVariant$inventoryCountItemsArgs<ExtArgs>
   posItems?: boolean | Prisma.ProductVariant$posItemsArgs<ExtArgs>
   bundleItems?: boolean | Prisma.ProductVariant$bundleItemsArgs<ExtArgs>
   bundles?: boolean | Prisma.ProductVariant$bundlesArgs<ExtArgs>
@@ -2143,6 +2719,9 @@ export type $ProductVariantPayload<ExtArgs extends runtime.Types.Extensions.Inte
     receiptItems: Prisma.$GoodsReceiptItemPayload<ExtArgs>[]
     transferItems: Prisma.$StockTransferItemPayload<ExtArgs>[]
     orderItems: Prisma.$OrderItemPayload<ExtArgs>[]
+    returnItems: Prisma.$ReturnItemPayload<ExtArgs>[]
+    supplierReturnItems: Prisma.$SupplierReturnItemPayload<ExtArgs>[]
+    inventoryCountItems: Prisma.$InventoryCountItemPayload<ExtArgs>[]
     posItems: Prisma.$PosTransactionItemPayload<ExtArgs>[]
     bundleItems: Prisma.$BundleItemPayload<ExtArgs>[]
     bundles: Prisma.$BundleItemPayload<ExtArgs>[]
@@ -2558,6 +3137,9 @@ export interface Prisma__ProductVariantClient<T, Null = never, ExtArgs extends r
   receiptItems<T extends Prisma.ProductVariant$receiptItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductVariant$receiptItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GoodsReceiptItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   transferItems<T extends Prisma.ProductVariant$transferItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductVariant$transferItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StockTransferItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   orderItems<T extends Prisma.ProductVariant$orderItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductVariant$orderItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  returnItems<T extends Prisma.ProductVariant$returnItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductVariant$returnItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReturnItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  supplierReturnItems<T extends Prisma.ProductVariant$supplierReturnItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductVariant$supplierReturnItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SupplierReturnItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  inventoryCountItems<T extends Prisma.ProductVariant$inventoryCountItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductVariant$inventoryCountItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InventoryCountItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   posItems<T extends Prisma.ProductVariant$posItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductVariant$posItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PosTransactionItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   bundleItems<T extends Prisma.ProductVariant$bundleItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductVariant$bundleItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BundleItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   bundles<T extends Prisma.ProductVariant$bundlesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductVariant$bundlesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BundleItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -3210,6 +3792,78 @@ export type ProductVariant$orderItemsArgs<ExtArgs extends runtime.Types.Extensio
   take?: number
   skip?: number
   distinct?: Prisma.OrderItemScalarFieldEnum | Prisma.OrderItemScalarFieldEnum[]
+}
+
+/**
+ * ProductVariant.returnItems
+ */
+export type ProductVariant$returnItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ReturnItem
+   */
+  select?: Prisma.ReturnItemSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ReturnItem
+   */
+  omit?: Prisma.ReturnItemOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ReturnItemInclude<ExtArgs> | null
+  where?: Prisma.ReturnItemWhereInput
+  orderBy?: Prisma.ReturnItemOrderByWithRelationInput | Prisma.ReturnItemOrderByWithRelationInput[]
+  cursor?: Prisma.ReturnItemWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ReturnItemScalarFieldEnum | Prisma.ReturnItemScalarFieldEnum[]
+}
+
+/**
+ * ProductVariant.supplierReturnItems
+ */
+export type ProductVariant$supplierReturnItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SupplierReturnItem
+   */
+  select?: Prisma.SupplierReturnItemSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SupplierReturnItem
+   */
+  omit?: Prisma.SupplierReturnItemOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SupplierReturnItemInclude<ExtArgs> | null
+  where?: Prisma.SupplierReturnItemWhereInput
+  orderBy?: Prisma.SupplierReturnItemOrderByWithRelationInput | Prisma.SupplierReturnItemOrderByWithRelationInput[]
+  cursor?: Prisma.SupplierReturnItemWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SupplierReturnItemScalarFieldEnum | Prisma.SupplierReturnItemScalarFieldEnum[]
+}
+
+/**
+ * ProductVariant.inventoryCountItems
+ */
+export type ProductVariant$inventoryCountItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the InventoryCountItem
+   */
+  select?: Prisma.InventoryCountItemSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the InventoryCountItem
+   */
+  omit?: Prisma.InventoryCountItemOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.InventoryCountItemInclude<ExtArgs> | null
+  where?: Prisma.InventoryCountItemWhereInput
+  orderBy?: Prisma.InventoryCountItemOrderByWithRelationInput | Prisma.InventoryCountItemOrderByWithRelationInput[]
+  cursor?: Prisma.InventoryCountItemWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.InventoryCountItemScalarFieldEnum | Prisma.InventoryCountItemScalarFieldEnum[]
 }
 
 /**

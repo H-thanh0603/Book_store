@@ -248,6 +248,51 @@ export type PosTransactionItem = Prisma.PosTransactionItemModel
  */
 export type Payment = Prisma.PaymentModel
 /**
+ * Model Shipment
+ * 
+ */
+export type Shipment = Prisma.ShipmentModel
+/**
+ * Model Return
+ * 
+ */
+export type Return = Prisma.ReturnModel
+/**
+ * Model ReturnItem
+ * 
+ */
+export type ReturnItem = Prisma.ReturnItemModel
+/**
+ * Model GiftCard
+ * 
+ */
+export type GiftCard = Prisma.GiftCardModel
+/**
+ * Model GiftCardTransaction
+ * 
+ */
+export type GiftCardTransaction = Prisma.GiftCardTransactionModel
+/**
+ * Model SupplierReturn
+ * 
+ */
+export type SupplierReturn = Prisma.SupplierReturnModel
+/**
+ * Model SupplierReturnItem
+ * 
+ */
+export type SupplierReturnItem = Prisma.SupplierReturnItemModel
+/**
+ * Model InventoryCount
+ * 
+ */
+export type InventoryCount = Prisma.InventoryCountModel
+/**
+ * Model InventoryCountItem
+ * 
+ */
+export type InventoryCountItem = Prisma.InventoryCountItemModel
+/**
  * Model AuditLog
  * 
  */

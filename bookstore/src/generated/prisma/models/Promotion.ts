@@ -49,6 +49,7 @@ export type PromotionSumAggregateOutputType = {
 export type PromotionMinAggregateOutputType = {
   id: string | null
   name: string | null
+  code: string | null
   type: $Enums.PromoType | null
   value: bigint | null
   buyQty: number | null
@@ -69,6 +70,7 @@ export type PromotionMinAggregateOutputType = {
 export type PromotionMaxAggregateOutputType = {
   id: string | null
   name: string | null
+  code: string | null
   type: $Enums.PromoType | null
   value: bigint | null
   buyQty: number | null
@@ -89,6 +91,7 @@ export type PromotionMaxAggregateOutputType = {
 export type PromotionCountAggregateOutputType = {
   id: number
   name: number
+  code: number
   type: number
   value: number
   buyQty: number
@@ -131,6 +134,7 @@ export type PromotionSumAggregateInputType = {
 export type PromotionMinAggregateInputType = {
   id?: true
   name?: true
+  code?: true
   type?: true
   value?: true
   buyQty?: true
@@ -151,6 +155,7 @@ export type PromotionMinAggregateInputType = {
 export type PromotionMaxAggregateInputType = {
   id?: true
   name?: true
+  code?: true
   type?: true
   value?: true
   buyQty?: true
@@ -171,6 +176,7 @@ export type PromotionMaxAggregateInputType = {
 export type PromotionCountAggregateInputType = {
   id?: true
   name?: true
+  code?: true
   type?: true
   value?: true
   buyQty?: true
@@ -278,6 +284,7 @@ export type PromotionGroupByArgs<ExtArgs extends runtime.Types.Extensions.Intern
 export type PromotionGroupByOutputType = {
   id: string
   name: string
+  code: string | null
   type: $Enums.PromoType
   value: bigint
   buyQty: number | null
@@ -321,6 +328,7 @@ export type PromotionWhereInput = {
   NOT?: Prisma.PromotionWhereInput | Prisma.PromotionWhereInput[]
   id?: Prisma.StringFilter<"Promotion"> | string
   name?: Prisma.StringFilter<"Promotion"> | string
+  code?: Prisma.StringNullableFilter<"Promotion"> | string | null
   type?: Prisma.EnumPromoTypeFilter<"Promotion"> | $Enums.PromoType
   value?: Prisma.BigIntFilter<"Promotion"> | bigint | number
   buyQty?: Prisma.IntNullableFilter<"Promotion"> | number | null
@@ -343,6 +351,7 @@ export type PromotionWhereInput = {
 export type PromotionOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  code?: Prisma.SortOrderInput | Prisma.SortOrder
   type?: Prisma.SortOrder
   value?: Prisma.SortOrder
   buyQty?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -364,6 +373,7 @@ export type PromotionOrderByWithRelationInput = {
 
 export type PromotionWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  code?: string
   AND?: Prisma.PromotionWhereInput | Prisma.PromotionWhereInput[]
   OR?: Prisma.PromotionWhereInput[]
   NOT?: Prisma.PromotionWhereInput | Prisma.PromotionWhereInput[]
@@ -385,11 +395,12 @@ export type PromotionWhereUniqueInput = Prisma.AtLeast<{
   endAt?: Prisma.DateTimeNullableFilter<"Promotion"> | Date | string | null
   category?: Prisma.XOR<Prisma.CategoryNullableScalarRelationFilter, Prisma.CategoryWhereInput> | null
   stores?: Prisma.PromotionStoreListRelationFilter
-}, "id">
+}, "id" | "code">
 
 export type PromotionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  code?: Prisma.SortOrderInput | Prisma.SortOrder
   type?: Prisma.SortOrder
   value?: Prisma.SortOrder
   buyQty?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -418,6 +429,7 @@ export type PromotionScalarWhereWithAggregatesInput = {
   NOT?: Prisma.PromotionScalarWhereWithAggregatesInput | Prisma.PromotionScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Promotion"> | string
   name?: Prisma.StringWithAggregatesFilter<"Promotion"> | string
+  code?: Prisma.StringNullableWithAggregatesFilter<"Promotion"> | string | null
   type?: Prisma.EnumPromoTypeWithAggregatesFilter<"Promotion"> | $Enums.PromoType
   value?: Prisma.BigIntWithAggregatesFilter<"Promotion"> | bigint | number
   buyQty?: Prisma.IntNullableWithAggregatesFilter<"Promotion"> | number | null
@@ -438,6 +450,7 @@ export type PromotionScalarWhereWithAggregatesInput = {
 export type PromotionCreateInput = {
   id?: string
   name: string
+  code?: string | null
   type: $Enums.PromoType
   value: bigint | number
   buyQty?: number | null
@@ -459,6 +472,7 @@ export type PromotionCreateInput = {
 export type PromotionUncheckedCreateInput = {
   id?: string
   name: string
+  code?: string | null
   type: $Enums.PromoType
   value: bigint | number
   buyQty?: number | null
@@ -480,6 +494,7 @@ export type PromotionUncheckedCreateInput = {
 export type PromotionUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.EnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType
   value?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   buyQty?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -501,6 +516,7 @@ export type PromotionUpdateInput = {
 export type PromotionUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.EnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType
   value?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   buyQty?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -522,6 +538,7 @@ export type PromotionUncheckedUpdateInput = {
 export type PromotionCreateManyInput = {
   id?: string
   name: string
+  code?: string | null
   type: $Enums.PromoType
   value: bigint | number
   buyQty?: number | null
@@ -542,6 +559,7 @@ export type PromotionCreateManyInput = {
 export type PromotionUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.EnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType
   value?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   buyQty?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -561,6 +579,7 @@ export type PromotionUpdateManyMutationInput = {
 export type PromotionUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.EnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType
   value?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   buyQty?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -591,6 +610,7 @@ export type PromotionOrderByRelationAggregateInput = {
 export type PromotionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  code?: Prisma.SortOrder
   type?: Prisma.SortOrder
   value?: Prisma.SortOrder
   buyQty?: Prisma.SortOrder
@@ -621,6 +641,7 @@ export type PromotionAvgOrderByAggregateInput = {
 export type PromotionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  code?: Prisma.SortOrder
   type?: Prisma.SortOrder
   value?: Prisma.SortOrder
   buyQty?: Prisma.SortOrder
@@ -641,6 +662,7 @@ export type PromotionMaxOrderByAggregateInput = {
 export type PromotionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  code?: Prisma.SortOrder
   type?: Prisma.SortOrder
   value?: Prisma.SortOrder
   buyQty?: Prisma.SortOrder
@@ -740,6 +762,7 @@ export type PromotionUpdateOneRequiredWithoutStoresNestedInput = {
 export type PromotionCreateWithoutCategoryInput = {
   id?: string
   name: string
+  code?: string | null
   type: $Enums.PromoType
   value: bigint | number
   buyQty?: number | null
@@ -760,6 +783,7 @@ export type PromotionCreateWithoutCategoryInput = {
 export type PromotionUncheckedCreateWithoutCategoryInput = {
   id?: string
   name: string
+  code?: string | null
   type: $Enums.PromoType
   value: bigint | number
   buyQty?: number | null
@@ -809,6 +833,7 @@ export type PromotionScalarWhereInput = {
   NOT?: Prisma.PromotionScalarWhereInput | Prisma.PromotionScalarWhereInput[]
   id?: Prisma.StringFilter<"Promotion"> | string
   name?: Prisma.StringFilter<"Promotion"> | string
+  code?: Prisma.StringNullableFilter<"Promotion"> | string | null
   type?: Prisma.EnumPromoTypeFilter<"Promotion"> | $Enums.PromoType
   value?: Prisma.BigIntFilter<"Promotion"> | bigint | number
   buyQty?: Prisma.IntNullableFilter<"Promotion"> | number | null
@@ -829,6 +854,7 @@ export type PromotionScalarWhereInput = {
 export type PromotionCreateWithoutStoresInput = {
   id?: string
   name: string
+  code?: string | null
   type: $Enums.PromoType
   value: bigint | number
   buyQty?: number | null
@@ -849,6 +875,7 @@ export type PromotionCreateWithoutStoresInput = {
 export type PromotionUncheckedCreateWithoutStoresInput = {
   id?: string
   name: string
+  code?: string | null
   type: $Enums.PromoType
   value: bigint | number
   buyQty?: number | null
@@ -885,6 +912,7 @@ export type PromotionUpdateToOneWithWhereWithoutStoresInput = {
 export type PromotionUpdateWithoutStoresInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.EnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType
   value?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   buyQty?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -905,6 +933,7 @@ export type PromotionUpdateWithoutStoresInput = {
 export type PromotionUncheckedUpdateWithoutStoresInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.EnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType
   value?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   buyQty?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -925,6 +954,7 @@ export type PromotionUncheckedUpdateWithoutStoresInput = {
 export type PromotionCreateManyCategoryInput = {
   id?: string
   name: string
+  code?: string | null
   type: $Enums.PromoType
   value: bigint | number
   buyQty?: number | null
@@ -944,6 +974,7 @@ export type PromotionCreateManyCategoryInput = {
 export type PromotionUpdateWithoutCategoryInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.EnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType
   value?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   buyQty?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -964,6 +995,7 @@ export type PromotionUpdateWithoutCategoryInput = {
 export type PromotionUncheckedUpdateWithoutCategoryInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.EnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType
   value?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   buyQty?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -984,6 +1016,7 @@ export type PromotionUncheckedUpdateWithoutCategoryInput = {
 export type PromotionUncheckedUpdateManyWithoutCategoryInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.EnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType
   value?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   buyQty?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1034,6 +1067,7 @@ export type PromotionCountOutputTypeCountStoresArgs<ExtArgs extends runtime.Type
 export type PromotionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  code?: boolean
   type?: boolean
   value?: boolean
   buyQty?: boolean
@@ -1057,6 +1091,7 @@ export type PromotionSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
 export type PromotionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  code?: boolean
   type?: boolean
   value?: boolean
   buyQty?: boolean
@@ -1078,6 +1113,7 @@ export type PromotionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
 export type PromotionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  code?: boolean
   type?: boolean
   value?: boolean
   buyQty?: boolean
@@ -1099,6 +1135,7 @@ export type PromotionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
 export type PromotionSelectScalar = {
   id?: boolean
   name?: boolean
+  code?: boolean
   type?: boolean
   value?: boolean
   buyQty?: boolean
@@ -1116,7 +1153,7 @@ export type PromotionSelectScalar = {
   endAt?: boolean
 }
 
-export type PromotionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "type" | "value" | "buyQty" | "getQty" | "categoryId" | "minQty" | "channel" | "stackable" | "usageLimit" | "usedCount" | "memberOnly" | "priority" | "active" | "startAt" | "endAt", ExtArgs["result"]["promotion"]>
+export type PromotionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "code" | "type" | "value" | "buyQty" | "getQty" | "categoryId" | "minQty" | "channel" | "stackable" | "usageLimit" | "usedCount" | "memberOnly" | "priority" | "active" | "startAt" | "endAt", ExtArgs["result"]["promotion"]>
 export type PromotionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   category?: boolean | Prisma.Promotion$categoryArgs<ExtArgs>
   stores?: boolean | Prisma.Promotion$storesArgs<ExtArgs>
@@ -1138,6 +1175,7 @@ export type $PromotionPayload<ExtArgs extends runtime.Types.Extensions.InternalA
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     name: string
+    code: string | null
     type: $Enums.PromoType
     value: bigint
     buyQty: number | null
@@ -1580,6 +1618,7 @@ export interface Prisma__PromotionClient<T, Null = never, ExtArgs extends runtim
 export interface PromotionFieldRefs {
   readonly id: Prisma.FieldRef<"Promotion", 'String'>
   readonly name: Prisma.FieldRef<"Promotion", 'String'>
+  readonly code: Prisma.FieldRef<"Promotion", 'String'>
   readonly type: Prisma.FieldRef<"Promotion", 'PromoType'>
   readonly value: Prisma.FieldRef<"Promotion", 'BigInt'>
   readonly buyQty: Prisma.FieldRef<"Promotion", 'Int'>

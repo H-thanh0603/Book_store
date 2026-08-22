@@ -200,6 +200,7 @@ export type CustomerWhereInput = {
   address?: Prisma.StringNullableFilter<"Customer"> | string | null
   loyalty?: Prisma.XOR<Prisma.LoyaltyAccountNullableScalarRelationFilter, Prisma.LoyaltyAccountWhereInput> | null
   orders?: Prisma.OrderListRelationFilter
+  returns?: Prisma.ReturnListRelationFilter
   posTransactions?: Prisma.PosTransactionListRelationFilter
 }
 
@@ -213,6 +214,7 @@ export type CustomerOrderByWithRelationInput = {
   address?: Prisma.SortOrderInput | Prisma.SortOrder
   loyalty?: Prisma.LoyaltyAccountOrderByWithRelationInput
   orders?: Prisma.OrderOrderByRelationAggregateInput
+  returns?: Prisma.ReturnOrderByRelationAggregateInput
   posTransactions?: Prisma.PosTransactionOrderByRelationAggregateInput
 }
 
@@ -229,6 +231,7 @@ export type CustomerWhereUniqueInput = Prisma.AtLeast<{
   address?: Prisma.StringNullableFilter<"Customer"> | string | null
   loyalty?: Prisma.XOR<Prisma.LoyaltyAccountNullableScalarRelationFilter, Prisma.LoyaltyAccountWhereInput> | null
   orders?: Prisma.OrderListRelationFilter
+  returns?: Prisma.ReturnListRelationFilter
   posTransactions?: Prisma.PosTransactionListRelationFilter
 }, "id" | "code" | "phone">
 
@@ -268,6 +271,7 @@ export type CustomerCreateInput = {
   address?: string | null
   loyalty?: Prisma.LoyaltyAccountCreateNestedOneWithoutCustomerInput
   orders?: Prisma.OrderCreateNestedManyWithoutCustomerInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutCustomerInput
   posTransactions?: Prisma.PosTransactionCreateNestedManyWithoutCustomerInput
 }
 
@@ -281,6 +285,7 @@ export type CustomerUncheckedCreateInput = {
   address?: string | null
   loyalty?: Prisma.LoyaltyAccountUncheckedCreateNestedOneWithoutCustomerInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutCustomerInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutCustomerInput
   posTransactions?: Prisma.PosTransactionUncheckedCreateNestedManyWithoutCustomerInput
 }
 
@@ -294,6 +299,7 @@ export type CustomerUpdateInput = {
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   loyalty?: Prisma.LoyaltyAccountUpdateOneWithoutCustomerNestedInput
   orders?: Prisma.OrderUpdateManyWithoutCustomerNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutCustomerNestedInput
   posTransactions?: Prisma.PosTransactionUpdateManyWithoutCustomerNestedInput
 }
 
@@ -307,6 +313,7 @@ export type CustomerUncheckedUpdateInput = {
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   loyalty?: Prisma.LoyaltyAccountUncheckedUpdateOneWithoutCustomerNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutCustomerNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutCustomerNestedInput
   posTransactions?: Prisma.PosTransactionUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
@@ -424,6 +431,22 @@ export type CustomerUpdateOneWithoutPosTransactionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.CustomerUpdateToOneWithWhereWithoutPosTransactionsInput, Prisma.CustomerUpdateWithoutPosTransactionsInput>, Prisma.CustomerUncheckedUpdateWithoutPosTransactionsInput>
 }
 
+export type CustomerCreateNestedOneWithoutReturnsInput = {
+  create?: Prisma.XOR<Prisma.CustomerCreateWithoutReturnsInput, Prisma.CustomerUncheckedCreateWithoutReturnsInput>
+  connectOrCreate?: Prisma.CustomerCreateOrConnectWithoutReturnsInput
+  connect?: Prisma.CustomerWhereUniqueInput
+}
+
+export type CustomerUpdateOneWithoutReturnsNestedInput = {
+  create?: Prisma.XOR<Prisma.CustomerCreateWithoutReturnsInput, Prisma.CustomerUncheckedCreateWithoutReturnsInput>
+  connectOrCreate?: Prisma.CustomerCreateOrConnectWithoutReturnsInput
+  upsert?: Prisma.CustomerUpsertWithoutReturnsInput
+  disconnect?: Prisma.CustomerWhereInput | boolean
+  delete?: Prisma.CustomerWhereInput | boolean
+  connect?: Prisma.CustomerWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.CustomerUpdateToOneWithWhereWithoutReturnsInput, Prisma.CustomerUpdateWithoutReturnsInput>, Prisma.CustomerUncheckedUpdateWithoutReturnsInput>
+}
+
 export type CustomerCreateWithoutLoyaltyInput = {
   id?: string
   code: string
@@ -433,6 +456,7 @@ export type CustomerCreateWithoutLoyaltyInput = {
   birthday?: Date | string | null
   address?: string | null
   orders?: Prisma.OrderCreateNestedManyWithoutCustomerInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutCustomerInput
   posTransactions?: Prisma.PosTransactionCreateNestedManyWithoutCustomerInput
 }
 
@@ -445,6 +469,7 @@ export type CustomerUncheckedCreateWithoutLoyaltyInput = {
   birthday?: Date | string | null
   address?: string | null
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutCustomerInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutCustomerInput
   posTransactions?: Prisma.PosTransactionUncheckedCreateNestedManyWithoutCustomerInput
 }
 
@@ -473,6 +498,7 @@ export type CustomerUpdateWithoutLoyaltyInput = {
   birthday?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   orders?: Prisma.OrderUpdateManyWithoutCustomerNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutCustomerNestedInput
   posTransactions?: Prisma.PosTransactionUpdateManyWithoutCustomerNestedInput
 }
 
@@ -485,6 +511,7 @@ export type CustomerUncheckedUpdateWithoutLoyaltyInput = {
   birthday?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   orders?: Prisma.OrderUncheckedUpdateManyWithoutCustomerNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutCustomerNestedInput
   posTransactions?: Prisma.PosTransactionUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
@@ -497,6 +524,7 @@ export type CustomerCreateWithoutOrdersInput = {
   birthday?: Date | string | null
   address?: string | null
   loyalty?: Prisma.LoyaltyAccountCreateNestedOneWithoutCustomerInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutCustomerInput
   posTransactions?: Prisma.PosTransactionCreateNestedManyWithoutCustomerInput
 }
 
@@ -509,6 +537,7 @@ export type CustomerUncheckedCreateWithoutOrdersInput = {
   birthday?: Date | string | null
   address?: string | null
   loyalty?: Prisma.LoyaltyAccountUncheckedCreateNestedOneWithoutCustomerInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutCustomerInput
   posTransactions?: Prisma.PosTransactionUncheckedCreateNestedManyWithoutCustomerInput
 }
 
@@ -537,6 +566,7 @@ export type CustomerUpdateWithoutOrdersInput = {
   birthday?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   loyalty?: Prisma.LoyaltyAccountUpdateOneWithoutCustomerNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutCustomerNestedInput
   posTransactions?: Prisma.PosTransactionUpdateManyWithoutCustomerNestedInput
 }
 
@@ -549,6 +579,7 @@ export type CustomerUncheckedUpdateWithoutOrdersInput = {
   birthday?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   loyalty?: Prisma.LoyaltyAccountUncheckedUpdateOneWithoutCustomerNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutCustomerNestedInput
   posTransactions?: Prisma.PosTransactionUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
@@ -562,6 +593,7 @@ export type CustomerCreateWithoutPosTransactionsInput = {
   address?: string | null
   loyalty?: Prisma.LoyaltyAccountCreateNestedOneWithoutCustomerInput
   orders?: Prisma.OrderCreateNestedManyWithoutCustomerInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerUncheckedCreateWithoutPosTransactionsInput = {
@@ -574,6 +606,7 @@ export type CustomerUncheckedCreateWithoutPosTransactionsInput = {
   address?: string | null
   loyalty?: Prisma.LoyaltyAccountUncheckedCreateNestedOneWithoutCustomerInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutCustomerInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutCustomerInput
 }
 
 export type CustomerCreateOrConnectWithoutPosTransactionsInput = {
@@ -602,6 +635,7 @@ export type CustomerUpdateWithoutPosTransactionsInput = {
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   loyalty?: Prisma.LoyaltyAccountUpdateOneWithoutCustomerNestedInput
   orders?: Prisma.OrderUpdateManyWithoutCustomerNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutCustomerNestedInput
 }
 
 export type CustomerUncheckedUpdateWithoutPosTransactionsInput = {
@@ -614,6 +648,75 @@ export type CustomerUncheckedUpdateWithoutPosTransactionsInput = {
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   loyalty?: Prisma.LoyaltyAccountUncheckedUpdateOneWithoutCustomerNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutCustomerNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutCustomerNestedInput
+}
+
+export type CustomerCreateWithoutReturnsInput = {
+  id?: string
+  code: string
+  name: string
+  phone: string
+  email?: string | null
+  birthday?: Date | string | null
+  address?: string | null
+  loyalty?: Prisma.LoyaltyAccountCreateNestedOneWithoutCustomerInput
+  orders?: Prisma.OrderCreateNestedManyWithoutCustomerInput
+  posTransactions?: Prisma.PosTransactionCreateNestedManyWithoutCustomerInput
+}
+
+export type CustomerUncheckedCreateWithoutReturnsInput = {
+  id?: string
+  code: string
+  name: string
+  phone: string
+  email?: string | null
+  birthday?: Date | string | null
+  address?: string | null
+  loyalty?: Prisma.LoyaltyAccountUncheckedCreateNestedOneWithoutCustomerInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutCustomerInput
+  posTransactions?: Prisma.PosTransactionUncheckedCreateNestedManyWithoutCustomerInput
+}
+
+export type CustomerCreateOrConnectWithoutReturnsInput = {
+  where: Prisma.CustomerWhereUniqueInput
+  create: Prisma.XOR<Prisma.CustomerCreateWithoutReturnsInput, Prisma.CustomerUncheckedCreateWithoutReturnsInput>
+}
+
+export type CustomerUpsertWithoutReturnsInput = {
+  update: Prisma.XOR<Prisma.CustomerUpdateWithoutReturnsInput, Prisma.CustomerUncheckedUpdateWithoutReturnsInput>
+  create: Prisma.XOR<Prisma.CustomerCreateWithoutReturnsInput, Prisma.CustomerUncheckedCreateWithoutReturnsInput>
+  where?: Prisma.CustomerWhereInput
+}
+
+export type CustomerUpdateToOneWithWhereWithoutReturnsInput = {
+  where?: Prisma.CustomerWhereInput
+  data: Prisma.XOR<Prisma.CustomerUpdateWithoutReturnsInput, Prisma.CustomerUncheckedUpdateWithoutReturnsInput>
+}
+
+export type CustomerUpdateWithoutReturnsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  birthday?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  loyalty?: Prisma.LoyaltyAccountUpdateOneWithoutCustomerNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutCustomerNestedInput
+  posTransactions?: Prisma.PosTransactionUpdateManyWithoutCustomerNestedInput
+}
+
+export type CustomerUncheckedUpdateWithoutReturnsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  birthday?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  loyalty?: Prisma.LoyaltyAccountUncheckedUpdateOneWithoutCustomerNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutCustomerNestedInput
+  posTransactions?: Prisma.PosTransactionUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 
@@ -623,11 +726,13 @@ export type CustomerUncheckedUpdateWithoutPosTransactionsInput = {
 
 export type CustomerCountOutputType = {
   orders: number
+  returns: number
   posTransactions: number
 }
 
 export type CustomerCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   orders?: boolean | CustomerCountOutputTypeCountOrdersArgs
+  returns?: boolean | CustomerCountOutputTypeCountReturnsArgs
   posTransactions?: boolean | CustomerCountOutputTypeCountPosTransactionsArgs
 }
 
@@ -651,6 +756,13 @@ export type CustomerCountOutputTypeCountOrdersArgs<ExtArgs extends runtime.Types
 /**
  * CustomerCountOutputType without action
  */
+export type CustomerCountOutputTypeCountReturnsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ReturnWhereInput
+}
+
+/**
+ * CustomerCountOutputType without action
+ */
 export type CustomerCountOutputTypeCountPosTransactionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.PosTransactionWhereInput
 }
@@ -666,6 +778,7 @@ export type CustomerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   address?: boolean
   loyalty?: boolean | Prisma.Customer$loyaltyArgs<ExtArgs>
   orders?: boolean | Prisma.Customer$ordersArgs<ExtArgs>
+  returns?: boolean | Prisma.Customer$returnsArgs<ExtArgs>
   posTransactions?: boolean | Prisma.Customer$posTransactionsArgs<ExtArgs>
   _count?: boolean | Prisma.CustomerCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["customer"]>
@@ -704,6 +817,7 @@ export type CustomerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs =
 export type CustomerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   loyalty?: boolean | Prisma.Customer$loyaltyArgs<ExtArgs>
   orders?: boolean | Prisma.Customer$ordersArgs<ExtArgs>
+  returns?: boolean | Prisma.Customer$returnsArgs<ExtArgs>
   posTransactions?: boolean | Prisma.Customer$posTransactionsArgs<ExtArgs>
   _count?: boolean | Prisma.CustomerCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -715,6 +829,7 @@ export type $CustomerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
   objects: {
     loyalty: Prisma.$LoyaltyAccountPayload<ExtArgs> | null
     orders: Prisma.$OrderPayload<ExtArgs>[]
+    returns: Prisma.$ReturnPayload<ExtArgs>[]
     posTransactions: Prisma.$PosTransactionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1121,6 +1236,7 @@ export interface Prisma__CustomerClient<T, Null = never, ExtArgs extends runtime
   readonly [Symbol.toStringTag]: "PrismaPromise"
   loyalty<T extends Prisma.Customer$loyaltyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Customer$loyaltyArgs<ExtArgs>>): Prisma.Prisma__LoyaltyAccountClient<runtime.Types.Result.GetResult<Prisma.$LoyaltyAccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   orders<T extends Prisma.Customer$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Customer$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  returns<T extends Prisma.Customer$returnsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Customer$returnsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReturnPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   posTransactions<T extends Prisma.Customer$posTransactionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Customer$posTransactionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PosTransactionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1591,6 +1707,30 @@ export type Customer$ordersArgs<ExtArgs extends runtime.Types.Extensions.Interna
   take?: number
   skip?: number
   distinct?: Prisma.OrderScalarFieldEnum | Prisma.OrderScalarFieldEnum[]
+}
+
+/**
+ * Customer.returns
+ */
+export type Customer$returnsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Return
+   */
+  select?: Prisma.ReturnSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Return
+   */
+  omit?: Prisma.ReturnOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ReturnInclude<ExtArgs> | null
+  where?: Prisma.ReturnWhereInput
+  orderBy?: Prisma.ReturnOrderByWithRelationInput | Prisma.ReturnOrderByWithRelationInput[]
+  cursor?: Prisma.ReturnWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ReturnScalarFieldEnum | Prisma.ReturnScalarFieldEnum[]
 }
 
 /**

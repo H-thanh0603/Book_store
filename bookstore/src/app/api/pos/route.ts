@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
         redeemPoints: body.redeemPoints,
         payments: body.payments.map((p: any) => ({
           method: p.method, amount: toMoney(p.amount, "payment.amount"), idempotencyKey: p.idempotencyKey,
+          giftCardCode: p.giftCardCode,
         })),
       });
       // audit

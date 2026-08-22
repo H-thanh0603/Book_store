@@ -236,6 +236,13 @@ async function main() {
     },
   });
 
+  // SystemConfig (spec §101) — loyalty rate: 10.000 VND = 1 point
+  await prisma.systemConfig.upsert({
+    where: { key: "loyalty.vndPerPoint" },
+    create: { key: "loyalty.vndPerPoint", value: 10000 },
+    update: {},
+  });
+
   console.log("Seed done:", {
     stores: stores.length, products: products.length, suppliers: suppliers.length,
   });

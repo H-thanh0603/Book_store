@@ -48,9 +48,12 @@ export async function applyMovement(
   `;
   const bal = updated[0];
   if (!bal) fail(500, "INTERNAL", "Balance row missing");
-  if (!allowNegative && bal.onHand < 0) {
+  if (!allowNegative && bal.onHand - bal.reserved < 0) {
     fail(409, "INSUFFICIENT_STOCK", "Insufficient available stock", {
-      variantId, locationId, requested: -quantityDelta, available: bal.onHand - quantityDelta,
+      variantId,
+      locationId,
+      requested: Math.max(-quantityDelta, reservedDelta),
+      available: bal.onHand - quantityDelta - (bal.reserved - reservedDelta),
     });
   }
 

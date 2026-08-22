@@ -206,6 +206,9 @@ export type StockLocationWhereInput = {
   movements?: Prisma.InventoryMovementListRelationFilter
   transfersOut?: Prisma.StockTransferListRelationFilter
   transfersIn?: Prisma.StockTransferListRelationFilter
+  returns?: Prisma.ReturnListRelationFilter
+  supplierReturns?: Prisma.SupplierReturnListRelationFilter
+  inventoryCounts?: Prisma.InventoryCountListRelationFilter
 }
 
 export type StockLocationOrderByWithRelationInput = {
@@ -224,6 +227,9 @@ export type StockLocationOrderByWithRelationInput = {
   movements?: Prisma.InventoryMovementOrderByRelationAggregateInput
   transfersOut?: Prisma.StockTransferOrderByRelationAggregateInput
   transfersIn?: Prisma.StockTransferOrderByRelationAggregateInput
+  returns?: Prisma.ReturnOrderByRelationAggregateInput
+  supplierReturns?: Prisma.SupplierReturnOrderByRelationAggregateInput
+  inventoryCounts?: Prisma.InventoryCountOrderByRelationAggregateInput
 }
 
 export type StockLocationWhereUniqueInput = Prisma.AtLeast<{
@@ -245,6 +251,9 @@ export type StockLocationWhereUniqueInput = Prisma.AtLeast<{
   movements?: Prisma.InventoryMovementListRelationFilter
   transfersOut?: Prisma.StockTransferListRelationFilter
   transfersIn?: Prisma.StockTransferListRelationFilter
+  returns?: Prisma.ReturnListRelationFilter
+  supplierReturns?: Prisma.SupplierReturnListRelationFilter
+  inventoryCounts?: Prisma.InventoryCountListRelationFilter
 }, "id">
 
 export type StockLocationOrderByWithAggregationInput = {
@@ -286,6 +295,9 @@ export type StockLocationCreateInput = {
   movements?: Prisma.InventoryMovementCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationUncheckedCreateInput = {
@@ -301,6 +313,9 @@ export type StockLocationUncheckedCreateInput = {
   movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferUncheckedCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferUncheckedCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationUpdateInput = {
@@ -316,6 +331,9 @@ export type StockLocationUpdateInput = {
   movements?: Prisma.InventoryMovementUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUncheckedUpdateInput = {
@@ -331,6 +349,9 @@ export type StockLocationUncheckedUpdateInput = {
   movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUncheckedUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUncheckedUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationCreateManyInput = {
@@ -612,6 +633,48 @@ export type StockLocationUpdateOneRequiredWithoutTransfersInNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.StockLocationUpdateToOneWithWhereWithoutTransfersInInput, Prisma.StockLocationUpdateWithoutTransfersInInput>, Prisma.StockLocationUncheckedUpdateWithoutTransfersInInput>
 }
 
+export type StockLocationCreateNestedOneWithoutReturnsInput = {
+  create?: Prisma.XOR<Prisma.StockLocationCreateWithoutReturnsInput, Prisma.StockLocationUncheckedCreateWithoutReturnsInput>
+  connectOrCreate?: Prisma.StockLocationCreateOrConnectWithoutReturnsInput
+  connect?: Prisma.StockLocationWhereUniqueInput
+}
+
+export type StockLocationUpdateOneRequiredWithoutReturnsNestedInput = {
+  create?: Prisma.XOR<Prisma.StockLocationCreateWithoutReturnsInput, Prisma.StockLocationUncheckedCreateWithoutReturnsInput>
+  connectOrCreate?: Prisma.StockLocationCreateOrConnectWithoutReturnsInput
+  upsert?: Prisma.StockLocationUpsertWithoutReturnsInput
+  connect?: Prisma.StockLocationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StockLocationUpdateToOneWithWhereWithoutReturnsInput, Prisma.StockLocationUpdateWithoutReturnsInput>, Prisma.StockLocationUncheckedUpdateWithoutReturnsInput>
+}
+
+export type StockLocationCreateNestedOneWithoutSupplierReturnsInput = {
+  create?: Prisma.XOR<Prisma.StockLocationCreateWithoutSupplierReturnsInput, Prisma.StockLocationUncheckedCreateWithoutSupplierReturnsInput>
+  connectOrCreate?: Prisma.StockLocationCreateOrConnectWithoutSupplierReturnsInput
+  connect?: Prisma.StockLocationWhereUniqueInput
+}
+
+export type StockLocationUpdateOneRequiredWithoutSupplierReturnsNestedInput = {
+  create?: Prisma.XOR<Prisma.StockLocationCreateWithoutSupplierReturnsInput, Prisma.StockLocationUncheckedCreateWithoutSupplierReturnsInput>
+  connectOrCreate?: Prisma.StockLocationCreateOrConnectWithoutSupplierReturnsInput
+  upsert?: Prisma.StockLocationUpsertWithoutSupplierReturnsInput
+  connect?: Prisma.StockLocationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StockLocationUpdateToOneWithWhereWithoutSupplierReturnsInput, Prisma.StockLocationUpdateWithoutSupplierReturnsInput>, Prisma.StockLocationUncheckedUpdateWithoutSupplierReturnsInput>
+}
+
+export type StockLocationCreateNestedOneWithoutInventoryCountsInput = {
+  create?: Prisma.XOR<Prisma.StockLocationCreateWithoutInventoryCountsInput, Prisma.StockLocationUncheckedCreateWithoutInventoryCountsInput>
+  connectOrCreate?: Prisma.StockLocationCreateOrConnectWithoutInventoryCountsInput
+  connect?: Prisma.StockLocationWhereUniqueInput
+}
+
+export type StockLocationUpdateOneRequiredWithoutInventoryCountsNestedInput = {
+  create?: Prisma.XOR<Prisma.StockLocationCreateWithoutInventoryCountsInput, Prisma.StockLocationUncheckedCreateWithoutInventoryCountsInput>
+  connectOrCreate?: Prisma.StockLocationCreateOrConnectWithoutInventoryCountsInput
+  upsert?: Prisma.StockLocationUpsertWithoutInventoryCountsInput
+  connect?: Prisma.StockLocationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StockLocationUpdateToOneWithWhereWithoutInventoryCountsInput, Prisma.StockLocationUpdateWithoutInventoryCountsInput>, Prisma.StockLocationUncheckedUpdateWithoutInventoryCountsInput>
+}
+
 export type StockLocationCreateWithoutStoreInput = {
   id?: string
   name: string
@@ -624,6 +687,9 @@ export type StockLocationCreateWithoutStoreInput = {
   movements?: Prisma.InventoryMovementCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationUncheckedCreateWithoutStoreInput = {
@@ -638,6 +704,9 @@ export type StockLocationUncheckedCreateWithoutStoreInput = {
   movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferUncheckedCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferUncheckedCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationCreateOrConnectWithoutStoreInput = {
@@ -691,6 +760,9 @@ export type StockLocationCreateWithoutWarehouseInput = {
   movements?: Prisma.InventoryMovementCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationUncheckedCreateWithoutWarehouseInput = {
@@ -705,6 +777,9 @@ export type StockLocationUncheckedCreateWithoutWarehouseInput = {
   movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferUncheckedCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferUncheckedCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationCreateOrConnectWithoutWarehouseInput = {
@@ -745,6 +820,9 @@ export type StockLocationCreateWithoutChildrenInput = {
   movements?: Prisma.InventoryMovementCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationUncheckedCreateWithoutChildrenInput = {
@@ -759,6 +837,9 @@ export type StockLocationUncheckedCreateWithoutChildrenInput = {
   movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferUncheckedCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferUncheckedCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationCreateOrConnectWithoutChildrenInput = {
@@ -778,6 +859,9 @@ export type StockLocationCreateWithoutParentInput = {
   movements?: Prisma.InventoryMovementCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationUncheckedCreateWithoutParentInput = {
@@ -792,6 +876,9 @@ export type StockLocationUncheckedCreateWithoutParentInput = {
   movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferUncheckedCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferUncheckedCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationCreateOrConnectWithoutParentInput = {
@@ -827,6 +914,9 @@ export type StockLocationUpdateWithoutChildrenInput = {
   movements?: Prisma.InventoryMovementUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUncheckedUpdateWithoutChildrenInput = {
@@ -841,6 +931,9 @@ export type StockLocationUncheckedUpdateWithoutChildrenInput = {
   movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUncheckedUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUncheckedUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUpsertWithWhereUniqueWithoutParentInput = {
@@ -871,6 +964,9 @@ export type StockLocationCreateWithoutBalancesInput = {
   movements?: Prisma.InventoryMovementCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationUncheckedCreateWithoutBalancesInput = {
@@ -885,6 +981,9 @@ export type StockLocationUncheckedCreateWithoutBalancesInput = {
   movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferUncheckedCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferUncheckedCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationCreateOrConnectWithoutBalancesInput = {
@@ -915,6 +1014,9 @@ export type StockLocationUpdateWithoutBalancesInput = {
   movements?: Prisma.InventoryMovementUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUncheckedUpdateWithoutBalancesInput = {
@@ -929,6 +1031,9 @@ export type StockLocationUncheckedUpdateWithoutBalancesInput = {
   movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUncheckedUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUncheckedUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationCreateWithoutMovementsInput = {
@@ -943,6 +1048,9 @@ export type StockLocationCreateWithoutMovementsInput = {
   balances?: Prisma.InventoryBalanceCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationUncheckedCreateWithoutMovementsInput = {
@@ -957,6 +1065,9 @@ export type StockLocationUncheckedCreateWithoutMovementsInput = {
   balances?: Prisma.InventoryBalanceUncheckedCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferUncheckedCreateNestedManyWithoutFromLocationInput
   transfersIn?: Prisma.StockTransferUncheckedCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationCreateOrConnectWithoutMovementsInput = {
@@ -987,6 +1098,9 @@ export type StockLocationUpdateWithoutMovementsInput = {
   balances?: Prisma.InventoryBalanceUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUncheckedUpdateWithoutMovementsInput = {
@@ -1001,6 +1115,9 @@ export type StockLocationUncheckedUpdateWithoutMovementsInput = {
   balances?: Prisma.InventoryBalanceUncheckedUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUncheckedUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUncheckedUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationCreateWithoutTransfersOutInput = {
@@ -1015,6 +1132,9 @@ export type StockLocationCreateWithoutTransfersOutInput = {
   balances?: Prisma.InventoryBalanceCreateNestedManyWithoutLocationInput
   movements?: Prisma.InventoryMovementCreateNestedManyWithoutLocationInput
   transfersIn?: Prisma.StockTransferCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationUncheckedCreateWithoutTransfersOutInput = {
@@ -1029,6 +1149,9 @@ export type StockLocationUncheckedCreateWithoutTransfersOutInput = {
   balances?: Prisma.InventoryBalanceUncheckedCreateNestedManyWithoutLocationInput
   movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutLocationInput
   transfersIn?: Prisma.StockTransferUncheckedCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationCreateOrConnectWithoutTransfersOutInput = {
@@ -1048,6 +1171,9 @@ export type StockLocationCreateWithoutTransfersInInput = {
   balances?: Prisma.InventoryBalanceCreateNestedManyWithoutLocationInput
   movements?: Prisma.InventoryMovementCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferCreateNestedManyWithoutFromLocationInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationUncheckedCreateWithoutTransfersInInput = {
@@ -1062,6 +1188,9 @@ export type StockLocationUncheckedCreateWithoutTransfersInInput = {
   balances?: Prisma.InventoryBalanceUncheckedCreateNestedManyWithoutLocationInput
   movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutLocationInput
   transfersOut?: Prisma.StockTransferUncheckedCreateNestedManyWithoutFromLocationInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedCreateNestedManyWithoutLocationInput
 }
 
 export type StockLocationCreateOrConnectWithoutTransfersInInput = {
@@ -1092,6 +1221,9 @@ export type StockLocationUpdateWithoutTransfersOutInput = {
   balances?: Prisma.InventoryBalanceUpdateManyWithoutLocationNestedInput
   movements?: Prisma.InventoryMovementUpdateManyWithoutLocationNestedInput
   transfersIn?: Prisma.StockTransferUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUncheckedUpdateWithoutTransfersOutInput = {
@@ -1106,6 +1238,9 @@ export type StockLocationUncheckedUpdateWithoutTransfersOutInput = {
   balances?: Prisma.InventoryBalanceUncheckedUpdateManyWithoutLocationNestedInput
   movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutLocationNestedInput
   transfersIn?: Prisma.StockTransferUncheckedUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUpsertWithoutTransfersInInput = {
@@ -1131,6 +1266,9 @@ export type StockLocationUpdateWithoutTransfersInInput = {
   balances?: Prisma.InventoryBalanceUpdateManyWithoutLocationNestedInput
   movements?: Prisma.InventoryMovementUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUpdateManyWithoutFromLocationNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUncheckedUpdateWithoutTransfersInInput = {
@@ -1145,6 +1283,261 @@ export type StockLocationUncheckedUpdateWithoutTransfersInInput = {
   balances?: Prisma.InventoryBalanceUncheckedUpdateManyWithoutLocationNestedInput
   movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUncheckedUpdateManyWithoutFromLocationNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedUpdateManyWithoutLocationNestedInput
+}
+
+export type StockLocationCreateWithoutReturnsInput = {
+  id?: string
+  name: string
+  type: string
+  active?: boolean
+  store?: Prisma.StoreCreateNestedOneWithoutStockLocationsInput
+  warehouse?: Prisma.WarehouseCreateNestedOneWithoutStockLocationsInput
+  parent?: Prisma.StockLocationCreateNestedOneWithoutChildrenInput
+  children?: Prisma.StockLocationCreateNestedManyWithoutParentInput
+  balances?: Prisma.InventoryBalanceCreateNestedManyWithoutLocationInput
+  movements?: Prisma.InventoryMovementCreateNestedManyWithoutLocationInput
+  transfersOut?: Prisma.StockTransferCreateNestedManyWithoutFromLocationInput
+  transfersIn?: Prisma.StockTransferCreateNestedManyWithoutToLocationInput
+  supplierReturns?: Prisma.SupplierReturnCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountCreateNestedManyWithoutLocationInput
+}
+
+export type StockLocationUncheckedCreateWithoutReturnsInput = {
+  id?: string
+  name: string
+  type: string
+  storeId?: string | null
+  warehouseId?: string | null
+  parentId?: string | null
+  active?: boolean
+  children?: Prisma.StockLocationUncheckedCreateNestedManyWithoutParentInput
+  balances?: Prisma.InventoryBalanceUncheckedCreateNestedManyWithoutLocationInput
+  movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutLocationInput
+  transfersOut?: Prisma.StockTransferUncheckedCreateNestedManyWithoutFromLocationInput
+  transfersIn?: Prisma.StockTransferUncheckedCreateNestedManyWithoutToLocationInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedCreateNestedManyWithoutLocationInput
+}
+
+export type StockLocationCreateOrConnectWithoutReturnsInput = {
+  where: Prisma.StockLocationWhereUniqueInput
+  create: Prisma.XOR<Prisma.StockLocationCreateWithoutReturnsInput, Prisma.StockLocationUncheckedCreateWithoutReturnsInput>
+}
+
+export type StockLocationUpsertWithoutReturnsInput = {
+  update: Prisma.XOR<Prisma.StockLocationUpdateWithoutReturnsInput, Prisma.StockLocationUncheckedUpdateWithoutReturnsInput>
+  create: Prisma.XOR<Prisma.StockLocationCreateWithoutReturnsInput, Prisma.StockLocationUncheckedCreateWithoutReturnsInput>
+  where?: Prisma.StockLocationWhereInput
+}
+
+export type StockLocationUpdateToOneWithWhereWithoutReturnsInput = {
+  where?: Prisma.StockLocationWhereInput
+  data: Prisma.XOR<Prisma.StockLocationUpdateWithoutReturnsInput, Prisma.StockLocationUncheckedUpdateWithoutReturnsInput>
+}
+
+export type StockLocationUpdateWithoutReturnsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.StoreUpdateOneWithoutStockLocationsNestedInput
+  warehouse?: Prisma.WarehouseUpdateOneWithoutStockLocationsNestedInput
+  parent?: Prisma.StockLocationUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.StockLocationUpdateManyWithoutParentNestedInput
+  balances?: Prisma.InventoryBalanceUpdateManyWithoutLocationNestedInput
+  movements?: Prisma.InventoryMovementUpdateManyWithoutLocationNestedInput
+  transfersOut?: Prisma.StockTransferUpdateManyWithoutFromLocationNestedInput
+  transfersIn?: Prisma.StockTransferUpdateManyWithoutToLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUpdateManyWithoutLocationNestedInput
+}
+
+export type StockLocationUncheckedUpdateWithoutReturnsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  storeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  warehouseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  children?: Prisma.StockLocationUncheckedUpdateManyWithoutParentNestedInput
+  balances?: Prisma.InventoryBalanceUncheckedUpdateManyWithoutLocationNestedInput
+  movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutLocationNestedInput
+  transfersOut?: Prisma.StockTransferUncheckedUpdateManyWithoutFromLocationNestedInput
+  transfersIn?: Prisma.StockTransferUncheckedUpdateManyWithoutToLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedUpdateManyWithoutLocationNestedInput
+}
+
+export type StockLocationCreateWithoutSupplierReturnsInput = {
+  id?: string
+  name: string
+  type: string
+  active?: boolean
+  store?: Prisma.StoreCreateNestedOneWithoutStockLocationsInput
+  warehouse?: Prisma.WarehouseCreateNestedOneWithoutStockLocationsInput
+  parent?: Prisma.StockLocationCreateNestedOneWithoutChildrenInput
+  children?: Prisma.StockLocationCreateNestedManyWithoutParentInput
+  balances?: Prisma.InventoryBalanceCreateNestedManyWithoutLocationInput
+  movements?: Prisma.InventoryMovementCreateNestedManyWithoutLocationInput
+  transfersOut?: Prisma.StockTransferCreateNestedManyWithoutFromLocationInput
+  transfersIn?: Prisma.StockTransferCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountCreateNestedManyWithoutLocationInput
+}
+
+export type StockLocationUncheckedCreateWithoutSupplierReturnsInput = {
+  id?: string
+  name: string
+  type: string
+  storeId?: string | null
+  warehouseId?: string | null
+  parentId?: string | null
+  active?: boolean
+  children?: Prisma.StockLocationUncheckedCreateNestedManyWithoutParentInput
+  balances?: Prisma.InventoryBalanceUncheckedCreateNestedManyWithoutLocationInput
+  movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutLocationInput
+  transfersOut?: Prisma.StockTransferUncheckedCreateNestedManyWithoutFromLocationInput
+  transfersIn?: Prisma.StockTransferUncheckedCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutLocationInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedCreateNestedManyWithoutLocationInput
+}
+
+export type StockLocationCreateOrConnectWithoutSupplierReturnsInput = {
+  where: Prisma.StockLocationWhereUniqueInput
+  create: Prisma.XOR<Prisma.StockLocationCreateWithoutSupplierReturnsInput, Prisma.StockLocationUncheckedCreateWithoutSupplierReturnsInput>
+}
+
+export type StockLocationUpsertWithoutSupplierReturnsInput = {
+  update: Prisma.XOR<Prisma.StockLocationUpdateWithoutSupplierReturnsInput, Prisma.StockLocationUncheckedUpdateWithoutSupplierReturnsInput>
+  create: Prisma.XOR<Prisma.StockLocationCreateWithoutSupplierReturnsInput, Prisma.StockLocationUncheckedCreateWithoutSupplierReturnsInput>
+  where?: Prisma.StockLocationWhereInput
+}
+
+export type StockLocationUpdateToOneWithWhereWithoutSupplierReturnsInput = {
+  where?: Prisma.StockLocationWhereInput
+  data: Prisma.XOR<Prisma.StockLocationUpdateWithoutSupplierReturnsInput, Prisma.StockLocationUncheckedUpdateWithoutSupplierReturnsInput>
+}
+
+export type StockLocationUpdateWithoutSupplierReturnsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.StoreUpdateOneWithoutStockLocationsNestedInput
+  warehouse?: Prisma.WarehouseUpdateOneWithoutStockLocationsNestedInput
+  parent?: Prisma.StockLocationUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.StockLocationUpdateManyWithoutParentNestedInput
+  balances?: Prisma.InventoryBalanceUpdateManyWithoutLocationNestedInput
+  movements?: Prisma.InventoryMovementUpdateManyWithoutLocationNestedInput
+  transfersOut?: Prisma.StockTransferUpdateManyWithoutFromLocationNestedInput
+  transfersIn?: Prisma.StockTransferUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUpdateManyWithoutLocationNestedInput
+}
+
+export type StockLocationUncheckedUpdateWithoutSupplierReturnsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  storeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  warehouseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  children?: Prisma.StockLocationUncheckedUpdateManyWithoutParentNestedInput
+  balances?: Prisma.InventoryBalanceUncheckedUpdateManyWithoutLocationNestedInput
+  movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutLocationNestedInput
+  transfersOut?: Prisma.StockTransferUncheckedUpdateManyWithoutFromLocationNestedInput
+  transfersIn?: Prisma.StockTransferUncheckedUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedUpdateManyWithoutLocationNestedInput
+}
+
+export type StockLocationCreateWithoutInventoryCountsInput = {
+  id?: string
+  name: string
+  type: string
+  active?: boolean
+  store?: Prisma.StoreCreateNestedOneWithoutStockLocationsInput
+  warehouse?: Prisma.WarehouseCreateNestedOneWithoutStockLocationsInput
+  parent?: Prisma.StockLocationCreateNestedOneWithoutChildrenInput
+  children?: Prisma.StockLocationCreateNestedManyWithoutParentInput
+  balances?: Prisma.InventoryBalanceCreateNestedManyWithoutLocationInput
+  movements?: Prisma.InventoryMovementCreateNestedManyWithoutLocationInput
+  transfersOut?: Prisma.StockTransferCreateNestedManyWithoutFromLocationInput
+  transfersIn?: Prisma.StockTransferCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnCreateNestedManyWithoutLocationInput
+}
+
+export type StockLocationUncheckedCreateWithoutInventoryCountsInput = {
+  id?: string
+  name: string
+  type: string
+  storeId?: string | null
+  warehouseId?: string | null
+  parentId?: string | null
+  active?: boolean
+  children?: Prisma.StockLocationUncheckedCreateNestedManyWithoutParentInput
+  balances?: Prisma.InventoryBalanceUncheckedCreateNestedManyWithoutLocationInput
+  movements?: Prisma.InventoryMovementUncheckedCreateNestedManyWithoutLocationInput
+  transfersOut?: Prisma.StockTransferUncheckedCreateNestedManyWithoutFromLocationInput
+  transfersIn?: Prisma.StockTransferUncheckedCreateNestedManyWithoutToLocationInput
+  returns?: Prisma.ReturnUncheckedCreateNestedManyWithoutLocationInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedCreateNestedManyWithoutLocationInput
+}
+
+export type StockLocationCreateOrConnectWithoutInventoryCountsInput = {
+  where: Prisma.StockLocationWhereUniqueInput
+  create: Prisma.XOR<Prisma.StockLocationCreateWithoutInventoryCountsInput, Prisma.StockLocationUncheckedCreateWithoutInventoryCountsInput>
+}
+
+export type StockLocationUpsertWithoutInventoryCountsInput = {
+  update: Prisma.XOR<Prisma.StockLocationUpdateWithoutInventoryCountsInput, Prisma.StockLocationUncheckedUpdateWithoutInventoryCountsInput>
+  create: Prisma.XOR<Prisma.StockLocationCreateWithoutInventoryCountsInput, Prisma.StockLocationUncheckedCreateWithoutInventoryCountsInput>
+  where?: Prisma.StockLocationWhereInput
+}
+
+export type StockLocationUpdateToOneWithWhereWithoutInventoryCountsInput = {
+  where?: Prisma.StockLocationWhereInput
+  data: Prisma.XOR<Prisma.StockLocationUpdateWithoutInventoryCountsInput, Prisma.StockLocationUncheckedUpdateWithoutInventoryCountsInput>
+}
+
+export type StockLocationUpdateWithoutInventoryCountsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.StoreUpdateOneWithoutStockLocationsNestedInput
+  warehouse?: Prisma.WarehouseUpdateOneWithoutStockLocationsNestedInput
+  parent?: Prisma.StockLocationUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.StockLocationUpdateManyWithoutParentNestedInput
+  balances?: Prisma.InventoryBalanceUpdateManyWithoutLocationNestedInput
+  movements?: Prisma.InventoryMovementUpdateManyWithoutLocationNestedInput
+  transfersOut?: Prisma.StockTransferUpdateManyWithoutFromLocationNestedInput
+  transfersIn?: Prisma.StockTransferUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUpdateManyWithoutLocationNestedInput
+}
+
+export type StockLocationUncheckedUpdateWithoutInventoryCountsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  storeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  warehouseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  children?: Prisma.StockLocationUncheckedUpdateManyWithoutParentNestedInput
+  balances?: Prisma.InventoryBalanceUncheckedUpdateManyWithoutLocationNestedInput
+  movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutLocationNestedInput
+  transfersOut?: Prisma.StockTransferUncheckedUpdateManyWithoutFromLocationNestedInput
+  transfersIn?: Prisma.StockTransferUncheckedUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationCreateManyStoreInput = {
@@ -1168,6 +1561,9 @@ export type StockLocationUpdateWithoutStoreInput = {
   movements?: Prisma.InventoryMovementUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUncheckedUpdateWithoutStoreInput = {
@@ -1182,6 +1578,9 @@ export type StockLocationUncheckedUpdateWithoutStoreInput = {
   movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUncheckedUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUncheckedUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUncheckedUpdateManyWithoutStoreInput = {
@@ -1214,6 +1613,9 @@ export type StockLocationUpdateWithoutWarehouseInput = {
   movements?: Prisma.InventoryMovementUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUncheckedUpdateWithoutWarehouseInput = {
@@ -1228,6 +1630,9 @@ export type StockLocationUncheckedUpdateWithoutWarehouseInput = {
   movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUncheckedUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUncheckedUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUncheckedUpdateManyWithoutWarehouseInput = {
@@ -1260,6 +1665,9 @@ export type StockLocationUpdateWithoutParentInput = {
   movements?: Prisma.InventoryMovementUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUncheckedUpdateWithoutParentInput = {
@@ -1274,6 +1682,9 @@ export type StockLocationUncheckedUpdateWithoutParentInput = {
   movements?: Prisma.InventoryMovementUncheckedUpdateManyWithoutLocationNestedInput
   transfersOut?: Prisma.StockTransferUncheckedUpdateManyWithoutFromLocationNestedInput
   transfersIn?: Prisma.StockTransferUncheckedUpdateManyWithoutToLocationNestedInput
+  returns?: Prisma.ReturnUncheckedUpdateManyWithoutLocationNestedInput
+  supplierReturns?: Prisma.SupplierReturnUncheckedUpdateManyWithoutLocationNestedInput
+  inventoryCounts?: Prisma.InventoryCountUncheckedUpdateManyWithoutLocationNestedInput
 }
 
 export type StockLocationUncheckedUpdateManyWithoutParentInput = {
@@ -1296,6 +1707,9 @@ export type StockLocationCountOutputType = {
   movements: number
   transfersOut: number
   transfersIn: number
+  returns: number
+  supplierReturns: number
+  inventoryCounts: number
 }
 
 export type StockLocationCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1304,6 +1718,9 @@ export type StockLocationCountOutputTypeSelect<ExtArgs extends runtime.Types.Ext
   movements?: boolean | StockLocationCountOutputTypeCountMovementsArgs
   transfersOut?: boolean | StockLocationCountOutputTypeCountTransfersOutArgs
   transfersIn?: boolean | StockLocationCountOutputTypeCountTransfersInArgs
+  returns?: boolean | StockLocationCountOutputTypeCountReturnsArgs
+  supplierReturns?: boolean | StockLocationCountOutputTypeCountSupplierReturnsArgs
+  inventoryCounts?: boolean | StockLocationCountOutputTypeCountInventoryCountsArgs
 }
 
 /**
@@ -1351,6 +1768,27 @@ export type StockLocationCountOutputTypeCountTransfersInArgs<ExtArgs extends run
   where?: Prisma.StockTransferWhereInput
 }
 
+/**
+ * StockLocationCountOutputType without action
+ */
+export type StockLocationCountOutputTypeCountReturnsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ReturnWhereInput
+}
+
+/**
+ * StockLocationCountOutputType without action
+ */
+export type StockLocationCountOutputTypeCountSupplierReturnsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SupplierReturnWhereInput
+}
+
+/**
+ * StockLocationCountOutputType without action
+ */
+export type StockLocationCountOutputTypeCountInventoryCountsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.InventoryCountWhereInput
+}
+
 
 export type StockLocationSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1368,6 +1806,9 @@ export type StockLocationSelect<ExtArgs extends runtime.Types.Extensions.Interna
   movements?: boolean | Prisma.StockLocation$movementsArgs<ExtArgs>
   transfersOut?: boolean | Prisma.StockLocation$transfersOutArgs<ExtArgs>
   transfersIn?: boolean | Prisma.StockLocation$transfersInArgs<ExtArgs>
+  returns?: boolean | Prisma.StockLocation$returnsArgs<ExtArgs>
+  supplierReturns?: boolean | Prisma.StockLocation$supplierReturnsArgs<ExtArgs>
+  inventoryCounts?: boolean | Prisma.StockLocation$inventoryCountsArgs<ExtArgs>
   _count?: boolean | Prisma.StockLocationCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["stockLocation"]>
 
@@ -1417,6 +1858,9 @@ export type StockLocationInclude<ExtArgs extends runtime.Types.Extensions.Intern
   movements?: boolean | Prisma.StockLocation$movementsArgs<ExtArgs>
   transfersOut?: boolean | Prisma.StockLocation$transfersOutArgs<ExtArgs>
   transfersIn?: boolean | Prisma.StockLocation$transfersInArgs<ExtArgs>
+  returns?: boolean | Prisma.StockLocation$returnsArgs<ExtArgs>
+  supplierReturns?: boolean | Prisma.StockLocation$supplierReturnsArgs<ExtArgs>
+  inventoryCounts?: boolean | Prisma.StockLocation$inventoryCountsArgs<ExtArgs>
   _count?: boolean | Prisma.StockLocationCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type StockLocationIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1441,6 +1885,9 @@ export type $StockLocationPayload<ExtArgs extends runtime.Types.Extensions.Inter
     movements: Prisma.$InventoryMovementPayload<ExtArgs>[]
     transfersOut: Prisma.$StockTransferPayload<ExtArgs>[]
     transfersIn: Prisma.$StockTransferPayload<ExtArgs>[]
+    returns: Prisma.$ReturnPayload<ExtArgs>[]
+    supplierReturns: Prisma.$SupplierReturnPayload<ExtArgs>[]
+    inventoryCounts: Prisma.$InventoryCountPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1852,6 +2299,9 @@ export interface Prisma__StockLocationClient<T, Null = never, ExtArgs extends ru
   movements<T extends Prisma.StockLocation$movementsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StockLocation$movementsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InventoryMovementPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   transfersOut<T extends Prisma.StockLocation$transfersOutArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StockLocation$transfersOutArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StockTransferPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   transfersIn<T extends Prisma.StockLocation$transfersInArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StockLocation$transfersInArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StockTransferPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  returns<T extends Prisma.StockLocation$returnsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StockLocation$returnsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReturnPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  supplierReturns<T extends Prisma.StockLocation$supplierReturnsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StockLocation$supplierReturnsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SupplierReturnPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  inventoryCounts<T extends Prisma.StockLocation$inventoryCountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StockLocation$inventoryCountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InventoryCountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2463,6 +2913,78 @@ export type StockLocation$transfersInArgs<ExtArgs extends runtime.Types.Extensio
   take?: number
   skip?: number
   distinct?: Prisma.StockTransferScalarFieldEnum | Prisma.StockTransferScalarFieldEnum[]
+}
+
+/**
+ * StockLocation.returns
+ */
+export type StockLocation$returnsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Return
+   */
+  select?: Prisma.ReturnSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Return
+   */
+  omit?: Prisma.ReturnOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ReturnInclude<ExtArgs> | null
+  where?: Prisma.ReturnWhereInput
+  orderBy?: Prisma.ReturnOrderByWithRelationInput | Prisma.ReturnOrderByWithRelationInput[]
+  cursor?: Prisma.ReturnWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ReturnScalarFieldEnum | Prisma.ReturnScalarFieldEnum[]
+}
+
+/**
+ * StockLocation.supplierReturns
+ */
+export type StockLocation$supplierReturnsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SupplierReturn
+   */
+  select?: Prisma.SupplierReturnSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SupplierReturn
+   */
+  omit?: Prisma.SupplierReturnOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SupplierReturnInclude<ExtArgs> | null
+  where?: Prisma.SupplierReturnWhereInput
+  orderBy?: Prisma.SupplierReturnOrderByWithRelationInput | Prisma.SupplierReturnOrderByWithRelationInput[]
+  cursor?: Prisma.SupplierReturnWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SupplierReturnScalarFieldEnum | Prisma.SupplierReturnScalarFieldEnum[]
+}
+
+/**
+ * StockLocation.inventoryCounts
+ */
+export type StockLocation$inventoryCountsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the InventoryCount
+   */
+  select?: Prisma.InventoryCountSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the InventoryCount
+   */
+  omit?: Prisma.InventoryCountOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.InventoryCountInclude<ExtArgs> | null
+  where?: Prisma.InventoryCountWhereInput
+  orderBy?: Prisma.InventoryCountOrderByWithRelationInput | Prisma.InventoryCountOrderByWithRelationInput[]
+  cursor?: Prisma.InventoryCountWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.InventoryCountScalarFieldEnum | Prisma.InventoryCountScalarFieldEnum[]
 }
 
 /**

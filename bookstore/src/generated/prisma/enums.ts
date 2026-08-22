@@ -32,7 +32,8 @@ export const MovementType = {
   DAMAGED: 'DAMAGED',
   LOST: 'LOST',
   RESERVATION: 'RESERVATION',
-  RESERVATION_RELEASE: 'RESERVATION_RELEASE'
+  RESERVATION_RELEASE: 'RESERVATION_RELEASE',
+  SUPPLIER_RETURN: 'SUPPLIER_RETURN'
 } as const
 
 export type MovementType = (typeof MovementType)[keyof typeof MovementType]
@@ -130,7 +131,47 @@ export const PaymentMethod = {
   CARD: 'CARD',
   QR: 'QR',
   E_WALLET: 'E_WALLET',
-  STORE_CREDIT: 'STORE_CREDIT'
+  STORE_CREDIT: 'STORE_CREDIT',
+  GIFT_CARD: 'GIFT_CARD'
 } as const
 
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod]
+
+
+export const ShipmentStatus = {
+  PENDING: 'PENDING',
+  SHIPPED: 'SHIPPED',
+  DELIVERED: 'DELIVERED',
+  CANCELLED: 'CANCELLED'
+} as const
+
+export type ShipmentStatus = (typeof ShipmentStatus)[keyof typeof ShipmentStatus]
+
+
+export const ReturnStatus = {
+  REQUESTED: 'REQUESTED',
+  RECEIVED: 'RECEIVED',
+  REFUNDED: 'REFUNDED',
+  REJECTED: 'REJECTED'
+} as const
+
+export type ReturnStatus = (typeof ReturnStatus)[keyof typeof ReturnStatus]
+
+
+export const SupplierReturnStatus = {
+  DRAFT: 'DRAFT',
+  SHIPPED: 'SHIPPED',
+  RECEIVED: 'RECEIVED',
+  CANCELLED: 'CANCELLED'
+} as const
+
+export type SupplierReturnStatus = (typeof SupplierReturnStatus)[keyof typeof SupplierReturnStatus]
+
+
+export const InventoryCountStatus = {
+  DRAFT: 'DRAFT',
+  POSTED: 'POSTED',
+  CANCELLED: 'CANCELLED'
+} as const
+
+export type InventoryCountStatus = (typeof InventoryCountStatus)[keyof typeof InventoryCountStatus]

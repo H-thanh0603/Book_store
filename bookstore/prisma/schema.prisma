@@ -64,6 +64,9 @@ model StockLocation {
   movements  InventoryMovement[]
   transfersOut StockTransfer[] @relation("FromLoc")
   transfersIn  StockTransfer[] @relation("ToLoc")
+  returns      Return[]
+  supplierReturns SupplierReturn[]
+  inventoryCounts InventoryCount[]
   @@index([storeId])
 }
 
@@ -213,6 +216,9 @@ model ProductVariant {
   receiptItems GoodsReceiptItem[]
   transferItems StockTransferItem[]
   orderItems OrderItem[]
+  returnItems ReturnItem[]
+  supplierReturnItems SupplierReturnItem[]
+  inventoryCountItems InventoryCountItem[]
   posItems  PosTransactionItem[]
   bundleItems BundleItem[] @relation("component")
   bundles   BundleItem[] @relation("bundle")
@@ -286,6 +292,7 @@ enum MovementType {
   LOST
   RESERVATION
   RESERVATION_RELEASE
+  SUPPLIER_RETURN
 }
 
 model InventoryMovement {
@@ -319,7 +326,9 @@ model Supplier {
   paymentTerms String? // e.g. NET30
   leadTimeDays Int @default(7)
   active       Boolean @default(true)
+  isConsignment Boolean @default(false)
   purchaseOrders PurchaseOrder[]
+  supplierReturns SupplierReturn[]
 }
 
 enum PoStatus {
@@ -431,6 +440,7 @@ model Customer {
   address   String?
   loyalty   LoyaltyAccount?
   orders    Order[]
+  returns   Return[]
   posTransactions PosTransaction[]
 }
 
@@ -472,6 +482,7 @@ enum PromoChannel {
 model Promotion {
   id          String @id @default(uuid())
   name        String
+  code        String? @unique // coupon/voucher code; null means automatic promotion
   type        PromoType
   value       BigInt // percent (0-100) or fixed minor units
   buyQty      Int? // for buy_x_get_y
@@ -553,6 +564,8 @@ model Order {
   total       BigInt
   items       OrderItem[]
   statusHistory OrderStatusHistory[]
+  shipment    Shipment?
+  returns     Return[]
   createdAt   DateTime @default(now())
   @@index([status])
   @@index([customerId])
@@ -567,6 +580,7 @@ model OrderItem {
   quantity  Int
   unitPrice BigInt
   discount  BigInt @default(0)
+  returnItems ReturnItem[]
 }
 
 model OrderStatusHistory {
@@ -655,6 +669,7 @@ enum PaymentMethod {
   QR
   E_WALLET
   STORE_CREDIT
+  GIFT_CARD
 }
 
 model Payment {
@@ -664,7 +679,151 @@ model Payment {
   method    PaymentMethod
   amount    BigInt
   idempotencyKey String? @unique
+  giftCardId String?
+  giftCard GiftCard? @relation(fields: [giftCardId], references: [id])
   createdAt DateTime @default(now())
+}
+
+// ── Phase 2: fulfillment, returns, gift cards, supplier returns, counts ──
+
+enum ShipmentStatus {
+  PENDING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model Shipment {
+  id             String @id @default(uuid())
+  orderId        String @unique
+  order          Order @relation(fields: [orderId], references: [id])
+  carrier        String?
+  trackingNumber String? @unique
+  recipientName  String
+  recipientPhone String
+  address        String
+  status         ShipmentStatus @default(PENDING)
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+}
+
+enum ReturnStatus {
+  REQUESTED
+  RECEIVED
+  REFUNDED
+  REJECTED
+}
+
+model Return {
+  id          String @id @default(uuid())
+  number      String @unique
+  orderId     String?
+  order       Order? @relation(fields: [orderId], references: [id])
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  locationId  String
+  location    StockLocation @relation(fields: [locationId], references: [id])
+  status      ReturnStatus @default(REQUESTED)
+  reason      String?
+  refundTotal BigInt @default(0)
+  receivedBy  String?
+  items       ReturnItem[]
+  createdAt   DateTime @default(now())
+}
+
+model ReturnItem {
+  id          String @id @default(uuid())
+  returnId    String
+  return      Return @relation(fields: [returnId], references: [id])
+  orderItemId String?
+  orderItem   OrderItem? @relation(fields: [orderItemId], references: [id])
+  variantId   String
+  variant     ProductVariant @relation(fields: [variantId], references: [id])
+  quantity    Int
+  disposition String @default("RESTOCK") // RESTOCK | DAMAGED
+  refundAmount BigInt
+}
+
+model GiftCard {
+  id         String @id @default(uuid())
+  code       String @unique
+  initialValue BigInt
+  balance    BigInt
+  active     Boolean @default(true)
+  expiresAt  DateTime?
+  transactions GiftCardTransaction[]
+  payments   Payment[]
+  createdAt  DateTime @default(now())
+}
+
+model GiftCardTransaction {
+  id         String @id @default(uuid())
+  giftCardId String
+  giftCard   GiftCard @relation(fields: [giftCardId], references: [id])
+  amount     BigInt // positive = issue/adjust, negative = redemption
+  balanceAfter BigInt
+  refType    String?
+  refId      String?
+  createdAt  DateTime @default(now())
+}
+
+enum SupplierReturnStatus {
+  DRAFT
+  SHIPPED
+  RECEIVED
+  CANCELLED
+}
+
+model SupplierReturn {
+  id          String @id @default(uuid())
+  number      String @unique
+  supplierId  String
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  locationId  String
+  location    StockLocation @relation(fields: [locationId], references: [id])
+  status      SupplierReturnStatus @default(DRAFT)
+  reason      String?
+  items       SupplierReturnItem[]
+  createdAt   DateTime @default(now())
+}
+
+model SupplierReturnItem {
+  id               String @id @default(uuid())
+  supplierReturnId String
+  supplierReturn   SupplierReturn @relation(fields: [supplierReturnId], references: [id])
+  variantId        String
+  variant          ProductVariant @relation(fields: [variantId], references: [id])
+  quantity         Int
+}
+
+enum InventoryCountStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+model InventoryCount {
+  id          String @id @default(uuid())
+  number      String @unique
+  locationId  String
+  location    StockLocation @relation(fields: [locationId], references: [id])
+  status      InventoryCountStatus @default(DRAFT)
+  countedBy   String
+  postedBy    String?
+  items       InventoryCountItem[]
+  createdAt   DateTime @default(now())
+  postedAt    DateTime?
+}
+
+model InventoryCountItem {
+  id              String @id @default(uuid())
+  inventoryCountId String
+  inventoryCount  InventoryCount @relation(fields: [inventoryCountId], references: [id])
+  variantId       String
+  variant         ProductVariant @relation(fields: [variantId], references: [id])
+  expectedQty     Int
+  countedQty      Int
+  @@unique([inventoryCountId, variantId])
 }
 
 // ── Audit ─────────────────────────────────────────────────────

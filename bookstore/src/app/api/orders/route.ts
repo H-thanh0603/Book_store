@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission } from "@/lib/auth";
+import { requirePermission, requireAuth } from "@/lib/auth";
 import { apiError, ok, fail, nextBusinessNumber, toMoney } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(body.items) || body.items.length === 0 || !body.customerId)
       fail(400, "VALIDATION", "customerId and items required");
 
-    const auth = await requireAuthSafe();
+    const auth = await requireAuth();
 
     const result = await prisma.$transaction(async (tx) => {
       const variants = await tx.productVariant.findMany({
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
           status: "CONFIRMED",
           subtotal, total,
           items: { create: lines },
-          statusHistory: { create: { fromStatus: null, toStatus: "CONFIRMED", userId: auth?.userId } },
+          statusHistory: { create: { fromStatus: null, toStatus: "CONFIRMED", userId: auth.userId } },
         },
         include: { items: true },
       });
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         await applyMovement(tx, {
           variantId: l.variantId, locationId: location.id,
           type: "RESERVATION", quantityDelta: 0, reservedDelta: l.quantity,
-          refType: "order", refId: order.id, userId: auth?.userId,
+          refType: "order", refId: order.id, userId: auth.userId,
         });
       }
       return order;
@@ -75,14 +75,5 @@ export async function GET() {
     return ok({ orders });
   } catch (err) {
     return apiError(err);
-  }
-}
-
-async function requireAuthSafe() {
-  try {
-    const { requireAuth } = await import("@/lib/auth");
-    return await requireAuth();
-  } catch {
-    return null;
   }
 }

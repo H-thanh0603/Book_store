@@ -3,10 +3,10 @@ import { prisma } from "./db";
 import { fail } from "./api";
 import { applyMovement } from "./inventory";
 import { evaluatePromotions, mergeLineDiscounts, CartLine } from "./promotions";
-import { nextBusinessNumber } from "./api";
+import { nextBusinessNumber, getSystemConfig } from "./api";
 import { MovementType, PaymentMethod, Prisma } from "../generated/prisma/client";
 
-const LOYALTY_RATE = 10_000n; // 10.000 VND = 1 point (config later via SystemConfig)
+const LOYALTY_RATE_FALLBACK = 10_000n; // 10.000 VND = 1 point (spec §101: override via SystemConfig "loyalty.vndPerPoint")
 
 export type CompleteSaleInput = {
   shiftId: string;
@@ -16,11 +16,12 @@ export type CompleteSaleInput = {
   customerId?: string | null;
   redeemPoints?: number;
   couponCode?: string | null; // Phase 2
-  payments: { method: PaymentMethod; amount: bigint; idempotencyKey?: string }[];
+  payments: { method: PaymentMethod; amount: bigint; idempotencyKey?: string; giftCardCode?: string }[];
 };
 
 export async function completeSale(input: CompleteSaleInput) {
   const totalPaid = input.payments.reduce((s, p) => s + p.amount, 0n);
+  const rate = BigInt(await getSystemConfig<number>("loyalty.vndPerPoint", Number(LOYALTY_RATE_FALLBACK)));
 
   return prisma.$transaction(async (tx) => {
     // Idempotency: same key → return existing tx
@@ -73,6 +74,7 @@ export async function completeSale(input: CompleteSaleInput) {
       storeId: input.storeId,
       channel: "POS",
       customerId: input.customerId,
+      couponCode: input.couponCode,
     });
     const { byVariant, total: discountTotal } = mergeLineDiscounts(applied, lines);
 
@@ -85,13 +87,26 @@ export async function completeSale(input: CompleteSaleInput) {
       if (!acct || acct.points < input.redeemPoints)
         fail(400, "VALIDATION", "Insufficient loyalty points");
       loyaltyRedeemed = input.redeemPoints;
-      redeemDiscount = BigInt(loyaltyRedeemed) * LOYALTY_RATE;
+      redeemDiscount = BigInt(loyaltyRedeemed) * rate;
     }
 
     const total = subtotal - discountTotal - redeemDiscount;
     if (total < 0n) fail(400, "VALIDATION", "Discount exceeds total");
     if (totalPaid !== total)
       fail(400, "VALIDATION", `Payment mismatch: expected ${total}, got ${totalPaid}`);
+
+    const giftCards = new Map<number, { id: string; balance: bigint }>();
+    for (const [index, payment] of input.payments.entries()) {
+      if (payment.method !== "GIFT_CARD") continue;
+      const code = payment.giftCardCode?.trim().toUpperCase();
+      if (!code) fail(400, "VALIDATION", "Gift card payment requires giftCardCode");
+      const card = await tx.giftCard.findUnique({ where: { code } });
+      if (!card || !card.active || (card.expiresAt && card.expiresAt <= new Date()))
+        fail(400, "VALIDATION", "Gift card is inactive or expired");
+      if (card.balance < payment.amount) fail(400, "VALIDATION", "Insufficient gift card balance");
+      const updated = await tx.giftCard.update({ where: { id: card.id }, data: { balance: { decrement: payment.amount } } });
+      giftCards.set(index, { id: card.id, balance: updated.balance });
+    }
 
     // Deduct inventory atomically per line
     const saleLocation = await tx.stockLocation.findFirst({
@@ -111,7 +126,7 @@ export async function completeSale(input: CompleteSaleInput) {
       });
     }
 
-    const earned = total / LOYALTY_RATE;
+    const earned = total / rate;
 
     const number = await nextBusinessNumber("TXN");
     const txn = await tx.posTransaction.create({
@@ -136,14 +151,21 @@ export async function completeSale(input: CompleteSaleInput) {
           })),
         },
         payments: {
-          create: input.payments.map((p) => ({
+          create: input.payments.map((p, index) => ({
             method: p.method,
             amount: p.amount,
             idempotencyKey: p.idempotencyKey,
+            giftCardId: giftCards.get(index)?.id ?? null,
           })),
         },
       },
     });
+
+    for (const [index, card] of giftCards) {
+      await tx.giftCardTransaction.create({
+        data: { giftCardId: card.id, amount: -input.payments[index].amount, balanceAfter: card.balance, refType: "pos_transaction", refId: txn.id },
+      });
+    }
 
     // Patch movements' refId to the created txn
     await tx.inventoryMovement.updateMany({
