@@ -2,7 +2,8 @@
 import { prisma } from "./db";
 import { fail, nextBusinessNumber } from "./api";
 import { applyMovement } from "./inventory";
-import { MovementType, PoStatus, TransferStatus, Prisma } from "../generated/prisma/client";
+import { MovementType, TransferStatus } from "../generated/prisma/client";
+import { PoStatus } from "../generated/prisma/enums";
 
 // ── Purchase Orders ──────────────────────────────────────────
 

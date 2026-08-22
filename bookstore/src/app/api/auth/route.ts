@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { createSession, destroySession, verifyPassword } from "@/lib/auth";
 import { apiError, ok, fail } from "@/lib/api";

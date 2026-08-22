@@ -5,11 +5,14 @@ import { usePathname } from "next/navigation";
 const LINKS: [string, string][] = [
   ["/dashboard", "Dashboard"],
   ["/pos", "POS"],
+  ["/orders", "Đơn hàng"],
   ["/products", "Sản phẩm"],
   ["/inventory", "Tồn kho"],
   ["/purchase-orders", "Nhập hàng"],
   ["/transfers", "Điều chuyển"],
   ["/customers", "Khách hàng"],
+  ["/promotions", "Khuyến mãi"],
+  ["/gift-cards", "Gift card & Kiểm kê"],
   ["/audit-logs", "Audit log"],
 ];
 

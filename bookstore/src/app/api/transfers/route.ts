@@ -1,9 +1,21 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission } from "@/lib/auth";
+import { requirePermission, assertStoreAccess, audit } from "@/lib/auth";
 import { apiError, ok, fail, nextBusinessNumber } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { TransferStatus } from "@/generated/prisma/client";
+
+type TransferItemInput = { variantId: string; quantity: number };
+
+function parseItems(raw: unknown): TransferItemInput[] {
+  if (!Array.isArray(raw) || raw.length === 0) fail(400, "VALIDATION", "items required");
+  return raw.map((i: Record<string, unknown>) => {
+    const item = i as { variantId?: unknown; quantity?: unknown };
+    if (typeof item.variantId !== "string" || !item.variantId || !Number.isInteger(item.quantity) || (item.quantity as number) <= 0)
+      fail(400, "VALIDATION", "Each item needs a variantId and positive integer quantity");
+    return { variantId: item.variantId as string, quantity: item.quantity as number };
+  });
+}
 
 const ALLOWED: Record<string, string[]> = {
   DRAFT: ["REQUESTED", "CANCELLED"],
@@ -26,16 +38,27 @@ export async function POST(req: NextRequest) {
 
     if (body.action === "create") {
       const auth = await requirePermission("inventory.transfer");
-      if (!Array.isArray(body.items) || body.items.length === 0 || !body.fromLocationId || !body.toLocationId)
+      const items = parseItems(body.items);
+      if (!body.fromLocationId || !body.toLocationId)
         fail(400, "VALIDATION", "fromLocationId, toLocationId, items required");
+      // Both endpoints must be inside the caller's store scope.
+      for (const locationId of [body.fromLocationId, body.toLocationId]) {
+        const loc = await prisma.stockLocation.findUnique({ where: { id: locationId } });
+        if (!loc) fail(404, "NOT_FOUND", `Location ${locationId} not found`);
+        assertStoreAccess(auth, loc.storeId, "inventory.transfer");
+      }
       const number = await nextBusinessNumber("TRF");
-      const trf = await prisma.stockTransfer.create({
-        data: {
-          number, fromLocationId: body.fromLocationId, toLocationId: body.toLocationId,
-          status: "REQUESTED", requestedBy: auth.userId,
-          items: { create: body.items.map((i: any) => ({ variantId: i.variantId, quantity: i.quantity })) },
-        },
-        include: { items: true },
+      const trf = await prisma.$transaction(async (tx) => {
+        const created = await tx.stockTransfer.create({
+          data: {
+            number, fromLocationId: body.fromLocationId, toLocationId: body.toLocationId,
+            status: "REQUESTED", requestedBy: auth.userId,
+            items: { create: items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })) },
+          },
+          include: { items: true },
+        });
+        await audit(auth.userId, "transfer.create", "StockTransfer", created.id, { number }, tx);
+        return created;
       });
       return ok({ id: trf.id, number: trf.number, status: trf.status }, 201);
     }
@@ -51,6 +74,11 @@ export async function POST(req: NextRequest) {
           include: { items: true },
         });
         if (!trf) fail(404, "NOT_FOUND", "Transfer not found");
+        // Store scope: check both endpoints of the loaded transfer.
+        for (const locationId of [trf.fromLocationId, trf.toLocationId]) {
+          const loc = await tx.stockLocation.findUnique({ where: { id: locationId } });
+          assertStoreAccess(auth, loc?.storeId, "inventory.transfer");
+        }
         assertTransition(trf.status, to);
 
         if (to === "IN_TRANSIT") {
@@ -77,9 +105,7 @@ export async function POST(req: NextRequest) {
           where: { id: trf.id },
           data: { status: to as TransferStatus, approvedBy: to === "APPROVED" ? auth.userId : trf.approvedBy },
         });
-        await tx.auditLog.create({
-          data: { actorId: auth.userId, action: `transfer.${to.toLowerCase()}`, entity: "StockTransfer", entityId: trf.id },
-        });
+        await audit(auth.userId, `transfer.${to.toLowerCase()}`, "StockTransfer", trf.id, undefined, tx);
         return updated;
       });
       return ok({ number: result.number, status: result.status });

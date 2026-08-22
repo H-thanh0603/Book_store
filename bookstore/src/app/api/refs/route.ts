@@ -1,10 +1,10 @@
+// GET /api/refs?kind=suppliers|warehouses|locations|variants|categories|brands|authors|publishers
+// Small lookup endpoint for the management pages' dropdowns.
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 
-// GET /api/refs?kind=suppliers|warehouses|locations|variants
-// Small lookup endpoint for the management pages' dropdowns.
 export async function GET(req: NextRequest) {
   try {
     await requireAuth();
@@ -29,6 +29,19 @@ export async function GET(req: NextRequest) {
           orderBy: { sku: "asc" },
         }),
       });
+    if (kind === "categories") {
+      const cats = await prisma.category.findMany({
+        select: { id: true, name: true, parentId: true },
+        orderBy: { name: "asc" },
+      });
+      return ok({ categories: cats });
+    }
+    if (kind === "brands")
+      return ok({ brands: await prisma.brand.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }) });
+    if (kind === "authors")
+      return ok({ authors: await prisma.author.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }) });
+    if (kind === "publishers")
+      return ok({ publishers: await prisma.publisher.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }) });
     return ok({});
   } catch (err) {
     return apiError(err);

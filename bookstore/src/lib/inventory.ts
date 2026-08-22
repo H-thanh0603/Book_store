@@ -32,7 +32,7 @@ export async function applyMovement(
     refType, refId, userId, allowNegative = false,
   } = args;
 
-  const rows = await tx.$queryRaw<{ id: string }[]>`
+  await tx.$executeRaw`
     INSERT INTO "InventoryBalance" (id, "variantId", "locationId", "onHand", reserved, "inTransit", damaged)
     VALUES (gen_random_uuid()::text, ${variantId}, ${locationId}, 0, 0, 0, 0)
     ON CONFLICT ("variantId", "locationId") DO NOTHING

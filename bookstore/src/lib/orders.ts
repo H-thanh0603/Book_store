@@ -58,6 +58,10 @@ export async function createReservedOrder(input: CreateOrderInput, actorId?: str
   const subtotal = lines.reduce((sum, line) => sum + line.unitPrice * BigInt(line.quantity), 0n);
 
   return prisma.$transaction(async (tx) => {
+    // Customer must exist and be active-ish (real FK target, not a guessed id).
+    const customer = await tx.customer.findUnique({ where: { id: input.customerId } });
+    if (!customer) fail(404, "NOT_FOUND", "Unknown customer");
+
     const location = await tx.stockLocation.findFirst({
       where: input.locationId
         ? { id: input.locationId, active: true }
@@ -66,6 +70,9 @@ export async function createReservedOrder(input: CreateOrderInput, actorId?: str
           : { type: "WAREHOUSE", active: true },
     });
     if (!location) fail(400, "VALIDATION", "No fulfillment location");
+    // A pickup/store order must fulfill from that store; location must belong to it.
+    if (input.locationId && input.storeId && location.storeId !== input.storeId)
+      fail(400, "VALIDATION", "Location does not belong to the requested store");
 
     const order = await tx.order.create({
       data: {

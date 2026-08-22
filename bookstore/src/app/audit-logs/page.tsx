@@ -23,7 +23,8 @@ export default function AuditLogsPage() {
     else setErr(d.message);
   }
 
-  useEffect(() => { load(1, "", ""); }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch; setState fires after await
+  useEffect(() => { void load(1, "", ""); }, []);
 
   return (
     <main className="min-h-screen bg-slate-100">

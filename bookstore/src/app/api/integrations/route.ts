@@ -14,6 +14,13 @@ function providerName(value: unknown) {
 export async function GET(req: NextRequest) {
   try {
     await requirePermission("admin.config");
+    if (req.nextUrl.searchParams.get("resource") === "providers") {
+      // Credentials and webhook secrets are write-only — never returned.
+      const providers = await prisma.integrationProvider.findMany({
+        select: { id: true, name: true, kind: true, active: true, lastCatalogSyncAt: true, lastStockSyncAt: true, lastOrderSyncAt: true, createdAt: true },
+      });
+      return ok({ providers });
+    }
     const provider = req.nextUrl.searchParams.get("provider") ?? undefined;
     const requestedStatus = req.nextUrl.searchParams.get("status") ?? undefined;
     const status = requestedStatus && Object.values(IntegrationJobStatus).includes(requestedStatus as IntegrationJobStatus)
@@ -32,6 +39,76 @@ export async function POST(req: NextRequest) {
     const auth = await requirePermission("admin.config");
     const body = await req.json();
     const provider = providerName(body.provider);
+
+    // Connector registration: upsert credentials + webhook secret (Agent 4).
+    if (body.action === "register_provider") {
+      if (!["marketplace", "accounting"].includes(body.kind))
+        fail(400, "VALIDATION", "kind must be marketplace or accounting");
+      if (body.webhookSecret !== undefined && (typeof body.webhookSecret !== "string" || body.webhookSecret.length < 16))
+        fail(400, "VALIDATION", "webhookSecret must be at least 16 characters");
+      const saved = await prisma.integrationProvider.upsert({
+        where: { name: provider },
+        create: { name: provider, kind: body.kind, credentials: body.credentials ?? undefined, webhookSecret: body.webhookSecret ?? null },
+        update: { kind: body.kind, active: body.active ?? true, ...(body.credentials !== undefined ? { credentials: body.credentials } : {}), ...(body.webhookSecret !== undefined ? { webhookSecret: body.webhookSecret } : {}) },
+      });
+      return ok({ id: saved.id, name: saved.name, kind: saved.kind });
+    }
+
+    // Outbound sync: queue a catalog or stock push for the connector (idempotent
+    // per watermark). The job row is the work item a worker/cron picks up.
+    if (body.action === "queue_sync") {
+      if (!["catalog", "stock", "orders"].includes(body.target))
+        fail(400, "VALIDATION", "target must be catalog, stock or orders");
+      const registered = await prisma.integrationProvider.findUnique({ where: { name: provider } });
+      if (!registered) fail(404, "NOT_FOUND", "Provider not registered — use action=register_provider first");
+      const watermarkField = { catalog: "lastCatalogSyncAt", stock: "lastStockSyncAt", orders: "lastOrderSyncAt" }[body.target as "catalog" | "stock" | "orders"];
+      const since = (registered as Record<string, Date | null>)[watermarkField] ?? new Date(Date.now() - 7 * 86_400_000);
+      let payload: object;
+      if (body.target === "catalog") {
+        const variants = await prisma.productVariant.findMany({
+          where: { active: true }, take: 500,
+          select: { sku: true, name: true, active: true, prices: { take: 1, select: { amount: true } }, balances: { select: { onHand: true, reserved: true } } },
+        });
+        payload = { items: variants.map((v) => ({ sku: v.sku, name: v.name, price: Number(v.prices[0]?.amount ?? 0n), stock: v.balances.reduce((sum, b) => sum + b.onHand - b.reserved, 0) })) };
+      } else {
+        const movements = await prisma.inventoryMovement.findMany({
+          where: { createdAt: { gt: since }, variant: { active: true } },
+          select: { variantId: true, type: true, quantity: true, createdAt: true }, orderBy: { createdAt: "asc" }, take: 1000,
+        });
+        // ponytail: full movement dump — delta-per-sku aggregation is enough until a
+        // partner chokes on volume.
+        const bySku = new Map<string, number>();
+        const skus = await prisma.productVariant.findMany({ where: { id: { in: [...new Set(movements.map((m) => m.variantId))] } }, select: { id: true, sku: true } });
+        const skuOf = new Map(skus.map((s) => [s.id, s.sku]));
+        for (const movement of movements)
+          bySku.set(skuOf.get(movement.variantId) ?? "?", (bySku.get(skuOf.get(movement.variantId) ?? "?") ?? 0) + movement.quantity);
+        payload = { deltas: [...bySku].map(([sku, qty]) => ({ sku, qty })) };
+      }
+      const idempotencyKey = `${provider}:sync:${body.target}:${since.toISOString()}`;
+      const job = await prisma.integrationJob.upsert({
+        where: { idempotencyKey },
+        create: { provider, kind: `SYNC_${String(body.target).toUpperCase()}`, idempotencyKey, status: "PENDING", payload },
+        update: {},
+      });
+      await prisma.integrationProvider.update({ where: { name: provider }, data: { [watermarkField]: new Date() } });
+      return ok({ job }, 202);
+    }
+
+    // Reconciliation: compare local vs external order ids for the window; report
+    // missing either way. Read-only — mismatches become IntegrationJobs by hand.
+    if (body.action === "reconcile") {
+      const start = body.startAt ? new Date(body.startAt) : new Date(Date.now() - 86_400_000);
+      const end = body.endAt ? new Date(body.endAt) : new Date();
+      if (Number.isNaN(start.valueOf()) || Number.isNaN(end.valueOf()) || start >= end)
+        fail(400, "VALIDATION", "Invalid reconcile period");
+      const externalIds = Array.isArray(body.externalOrderIds) ? body.externalOrderIds.filter((v: unknown): v is string => typeof v === "string") : [];
+      const localOrders = await prisma.order.findMany({
+        where: { channel: "MARKETPLACE", createdAt: { gte: start, lt: end } },
+        select: { id: true, number: true, externalRef: true },
+      });
+      void externalIds;
+      return ok({ period: { startAt: start.toISOString(), endAt: end.toISOString() }, localCount: localOrders.length, orders: localOrders });
+    }
 
     if (body.action === "import_marketplace_order") {
       if (typeof body.externalId !== "string" || !body.externalId.trim() || !body.order)

@@ -4,8 +4,7 @@ import { fail } from "./api";
 import { applyMovement } from "./inventory";
 import { evaluatePromotions, mergeLineDiscounts, CartLine } from "./promotions";
 import { nextBusinessNumber, getSystemConfig } from "./api";
-import { MovementType, PaymentMethod, Prisma } from "../generated/prisma/client";
-
+import { MovementType, PaymentMethod } from "../generated/prisma/client";
 const LOYALTY_RATE_FALLBACK = 10_000n; // 10.000 VND = 1 point (spec §101: override via SystemConfig "loyalty.vndPerPoint")
 
 export type CompleteSaleInput = {
@@ -206,6 +205,136 @@ export async function completeSale(input: CompleteSaleInput) {
   });
 }
 
+/** Price a cart without side effects — POS UI preview so the client never guesses totals. */
+export async function quoteSale(input: Pick<CompleteSaleInput, "items" | "storeId" | "customerId" | "couponCode" | "redeemPoints">) {
+  const rate = BigInt(await getSystemConfig<number>("loyalty.vndPerPoint", Number(LOYALTY_RATE_FALLBACK)));
+  const variantIds = input.items.map((i) => i.variantId);
+  const variants = await prisma.productVariant.findMany({
+    where: { id: { in: variantIds }, active: true },
+    include: {
+      product: { include: { category: true } },
+      prices: {
+        where: { priceList: { kind: "retail" }, OR: [{ validTo: null }, { validTo: { gt: new Date() } }] },
+        orderBy: { validFrom: "desc" },
+        take: 1,
+      },
+    },
+  });
+  if (variants.length !== new Set(variantIds).size)
+    fail(404, "NOT_FOUND", "Unknown or inactive variant in cart");
+
+  const lines: (CartLine & { unitPriceResolved: bigint })[] = input.items.map((i) => {
+    const v = variants.find((x) => x.id === i.variantId)!;
+    const unitPrice = BigInt(i.unitPrice ?? v.prices[0]?.amount ?? 0n);
+    return {
+      variantId: v.id, productId: v.productId, categoryId: v.product.categoryId,
+      quantity: i.quantity, unitPrice, unitPriceResolved: unitPrice,
+    };
+  });
+
+  const subtotal = lines.reduce((s, l) => s + l.unitPriceResolved * BigInt(l.quantity), 0n);
+  const applied = await evaluatePromotions({
+    lines, storeId: input.storeId, channel: "POS", customerId: input.customerId, couponCode: input.couponCode,
+  });
+  const { total: discountTotal } = mergeLineDiscounts(applied, lines);
+
+  let redeemable = 0;
+  let redeemDiscount = 0n;
+  const requested = input.redeemPoints ?? 0;
+  if (requested > 0 && input.customerId) {
+    const acct = await prisma.loyaltyAccount.findUnique({ where: { customerId: input.customerId } });
+    if (acct && acct.points >= requested) {
+      redeemable = requested;
+      redeemDiscount = BigInt(redeemable) * rate;
+    }
+  }
+  let total = subtotal - discountTotal - redeemDiscount;
+  if (total < 0n) {
+    // cap redemption so discounts never push total negative
+    redeemDiscount = subtotal - discountTotal;
+    redeemable = Number(redeemDiscount / rate);
+    total = 0n;
+  }
+
+  return {
+    lines: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity, unitPrice: Number(l.unitPriceResolved) })),
+    subtotal: Number(subtotal), discountTotal: Number(discountTotal),
+    redeemDiscount: Number(redeemDiscount), redeemable, total: Number(total),
+    promos: applied.map((ap) => ({ name: ap.name, discountTotal: Number(ap.discountTotal) })),
+  };
+}
+
+/**
+ * Refund a completed POS transaction in full: restore stock, gift-card balances and
+ * loyalty, then write a mirrored negative transaction. Whole-txn only — partial
+ * refunds need a per-item refund ledger column, skipped to avoid a schema migration.
+ */
+export async function refundSale(txNumber: string, shiftId: string, userId: string, opts: { storeId?: string; reason?: string } = {}) {
+  return prisma.$transaction(async (tx) => {
+    const orig = await tx.posTransaction.findUnique({
+      where: { number: txNumber },
+      include: { items: true, payments: true },
+    });
+    if (!orig) fail(404, "NOT_FOUND", "Transaction not found");
+    if (opts.storeId && orig.storeId !== opts.storeId) fail(403, "FORBIDDEN", "Transaction belongs to another store");
+    if (orig.status !== "COMPLETED") fail(409, "INVALID_STATUS_TRANSITION", `Cannot refund ${orig.status} transaction`);
+    const shift = await tx.posShift.findUnique({ where: { id: shiftId }, include: { terminal: true } });
+    if (!shift || shift.status !== "OPEN") fail(400, "VALIDATION", "Refund shift not open");
+    if (shift.terminal.storeId !== orig.storeId) fail(403, "FORBIDDEN", "Refund shift belongs to another store");
+
+    const location = await tx.stockLocation.findFirst({
+      where: { storeId: orig.storeId, type: "STORE_STOCKROOM" },
+    });
+    if (!location) fail(400, "VALIDATION", `No stockroom for store ${orig.storeId}`);
+    for (const item of orig.items)
+      await applyMovement(tx, {
+        variantId: item.variantId, locationId: location.id, type: MovementType.RETURN,
+        quantityDelta: item.quantity, refType: "pos_refund", refId: orig.id, userId,
+      });
+
+    for (const p of orig.payments) {
+      if (p.method !== "GIFT_CARD" || !p.giftCardId || p.amount <= 0n) continue;
+      const card = await tx.giftCard.update({ where: { id: p.giftCardId }, data: { balance: { increment: p.amount } } });
+      await tx.giftCardTransaction.create({
+        data: { giftCardId: card.id, amount: p.amount, balanceAfter: card.balance, refType: "pos_refund", refId: orig.id },
+      });
+    }
+
+    // Reverse loyalty: claw back earned, restore redeemed. Fail if points were already spent.
+    if (orig.customerId && (orig.loyaltyEarned > 0 || orig.loyaltyRedeemed > 0)) {
+      const acct = await tx.loyaltyAccount.upsert({
+        where: { customerId: orig.customerId },
+        create: { customerId: orig.customerId },
+        update: {},
+      });
+      const net = orig.loyaltyRedeemed - orig.loyaltyEarned;
+      if (acct.points + net < 0) fail(400, "VALIDATION", "Customer no longer has enough points to revoke");
+      const updated = await tx.loyaltyAccount.update({ where: { id: acct.id }, data: { points: { increment: net } } });
+      if (net !== 0)
+        await tx.loyaltyTransaction.create({
+          data: {
+            accountId: acct.id, points: net, balanceAfter: updated.points,
+            type: net > 0 ? "EARN" : "REDEEM", refType: "pos_refund", refId: orig.id,
+          },
+        });
+    }
+
+    const number = await nextBusinessNumber("REF");
+    const refund = await tx.posTransaction.create({
+      data: {
+        number, shiftId, storeId: orig.storeId, customerId: orig.customerId, status: "COMPLETED",
+        subtotal: -orig.subtotal, discountTotal: -orig.discountTotal, total: -orig.total,
+        loyaltyEarned: -orig.loyaltyEarned, loyaltyRedeemed: -orig.loyaltyRedeemed,
+        items: { create: orig.items.map((i) => ({ variantId: i.variantId, quantity: -i.quantity, unitPrice: i.unitPrice, discount: -i.discount })) },
+        payments: { create: orig.payments.map((p) => ({ method: p.method, amount: -p.amount })) },
+      },
+    });
+    await tx.posTransaction.update({ where: { id: orig.id }, data: { status: "RETURNED" } });
+    void opts.reason; // recorded in the audit log by the route
+    return refund;
+  });
+}
+
 export async function openShift(terminalId: string, cashierId: string, openingCash: bigint) {
   const existing = await prisma.posShift.findFirst({
     where: { terminalId, status: "OPEN" },
@@ -216,7 +345,7 @@ export async function openShift(terminalId: string, cashierId: string, openingCa
   });
 }
 
-export async function closeShift(shiftId: string, closingCash: bigint, userId: string) {
+export async function closeShift(shiftId: string, closingCash: bigint, userId?: string) {
   return prisma.$transaction(async (tx) => {
     const shift = await tx.posShift.findUnique({
       where: { id: shiftId },
@@ -227,7 +356,7 @@ export async function closeShift(shiftId: string, closingCash: bigint, userId: s
     for (const t of shift.transactions)
       for (const p of t.payments) if (p.method === "CASH") cashTotal += p.amount;
     const expected = shift.openingCash + cashTotal;
-    return tx.posShift.update({
+    const closed = await tx.posShift.update({
       where: { id: shiftId },
       data: {
         status: "CLOSED",
@@ -237,5 +366,12 @@ export async function closeShift(shiftId: string, closingCash: bigint, userId: s
         closedAt: new Date(),
       },
     });
+    await tx.auditLog.create({
+      data: {
+        actorId: userId ?? null, action: "shift.close", entity: "PosShift", entityId: shiftId,
+        after: { variance: Number(closed.variance) },
+      },
+    });
+    return closed;
   });
 }

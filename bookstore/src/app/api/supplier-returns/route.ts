@@ -5,6 +5,21 @@ import { apiError, fail, nextBusinessNumber, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { MovementType } from "@/generated/prisma/client";
 
+// GET /api/supplier-returns — list with items (credit-note review)
+export async function GET() {
+  try {
+    await requirePermission("inventory.view");
+    const returns = await prisma.supplierReturn.findMany({
+      include: { supplier: true, items: { include: { variant: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+    return ok({ returns });
+  } catch (err) {
+    return apiError(err);
+  }
+}
+
 // POST /api/supplier-returns { action: "create"|"ship", supplierId, locationId, items }
 export async function POST(req: NextRequest) {
   try {

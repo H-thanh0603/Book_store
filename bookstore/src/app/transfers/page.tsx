@@ -40,7 +40,8 @@ export default function TransfersPage() {
   }
 
   useEffect(() => {
-    load();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
+    void load();
     fetch("/api/refs?kind=locations").then(async (r) => r.ok && setLocations((await r.json()).locations));
     fetch("/api/refs?kind=variants").then(async (r) => r.ok && setVariants((await r.json()).variants));
   }, []);

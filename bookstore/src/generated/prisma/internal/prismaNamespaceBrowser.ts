@@ -75,7 +75,10 @@ export const ModelName = {
   Price: 'Price',
   InventoryBalance: 'InventoryBalance',
   InventoryMovement: 'InventoryMovement',
+  InventoryAdjustment: 'InventoryAdjustment',
+  InventoryAdjustmentItem: 'InventoryAdjustmentItem',
   Supplier: 'Supplier',
+  SupplierProductPrice: 'SupplierProductPrice',
   PurchaseOrder: 'PurchaseOrder',
   PurchaseOrderItem: 'PurchaseOrderItem',
   GoodsReceipt: 'GoodsReceipt',
@@ -98,6 +101,7 @@ export const ModelName = {
   PosTransactionItem: 'PosTransactionItem',
   Payment: 'Payment',
   Shipment: 'Shipment',
+  ReturnPayment: 'ReturnPayment',
   Return: 'Return',
   ReturnItem: 'ReturnItem',
   GiftCard: 'GiftCard',
@@ -112,6 +116,8 @@ export const ModelName = {
   ReplenishmentSuggestion: 'ReplenishmentSuggestion',
   IntegrationJob: 'IntegrationJob',
   WarehouseTask: 'WarehouseTask',
+  WarehouseTaskItem: 'WarehouseTaskItem',
+  JobRun: 'JobRun',
   LossAlert: 'LossAlert'
 } as const
 
@@ -382,6 +388,32 @@ export const InventoryMovementScalarFieldEnum = {
 export type InventoryMovementScalarFieldEnum = (typeof InventoryMovementScalarFieldEnum)[keyof typeof InventoryMovementScalarFieldEnum]
 
 
+export const InventoryAdjustmentScalarFieldEnum = {
+  id: 'id',
+  number: 'number',
+  locationId: 'locationId',
+  reason: 'reason',
+  status: 'status',
+  createdBy: 'createdBy',
+  reviewedBy: 'reviewedBy',
+  reviewedAt: 'reviewedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type InventoryAdjustmentScalarFieldEnum = (typeof InventoryAdjustmentScalarFieldEnum)[keyof typeof InventoryAdjustmentScalarFieldEnum]
+
+
+export const InventoryAdjustmentItemScalarFieldEnum = {
+  id: 'id',
+  adjustmentId: 'adjustmentId',
+  variantId: 'variantId',
+  expectedQty: 'expectedQty',
+  countedQty: 'countedQty'
+} as const
+
+export type InventoryAdjustmentItemScalarFieldEnum = (typeof InventoryAdjustmentItemScalarFieldEnum)[keyof typeof InventoryAdjustmentItemScalarFieldEnum]
+
+
 export const SupplierScalarFieldEnum = {
   id: 'id',
   code: 'code',
@@ -400,6 +432,18 @@ export const SupplierScalarFieldEnum = {
 export type SupplierScalarFieldEnum = (typeof SupplierScalarFieldEnum)[keyof typeof SupplierScalarFieldEnum]
 
 
+export const SupplierProductPriceScalarFieldEnum = {
+  id: 'id',
+  supplierId: 'supplierId',
+  variantId: 'variantId',
+  unitCost: 'unitCost',
+  currency: 'currency',
+  recordedAt: 'recordedAt'
+} as const
+
+export type SupplierProductPriceScalarFieldEnum = (typeof SupplierProductPriceScalarFieldEnum)[keyof typeof SupplierProductPriceScalarFieldEnum]
+
+
 export const PurchaseOrderScalarFieldEnum = {
   id: 'id',
   number: 'number',
@@ -409,6 +453,10 @@ export const PurchaseOrderScalarFieldEnum = {
   expectedDate: 'expectedDate',
   orderedBy: 'orderedBy',
   approvedBy: 'approvedBy',
+  supplierConfirmedAt: 'supplierConfirmedAt',
+  invoiceNumber: 'invoiceNumber',
+  invoiceAmount: 'invoiceAmount',
+  payableStatus: 'payableStatus',
   createdAt: 'createdAt'
 } as const
 
@@ -692,6 +740,18 @@ export const ShipmentScalarFieldEnum = {
 export type ShipmentScalarFieldEnum = (typeof ShipmentScalarFieldEnum)[keyof typeof ShipmentScalarFieldEnum]
 
 
+export const ReturnPaymentScalarFieldEnum = {
+  id: 'id',
+  returnId: 'returnId',
+  method: 'method',
+  amount: 'amount',
+  receivedBy: 'receivedBy',
+  createdAt: 'createdAt'
+} as const
+
+export type ReturnPaymentScalarFieldEnum = (typeof ReturnPaymentScalarFieldEnum)[keyof typeof ReturnPaymentScalarFieldEnum]
+
+
 export const ReturnScalarFieldEnum = {
   id: 'id',
   number: 'number',
@@ -874,11 +934,41 @@ export const WarehouseTaskScalarFieldEnum = {
   assignedTo: 'assignedTo',
   priority: 'priority',
   notes: 'notes',
+  waveId: 'waveId',
   createdAt: 'createdAt',
   completedAt: 'completedAt'
 } as const
 
 export type WarehouseTaskScalarFieldEnum = (typeof WarehouseTaskScalarFieldEnum)[keyof typeof WarehouseTaskScalarFieldEnum]
+
+
+export const WarehouseTaskItemScalarFieldEnum = {
+  id: 'id',
+  taskId: 'taskId',
+  variantId: 'variantId',
+  quantity: 'quantity',
+  processedQty: 'processedQty',
+  binCode: 'binCode'
+} as const
+
+export type WarehouseTaskItemScalarFieldEnum = (typeof WarehouseTaskItemScalarFieldEnum)[keyof typeof WarehouseTaskItemScalarFieldEnum]
+
+
+export const JobRunScalarFieldEnum = {
+  id: 'id',
+  kind: 'kind',
+  status: 'status',
+  attempts: 'attempts',
+  maxAttempts: 'maxAttempts',
+  nextRunAt: 'nextRunAt',
+  startedAt: 'startedAt',
+  finishedAt: 'finishedAt',
+  result: 'result',
+  error: 'error',
+  createdAt: 'createdAt'
+} as const
+
+export type JobRunScalarFieldEnum = (typeof JobRunScalarFieldEnum)[keyof typeof JobRunScalarFieldEnum]
 
 
 export const LossAlertScalarFieldEnum = {

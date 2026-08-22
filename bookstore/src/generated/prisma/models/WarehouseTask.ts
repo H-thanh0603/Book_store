@@ -45,6 +45,7 @@ export type WarehouseTaskMinAggregateOutputType = {
   assignedTo: string | null
   priority: number | null
   notes: string | null
+  waveId: string | null
   createdAt: Date | null
   completedAt: Date | null
 }
@@ -60,6 +61,7 @@ export type WarehouseTaskMaxAggregateOutputType = {
   assignedTo: string | null
   priority: number | null
   notes: string | null
+  waveId: string | null
   createdAt: Date | null
   completedAt: Date | null
 }
@@ -75,6 +77,7 @@ export type WarehouseTaskCountAggregateOutputType = {
   assignedTo: number
   priority: number
   notes: number
+  waveId: number
   createdAt: number
   completedAt: number
   _all: number
@@ -100,6 +103,7 @@ export type WarehouseTaskMinAggregateInputType = {
   assignedTo?: true
   priority?: true
   notes?: true
+  waveId?: true
   createdAt?: true
   completedAt?: true
 }
@@ -115,6 +119,7 @@ export type WarehouseTaskMaxAggregateInputType = {
   assignedTo?: true
   priority?: true
   notes?: true
+  waveId?: true
   createdAt?: true
   completedAt?: true
 }
@@ -130,6 +135,7 @@ export type WarehouseTaskCountAggregateInputType = {
   assignedTo?: true
   priority?: true
   notes?: true
+  waveId?: true
   createdAt?: true
   completedAt?: true
   _all?: true
@@ -232,6 +238,7 @@ export type WarehouseTaskGroupByOutputType = {
   assignedTo: string | null
   priority: number
   notes: string | null
+  waveId: string | null
   createdAt: Date
   completedAt: Date | null
   _count: WarehouseTaskCountAggregateOutputType | null
@@ -270,9 +277,11 @@ export type WarehouseTaskWhereInput = {
   assignedTo?: Prisma.StringNullableFilter<"WarehouseTask"> | string | null
   priority?: Prisma.IntFilter<"WarehouseTask"> | number
   notes?: Prisma.StringNullableFilter<"WarehouseTask"> | string | null
+  waveId?: Prisma.StringNullableFilter<"WarehouseTask"> | string | null
   createdAt?: Prisma.DateTimeFilter<"WarehouseTask"> | Date | string
   completedAt?: Prisma.DateTimeNullableFilter<"WarehouseTask"> | Date | string | null
   location?: Prisma.XOR<Prisma.StockLocationScalarRelationFilter, Prisma.StockLocationWhereInput>
+  items?: Prisma.WarehouseTaskItemListRelationFilter
 }
 
 export type WarehouseTaskOrderByWithRelationInput = {
@@ -286,9 +295,11 @@ export type WarehouseTaskOrderByWithRelationInput = {
   assignedTo?: Prisma.SortOrderInput | Prisma.SortOrder
   priority?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  waveId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   location?: Prisma.StockLocationOrderByWithRelationInput
+  items?: Prisma.WarehouseTaskItemOrderByRelationAggregateInput
 }
 
 export type WarehouseTaskWhereUniqueInput = Prisma.AtLeast<{
@@ -305,9 +316,11 @@ export type WarehouseTaskWhereUniqueInput = Prisma.AtLeast<{
   assignedTo?: Prisma.StringNullableFilter<"WarehouseTask"> | string | null
   priority?: Prisma.IntFilter<"WarehouseTask"> | number
   notes?: Prisma.StringNullableFilter<"WarehouseTask"> | string | null
+  waveId?: Prisma.StringNullableFilter<"WarehouseTask"> | string | null
   createdAt?: Prisma.DateTimeFilter<"WarehouseTask"> | Date | string
   completedAt?: Prisma.DateTimeNullableFilter<"WarehouseTask"> | Date | string | null
   location?: Prisma.XOR<Prisma.StockLocationScalarRelationFilter, Prisma.StockLocationWhereInput>
+  items?: Prisma.WarehouseTaskItemListRelationFilter
 }, "id" | "number">
 
 export type WarehouseTaskOrderByWithAggregationInput = {
@@ -321,6 +334,7 @@ export type WarehouseTaskOrderByWithAggregationInput = {
   assignedTo?: Prisma.SortOrderInput | Prisma.SortOrder
   priority?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  waveId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.WarehouseTaskCountOrderByAggregateInput
@@ -344,6 +358,7 @@ export type WarehouseTaskScalarWhereWithAggregatesInput = {
   assignedTo?: Prisma.StringNullableWithAggregatesFilter<"WarehouseTask"> | string | null
   priority?: Prisma.IntWithAggregatesFilter<"WarehouseTask"> | number
   notes?: Prisma.StringNullableWithAggregatesFilter<"WarehouseTask"> | string | null
+  waveId?: Prisma.StringNullableWithAggregatesFilter<"WarehouseTask"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"WarehouseTask"> | Date | string
   completedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"WarehouseTask"> | Date | string | null
 }
@@ -358,9 +373,11 @@ export type WarehouseTaskCreateInput = {
   assignedTo?: string | null
   priority?: number
   notes?: string | null
+  waveId?: string | null
   createdAt?: Date | string
   completedAt?: Date | string | null
   location: Prisma.StockLocationCreateNestedOneWithoutWarehouseTasksInput
+  items?: Prisma.WarehouseTaskItemCreateNestedManyWithoutTaskInput
 }
 
 export type WarehouseTaskUncheckedCreateInput = {
@@ -374,8 +391,10 @@ export type WarehouseTaskUncheckedCreateInput = {
   assignedTo?: string | null
   priority?: number
   notes?: string | null
+  waveId?: string | null
   createdAt?: Date | string
   completedAt?: Date | string | null
+  items?: Prisma.WarehouseTaskItemUncheckedCreateNestedManyWithoutTaskInput
 }
 
 export type WarehouseTaskUpdateInput = {
@@ -388,9 +407,11 @@ export type WarehouseTaskUpdateInput = {
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  waveId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   location?: Prisma.StockLocationUpdateOneRequiredWithoutWarehouseTasksNestedInput
+  items?: Prisma.WarehouseTaskItemUpdateManyWithoutTaskNestedInput
 }
 
 export type WarehouseTaskUncheckedUpdateInput = {
@@ -404,8 +425,10 @@ export type WarehouseTaskUncheckedUpdateInput = {
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  waveId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  items?: Prisma.WarehouseTaskItemUncheckedUpdateManyWithoutTaskNestedInput
 }
 
 export type WarehouseTaskCreateManyInput = {
@@ -419,6 +442,7 @@ export type WarehouseTaskCreateManyInput = {
   assignedTo?: string | null
   priority?: number
   notes?: string | null
+  waveId?: string | null
   createdAt?: Date | string
   completedAt?: Date | string | null
 }
@@ -433,6 +457,7 @@ export type WarehouseTaskUpdateManyMutationInput = {
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  waveId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -448,6 +473,7 @@ export type WarehouseTaskUncheckedUpdateManyInput = {
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  waveId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -473,6 +499,7 @@ export type WarehouseTaskCountOrderByAggregateInput = {
   assignedTo?: Prisma.SortOrder
   priority?: Prisma.SortOrder
   notes?: Prisma.SortOrder
+  waveId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
 }
@@ -492,6 +519,7 @@ export type WarehouseTaskMaxOrderByAggregateInput = {
   assignedTo?: Prisma.SortOrder
   priority?: Prisma.SortOrder
   notes?: Prisma.SortOrder
+  waveId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
 }
@@ -507,12 +535,18 @@ export type WarehouseTaskMinOrderByAggregateInput = {
   assignedTo?: Prisma.SortOrder
   priority?: Prisma.SortOrder
   notes?: Prisma.SortOrder
+  waveId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
 }
 
 export type WarehouseTaskSumOrderByAggregateInput = {
   priority?: Prisma.SortOrder
+}
+
+export type WarehouseTaskScalarRelationFilter = {
+  is?: Prisma.WarehouseTaskWhereInput
+  isNot?: Prisma.WarehouseTaskWhereInput
 }
 
 export type WarehouseTaskCreateNestedManyWithoutLocationInput = {
@@ -565,6 +599,20 @@ export type EnumWarehouseTaskStatusFieldUpdateOperationsInput = {
   set?: $Enums.WarehouseTaskStatus
 }
 
+export type WarehouseTaskCreateNestedOneWithoutItemsInput = {
+  create?: Prisma.XOR<Prisma.WarehouseTaskCreateWithoutItemsInput, Prisma.WarehouseTaskUncheckedCreateWithoutItemsInput>
+  connectOrCreate?: Prisma.WarehouseTaskCreateOrConnectWithoutItemsInput
+  connect?: Prisma.WarehouseTaskWhereUniqueInput
+}
+
+export type WarehouseTaskUpdateOneRequiredWithoutItemsNestedInput = {
+  create?: Prisma.XOR<Prisma.WarehouseTaskCreateWithoutItemsInput, Prisma.WarehouseTaskUncheckedCreateWithoutItemsInput>
+  connectOrCreate?: Prisma.WarehouseTaskCreateOrConnectWithoutItemsInput
+  upsert?: Prisma.WarehouseTaskUpsertWithoutItemsInput
+  connect?: Prisma.WarehouseTaskWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WarehouseTaskUpdateToOneWithWhereWithoutItemsInput, Prisma.WarehouseTaskUpdateWithoutItemsInput>, Prisma.WarehouseTaskUncheckedUpdateWithoutItemsInput>
+}
+
 export type WarehouseTaskCreateWithoutLocationInput = {
   id?: string
   number: string
@@ -575,8 +623,10 @@ export type WarehouseTaskCreateWithoutLocationInput = {
   assignedTo?: string | null
   priority?: number
   notes?: string | null
+  waveId?: string | null
   createdAt?: Date | string
   completedAt?: Date | string | null
+  items?: Prisma.WarehouseTaskItemCreateNestedManyWithoutTaskInput
 }
 
 export type WarehouseTaskUncheckedCreateWithoutLocationInput = {
@@ -589,8 +639,10 @@ export type WarehouseTaskUncheckedCreateWithoutLocationInput = {
   assignedTo?: string | null
   priority?: number
   notes?: string | null
+  waveId?: string | null
   createdAt?: Date | string
   completedAt?: Date | string | null
+  items?: Prisma.WarehouseTaskItemUncheckedCreateNestedManyWithoutTaskInput
 }
 
 export type WarehouseTaskCreateOrConnectWithoutLocationInput = {
@@ -633,8 +685,89 @@ export type WarehouseTaskScalarWhereInput = {
   assignedTo?: Prisma.StringNullableFilter<"WarehouseTask"> | string | null
   priority?: Prisma.IntFilter<"WarehouseTask"> | number
   notes?: Prisma.StringNullableFilter<"WarehouseTask"> | string | null
+  waveId?: Prisma.StringNullableFilter<"WarehouseTask"> | string | null
   createdAt?: Prisma.DateTimeFilter<"WarehouseTask"> | Date | string
   completedAt?: Prisma.DateTimeNullableFilter<"WarehouseTask"> | Date | string | null
+}
+
+export type WarehouseTaskCreateWithoutItemsInput = {
+  id?: string
+  number: string
+  type: $Enums.WarehouseTaskType
+  status?: $Enums.WarehouseTaskStatus
+  refType?: string | null
+  refId?: string | null
+  assignedTo?: string | null
+  priority?: number
+  notes?: string | null
+  waveId?: string | null
+  createdAt?: Date | string
+  completedAt?: Date | string | null
+  location: Prisma.StockLocationCreateNestedOneWithoutWarehouseTasksInput
+}
+
+export type WarehouseTaskUncheckedCreateWithoutItemsInput = {
+  id?: string
+  number: string
+  type: $Enums.WarehouseTaskType
+  status?: $Enums.WarehouseTaskStatus
+  locationId: string
+  refType?: string | null
+  refId?: string | null
+  assignedTo?: string | null
+  priority?: number
+  notes?: string | null
+  waveId?: string | null
+  createdAt?: Date | string
+  completedAt?: Date | string | null
+}
+
+export type WarehouseTaskCreateOrConnectWithoutItemsInput = {
+  where: Prisma.WarehouseTaskWhereUniqueInput
+  create: Prisma.XOR<Prisma.WarehouseTaskCreateWithoutItemsInput, Prisma.WarehouseTaskUncheckedCreateWithoutItemsInput>
+}
+
+export type WarehouseTaskUpsertWithoutItemsInput = {
+  update: Prisma.XOR<Prisma.WarehouseTaskUpdateWithoutItemsInput, Prisma.WarehouseTaskUncheckedUpdateWithoutItemsInput>
+  create: Prisma.XOR<Prisma.WarehouseTaskCreateWithoutItemsInput, Prisma.WarehouseTaskUncheckedCreateWithoutItemsInput>
+  where?: Prisma.WarehouseTaskWhereInput
+}
+
+export type WarehouseTaskUpdateToOneWithWhereWithoutItemsInput = {
+  where?: Prisma.WarehouseTaskWhereInput
+  data: Prisma.XOR<Prisma.WarehouseTaskUpdateWithoutItemsInput, Prisma.WarehouseTaskUncheckedUpdateWithoutItemsInput>
+}
+
+export type WarehouseTaskUpdateWithoutItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.EnumWarehouseTaskTypeFieldUpdateOperationsInput | $Enums.WarehouseTaskType
+  status?: Prisma.EnumWarehouseTaskStatusFieldUpdateOperationsInput | $Enums.WarehouseTaskStatus
+  refType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priority?: Prisma.IntFieldUpdateOperationsInput | number
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  waveId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  location?: Prisma.StockLocationUpdateOneRequiredWithoutWarehouseTasksNestedInput
+}
+
+export type WarehouseTaskUncheckedUpdateWithoutItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.EnumWarehouseTaskTypeFieldUpdateOperationsInput | $Enums.WarehouseTaskType
+  status?: Prisma.EnumWarehouseTaskStatusFieldUpdateOperationsInput | $Enums.WarehouseTaskStatus
+  locationId?: Prisma.StringFieldUpdateOperationsInput | string
+  refType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priority?: Prisma.IntFieldUpdateOperationsInput | number
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  waveId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type WarehouseTaskCreateManyLocationInput = {
@@ -647,6 +780,7 @@ export type WarehouseTaskCreateManyLocationInput = {
   assignedTo?: string | null
   priority?: number
   notes?: string | null
+  waveId?: string | null
   createdAt?: Date | string
   completedAt?: Date | string | null
 }
@@ -661,8 +795,10 @@ export type WarehouseTaskUpdateWithoutLocationInput = {
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  waveId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  items?: Prisma.WarehouseTaskItemUpdateManyWithoutTaskNestedInput
 }
 
 export type WarehouseTaskUncheckedUpdateWithoutLocationInput = {
@@ -675,8 +811,10 @@ export type WarehouseTaskUncheckedUpdateWithoutLocationInput = {
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  waveId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  items?: Prisma.WarehouseTaskItemUncheckedUpdateManyWithoutTaskNestedInput
 }
 
 export type WarehouseTaskUncheckedUpdateManyWithoutLocationInput = {
@@ -689,10 +827,40 @@ export type WarehouseTaskUncheckedUpdateManyWithoutLocationInput = {
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  waveId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
+
+/**
+ * Count Type WarehouseTaskCountOutputType
+ */
+
+export type WarehouseTaskCountOutputType = {
+  items: number
+}
+
+export type WarehouseTaskCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  items?: boolean | WarehouseTaskCountOutputTypeCountItemsArgs
+}
+
+/**
+ * WarehouseTaskCountOutputType without action
+ */
+export type WarehouseTaskCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WarehouseTaskCountOutputType
+   */
+  select?: Prisma.WarehouseTaskCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * WarehouseTaskCountOutputType without action
+ */
+export type WarehouseTaskCountOutputTypeCountItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.WarehouseTaskItemWhereInput
+}
 
 
 export type WarehouseTaskSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -706,9 +874,12 @@ export type WarehouseTaskSelect<ExtArgs extends runtime.Types.Extensions.Interna
   assignedTo?: boolean
   priority?: boolean
   notes?: boolean
+  waveId?: boolean
   createdAt?: boolean
   completedAt?: boolean
   location?: boolean | Prisma.StockLocationDefaultArgs<ExtArgs>
+  items?: boolean | Prisma.WarehouseTask$itemsArgs<ExtArgs>
+  _count?: boolean | Prisma.WarehouseTaskCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["warehouseTask"]>
 
 export type WarehouseTaskSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -722,6 +893,7 @@ export type WarehouseTaskSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   assignedTo?: boolean
   priority?: boolean
   notes?: boolean
+  waveId?: boolean
   createdAt?: boolean
   completedAt?: boolean
   location?: boolean | Prisma.StockLocationDefaultArgs<ExtArgs>
@@ -738,6 +910,7 @@ export type WarehouseTaskSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   assignedTo?: boolean
   priority?: boolean
   notes?: boolean
+  waveId?: boolean
   createdAt?: boolean
   completedAt?: boolean
   location?: boolean | Prisma.StockLocationDefaultArgs<ExtArgs>
@@ -754,13 +927,16 @@ export type WarehouseTaskSelectScalar = {
   assignedTo?: boolean
   priority?: boolean
   notes?: boolean
+  waveId?: boolean
   createdAt?: boolean
   completedAt?: boolean
 }
 
-export type WarehouseTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "type" | "status" | "locationId" | "refType" | "refId" | "assignedTo" | "priority" | "notes" | "createdAt" | "completedAt", ExtArgs["result"]["warehouseTask"]>
+export type WarehouseTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "type" | "status" | "locationId" | "refType" | "refId" | "assignedTo" | "priority" | "notes" | "waveId" | "createdAt" | "completedAt", ExtArgs["result"]["warehouseTask"]>
 export type WarehouseTaskInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   location?: boolean | Prisma.StockLocationDefaultArgs<ExtArgs>
+  items?: boolean | Prisma.WarehouseTask$itemsArgs<ExtArgs>
+  _count?: boolean | Prisma.WarehouseTaskCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type WarehouseTaskIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   location?: boolean | Prisma.StockLocationDefaultArgs<ExtArgs>
@@ -773,6 +949,7 @@ export type $WarehouseTaskPayload<ExtArgs extends runtime.Types.Extensions.Inter
   name: "WarehouseTask"
   objects: {
     location: Prisma.$StockLocationPayload<ExtArgs>
+    items: Prisma.$WarehouseTaskItemPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -785,6 +962,7 @@ export type $WarehouseTaskPayload<ExtArgs extends runtime.Types.Extensions.Inter
     assignedTo: string | null
     priority: number
     notes: string | null
+    waveId: string | null
     createdAt: Date
     completedAt: Date | null
   }, ExtArgs["result"]["warehouseTask"]>
@@ -1182,6 +1360,7 @@ readonly fields: WarehouseTaskFieldRefs;
 export interface Prisma__WarehouseTaskClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   location<T extends Prisma.StockLocationDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StockLocationDefaultArgs<ExtArgs>>): Prisma.Prisma__StockLocationClient<runtime.Types.Result.GetResult<Prisma.$StockLocationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  items<T extends Prisma.WarehouseTask$itemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WarehouseTask$itemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WarehouseTaskItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1221,6 +1400,7 @@ export interface WarehouseTaskFieldRefs {
   readonly assignedTo: Prisma.FieldRef<"WarehouseTask", 'String'>
   readonly priority: Prisma.FieldRef<"WarehouseTask", 'Int'>
   readonly notes: Prisma.FieldRef<"WarehouseTask", 'String'>
+  readonly waveId: Prisma.FieldRef<"WarehouseTask", 'String'>
   readonly createdAt: Prisma.FieldRef<"WarehouseTask", 'DateTime'>
   readonly completedAt: Prisma.FieldRef<"WarehouseTask", 'DateTime'>
 }
@@ -1621,6 +1801,30 @@ export type WarehouseTaskDeleteManyArgs<ExtArgs extends runtime.Types.Extensions
    * Limit how many WarehouseTasks to delete.
    */
   limit?: number
+}
+
+/**
+ * WarehouseTask.items
+ */
+export type WarehouseTask$itemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WarehouseTaskItem
+   */
+  select?: Prisma.WarehouseTaskItemSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WarehouseTaskItem
+   */
+  omit?: Prisma.WarehouseTaskItemOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WarehouseTaskItemInclude<ExtArgs> | null
+  where?: Prisma.WarehouseTaskItemWhereInput
+  orderBy?: Prisma.WarehouseTaskItemOrderByWithRelationInput | Prisma.WarehouseTaskItemOrderByWithRelationInput[]
+  cursor?: Prisma.WarehouseTaskItemWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.WarehouseTaskItemScalarFieldEnum | Prisma.WarehouseTaskItemScalarFieldEnum[]
 }
 
 /**

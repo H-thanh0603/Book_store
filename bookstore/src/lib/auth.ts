@@ -88,6 +88,70 @@ export async function requirePermission(code: string, storeId?: string) {
   return auth;
 }
 
+/**
+ * Central store-scoping for list/query filters (deliverable 1).
+ * Returns the storeIds the caller may see:
+ *  - null            → unscoped role, no filter (all stores)
+ *  - string[]        → clamp to these stores
+ * A store-scoped role requesting another store — or an unscoped request that
+ * can't be satisfied — gets 403. Omitted storeId is clamped to the caller's
+ * own stores, never widened to "all".
+ */
+export function resolveStoreScope(
+  auth: AuthContext,
+  requestedStoreId?: string | null,
+  permission?: string
+): string[] | null {
+  const relevant = permission
+    ? auth.roles.filter((r) => r.permissions.includes(permission))
+    : auth.roles;
+  const unscoped = relevant.some((r) => r.storeId === null);
+  if (unscoped) return requestedStoreId ? [requestedStoreId] : null;
+  const mine = [...new Set(relevant.map((r) => r.storeId).filter((s): s is string => !!s))];
+  if (mine.length === 0)
+    throw Object.assign(new Error("Forbidden: no store scope"), { status: 403 });
+  if (requestedStoreId) {
+    if (!mine.includes(requestedStoreId))
+      throw Object.assign(new Error(`Forbidden: store ${requestedStoreId}`), { status: 403 });
+    return [requestedStoreId];
+  }
+  return mine;
+}
+
+/**
+ * Assert the caller (via resolveStoreScope) may act on data living in
+ * `dataStoreId`. Use after loading the row a mutation targets.
+ */
+export function assertStoreAccess(
+  auth: AuthContext,
+  dataStoreId: string | null | undefined,
+  permission?: string
+) {
+  const scope = resolveStoreScope(auth, dataStoreId ?? undefined, permission);
+  if (scope === null) return;
+  if (!dataStoreId || !scope.includes(dataStoreId))
+    throw Object.assign(new Error("Forbidden: store scope"), { status: 403 });
+}
+
+/** Write a sensitive-mutation audit row (deliverable 4). */
+export async function audit(
+  actorId: string,
+  action: string,
+  entity: string,
+  entityId: string,
+  meta?: Record<string, unknown>,
+  // ponytail: structural tx type so both PrismaClient and Prisma.TransactionClient fit
+  tx?: { auditLog: { create: (args: { data: Record<string, unknown> }) => Promise<unknown> } } | Record<string, unknown>
+) {
+  const data = {
+    actorId, action, entity, entityId,
+    after: meta ? JSON.parse(JSON.stringify(meta)) : undefined,
+  };
+  const client = tx as { auditLog?: { create: (a: { data: Record<string, unknown> }) => Promise<unknown> } } | undefined;
+  if (client?.auditLog) await client.auditLog.create({ data });
+  else await prisma.auditLog.create({ data });
+}
+
 export async function requireAuth(): Promise<AuthContext> {
   const auth = await getAuth();
   if (!auth) throw Object.assign(new Error("Unauthorized"), { status: 401 });

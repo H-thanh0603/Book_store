@@ -1,20 +1,19 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission } from "@/lib/auth";
+import { requirePermission, resolveStoreScope } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 
-// GET /api/inventory?variantId=&storeId=
+// GET /api/inventory?variantId=&storeId= — store-scoped (deliverable 1)
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission("inventory.view");
     const sp = req.nextUrl.searchParams;
-    const variantId = sp.get("variantId") ?? undefined;
-    const storeId = sp.get("storeId") ?? undefined;
+    const auth = await requirePermission("inventory.view");
+    const scope = resolveStoreScope(auth, sp.get("storeId") ?? undefined, "inventory.view");
 
     const balances = await prisma.inventoryBalance.findMany({
       where: {
-        variantId,
-        location: storeId ? { storeId } : undefined,
+        variantId: sp.get("variantId") ?? undefined,
+        location: scope ? { storeId: { in: scope } } : undefined,
       },
       include: { location: true, variant: { include: { product: true } } },
       take: 500,

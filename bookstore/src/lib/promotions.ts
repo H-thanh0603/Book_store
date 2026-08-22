@@ -1,6 +1,6 @@
 // Promotion engine — rule-based, Phase 1 scope.
 import { prisma } from "./db";
-import { PromoChannel, Prisma } from "../generated/prisma/client";
+import { PromoChannel } from "../generated/prisma/client";
 
 export type CartLine = {
   variantId: string;
@@ -108,12 +108,10 @@ export async function evaluatePromotions(args: {
   const caps = new Map<string, bigint>();
   for (const l of args.lines) caps.set(l.variantId, l.unitPrice * BigInt(l.quantity));
   const merged = new Map<string, bigint>();
-  let mergedTotal = 0n;
   for (const ap of applied)
     for (const [vid, d] of ap.lineDiscounts) {
       const next = (merged.get(vid) ?? 0n) + d;
       const capped = next > caps.get(vid)! ? caps.get(vid)! : next;
-      mergedTotal += capped - (merged.get(vid) ?? 0n) > 0n ? capped - (merged.get(vid) ?? 0n) : 0n;
       merged.set(vid, capped);
     }
 

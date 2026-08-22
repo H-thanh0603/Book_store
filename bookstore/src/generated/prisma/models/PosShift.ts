@@ -547,14 +547,6 @@ export type EnumShiftStatusFieldUpdateOperationsInput = {
   set?: $Enums.ShiftStatus
 }
 
-export type NullableBigIntFieldUpdateOperationsInput = {
-  set?: bigint | number | null
-  increment?: bigint | number
-  decrement?: bigint | number
-  multiply?: bigint | number
-  divide?: bigint | number
-}
-
 export type PosShiftCreateNestedOneWithoutTransactionsInput = {
   create?: Prisma.XOR<Prisma.PosShiftCreateWithoutTransactionsInput, Prisma.PosShiftUncheckedCreateWithoutTransactionsInput>
   connectOrCreate?: Prisma.PosShiftCreateOrConnectWithoutTransactionsInput

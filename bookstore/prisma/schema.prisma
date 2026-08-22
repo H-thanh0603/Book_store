@@ -67,6 +67,7 @@ model StockLocation {
   returns      Return[]
   supplierReturns SupplierReturn[]
   inventoryCounts InventoryCount[]
+  adjustments  InventoryAdjustment[]
   replenishmentSuggestions ReplenishmentSuggestion[]
   warehouseTasks WarehouseTask[]
   @@index([storeId])
@@ -221,6 +222,9 @@ model ProductVariant {
   returnItems ReturnItem[]
   supplierReturnItems SupplierReturnItem[]
   inventoryCountItems InventoryCountItem[]
+  adjustmentItems  InventoryAdjustmentItem[] @relation("adjItems")
+  supplierPrices   SupplierProductPrice[]
+  wmsTaskItems     WarehouseTaskItem[] @relation("wmsItems")
   replenishmentSuggestions ReplenishmentSuggestion[]
   posItems  PosTransactionItem[]
   bundleItems BundleItem[] @relation("component")
@@ -315,6 +319,39 @@ model InventoryMovement {
   @@index([createdAt])
 }
 
+// Agent 2: inventory adjustment approval workflow. DRAFT → PENDING → APPROVED (applies movement) | REJECTED.
+enum AdjustmentStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+model InventoryAdjustment {
+  id          String @id @default(uuid())
+  number      String @unique // ADJ-2026-000001
+  locationId  String
+  location    StockLocation @relation(fields: [locationId], references: [id])
+  reason      String
+  status      AdjustmentStatus @default(DRAFT)
+  createdBy   String
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  items       InventoryAdjustmentItem[]
+  createdAt   DateTime @default(now())
+  @@index([status])
+}
+
+model InventoryAdjustmentItem {
+  id            String @id @default(uuid())
+  adjustmentId  String
+  adjustment    InventoryAdjustment @relation(fields: [adjustmentId], references: [id])
+  variantId     String
+  variant       ProductVariant @relation("adjItems", fields: [variantId], references: [id])
+  expectedQty   Int
+  countedQty    Int
+}
+
 // ── Suppliers / Purchasing ────────────────────────────────────
 
 model Supplier {
@@ -332,6 +369,20 @@ model Supplier {
   isConsignment Boolean @default(false)
   purchaseOrders PurchaseOrder[]
   supplierReturns SupplierReturn[]
+  productPrices SupplierProductPrice[]
+}
+
+// Agent 2: supplier-product price history (one row per recorded cost)
+model SupplierProductPrice {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  variantId  String
+  variant    ProductVariant @relation(fields: [variantId], references: [id])
+  unitCost   BigInt
+  currency   String   @default("VND")
+  recordedAt DateTime @default(now())
+  @@index([supplierId, variantId, recordedAt])
 }
 
 enum PoStatus {
@@ -356,6 +407,11 @@ model PurchaseOrder {
   expectedDate DateTime?
   orderedBy   String?
   approvedBy  String?
+  // Agent 2: supplier confirmation + invoice/payable workflow
+  supplierConfirmedAt DateTime?
+  invoiceNumber   String?
+  invoiceAmount   BigInt?
+  payableStatus   String? // unpaid | partially_paid | paid
   items       PurchaseOrderItem[]
   receipts    GoodsReceipt[]
   createdAt   DateTime @default(now())
@@ -717,6 +773,19 @@ enum ReturnStatus {
   REJECTED
 }
 
+// Refund ledger: real money-out rows for returns (deliverable 3).
+model ReturnPayment {
+  id         String   @id @default(uuid())
+  returnId   String
+  return     Return   @relation(fields: [returnId], references: [id])
+  method     String   @default("CASH") // CASH | CARD | QR | E_WALLET | STORE_CREDIT | GIFT_CARD
+  amount     BigInt
+  receivedBy String?
+  createdAt  DateTime @default(now())
+
+  @@index([returnId])
+}
+
 model Return {
   id          String @id @default(uuid())
   number      String @unique
@@ -724,6 +793,7 @@ model Return {
   order       Order? @relation(fields: [orderId], references: [id])
   customerId  String?
   customer    Customer? @relation(fields: [customerId], references: [id])
+  payments    ReturnPayment[]
   locationId  String
   location    StockLocation @relation(fields: [locationId], references: [id])
   status      ReturnStatus @default(REQUESTED)
@@ -909,6 +979,21 @@ model IntegrationJob {
   @@index([provider, status])
 }
 
+// Agent 4: connector registration — per-provider credentials, webhook signing
+// secret, and last-sync watermarks for catalog/stock/order reconciliation.
+model IntegrationProvider {
+  id            String @id @default(uuid())
+  name          String @unique // shopee | lazada | maman | quickbooks...
+  kind          String // marketplace | accounting
+  active        Boolean @default(true)
+  credentials   Json? // API keys/tokens; never returned by GET
+  webhookSecret String? // HMAC-SHA256 signing secret for inbound webhooks
+  lastCatalogSyncAt DateTime?
+  lastStockSyncAt   DateTime?
+  lastOrderSyncAt   DateTime?
+  createdAt     DateTime @default(now())
+}
+
 enum WarehouseTaskType {
   PICK
   PACK
@@ -935,9 +1020,51 @@ model WarehouseTask {
   assignedTo  String?
   priority    Int @default(0)
   notes       String?
+  // Agent 4: wave picking + bin-level task items (variant, qty, from/to bin)
+  waveId      String?
+  items       WarehouseTaskItem[]
   createdAt   DateTime @default(now())
   completedAt DateTime?
   @@index([status, priority])
+  @@index([waveId])
+}
+
+// Agent 4: one row per variant inside a WMS task — bin picking / putaway detail.
+model WarehouseTaskItem {
+  id             String @id @default(uuid())
+  taskId         String
+  task           WarehouseTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  variantId      String
+  variant        ProductVariant @relation("wmsItems", fields: [variantId], references: [id])
+  quantity       Int
+  processedQty   Int @default(0) // picked / putaway / counted so far
+  binCode        String? // source bin for PICK, destination for PUTAWAY
+  @@index([taskId])
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+// Agent 4: run ledger for every scheduled/background job (replenishment, loss scan,
+// integration sync...). Failed runs visible + retryable via /api/jobs.
+model JobRun {
+  id         String @id @default(uuid())
+  kind       String // replenishment.generate | loss.scan | integrations.dispatch | ...
+  status     JobStatus @default(PENDING)
+  attempts   Int @default(0)
+  maxAttempts Int @default(3)
+  nextRunAt  DateTime @default(now()) // backoff schedule
+  startedAt  DateTime?
+  finishedAt DateTime?
+  result     Json?
+  error      String?
+  createdAt  DateTime @default(now())
+  @@index([status, nextRunAt])
+  @@index([kind])
 }
 
 enum LossAlertStatus {

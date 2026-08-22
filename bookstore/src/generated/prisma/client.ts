@@ -162,10 +162,25 @@ export type InventoryBalance = Prisma.InventoryBalanceModel
  */
 export type InventoryMovement = Prisma.InventoryMovementModel
 /**
+ * Model InventoryAdjustment
+ * 
+ */
+export type InventoryAdjustment = Prisma.InventoryAdjustmentModel
+/**
+ * Model InventoryAdjustmentItem
+ * 
+ */
+export type InventoryAdjustmentItem = Prisma.InventoryAdjustmentItemModel
+/**
  * Model Supplier
  * 
  */
 export type Supplier = Prisma.SupplierModel
+/**
+ * Model SupplierProductPrice
+ * 
+ */
+export type SupplierProductPrice = Prisma.SupplierProductPriceModel
 /**
  * Model PurchaseOrder
  * 
@@ -277,6 +292,11 @@ export type Payment = Prisma.PaymentModel
  */
 export type Shipment = Prisma.ShipmentModel
 /**
+ * Model ReturnPayment
+ * 
+ */
+export type ReturnPayment = Prisma.ReturnPaymentModel
+/**
  * Model Return
  * 
  */
@@ -346,6 +366,16 @@ export type IntegrationJob = Prisma.IntegrationJobModel
  * 
  */
 export type WarehouseTask = Prisma.WarehouseTaskModel
+/**
+ * Model WarehouseTaskItem
+ * 
+ */
+export type WarehouseTaskItem = Prisma.WarehouseTaskItemModel
+/**
+ * Model JobRun
+ * 
+ */
+export type JobRun = Prisma.JobRunModel
 /**
  * Model LossAlert
  * 

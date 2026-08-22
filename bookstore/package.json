@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:phase3": "tsx scripts/test-phase3.ts"
+    "test:phase3": "tsx scripts/test-phase3.ts",
+    "test:p0": "tsx scripts/test-p0.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

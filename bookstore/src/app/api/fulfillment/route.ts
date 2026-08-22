@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission } from "@/lib/auth";
+import { requirePermission, assertStoreAccess, audit } from "@/lib/auth";
 import { apiError, fail, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { MovementType } from "@/generated/prisma/client";
@@ -13,13 +13,23 @@ export async function POST(req: NextRequest) {
     if (!body.orderId) fail(400, "VALIDATION", "orderId required");
 
     if (body.action === "deliver") {
-      const order = await prisma.order.update({
-        where: { id: body.orderId },
-        data: {
-          status: "DELIVERED",
-          shipment: { update: { status: "DELIVERED", deliveredAt: new Date() } },
-          statusHistory: { create: { fromStatus: "SHIPPED", toStatus: "DELIVERED", userId: auth.userId } },
-        },
+      const order = await prisma.$transaction(async (tx) => {
+        const current = await tx.order.findUnique({ where: { id: body.orderId }, include: { shipment: true } });
+        if (!current) fail(404, "NOT_FOUND", "Order not found");
+        assertStoreAccess(auth, current.storeId, "inventory.adjust");
+        // Delivery is only valid from SHIPPED (or pickup READY flow).
+        if (!["SHIPPED", "READY"].includes(current.status))
+          fail(409, "INVALID_STATUS_TRANSITION", `Cannot deliver ${current.status} order`);
+        const updated = await tx.order.update({
+          where: { id: current.id },
+          data: {
+            status: "DELIVERED",
+            shipment: { update: { status: "DELIVERED", deliveredAt: new Date() } },
+            statusHistory: { create: { fromStatus: current.status, toStatus: "DELIVERED", userId: auth.userId } },
+          },
+        });
+        await audit(auth.userId, "order.deliver", "Order", current.id, { number: current.number }, tx);
+        return updated;
       });
       return ok({ number: order.number, status: order.status });
     }
@@ -27,6 +37,7 @@ export async function POST(req: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({ where: { id: body.orderId }, include: { items: true } });
       if (!order) fail(404, "NOT_FOUND", "Order not found");
+      assertStoreAccess(auth, order.storeId, "inventory.adjust");
 
       if (body.action === "cancel") {
         if (["SHIPPED", "DELIVERED", "CANCELLED"].includes(order.status))
@@ -46,6 +57,9 @@ export async function POST(req: NextRequest) {
         return tx.order.update({
           where: { id: order.id },
           data: { status: "CANCELLED", statusHistory: { create: { fromStatus: order.status, toStatus: "CANCELLED", userId: auth.userId } } },
+        }).then(async (cancelled) => {
+          await audit(auth.userId, "order.cancel", "Order", order.id, { number: order.number }, tx);
+          return cancelled;
         });
       }
 
@@ -76,7 +90,7 @@ export async function POST(req: NextRequest) {
       }
 
       const nextStatus = isPickup ? "DELIVERED" : "SHIPPED";
-      return tx.order.update({
+      const updated = await tx.order.update({
         where: { id: order.id },
         data: {
           status: nextStatus,
@@ -91,6 +105,8 @@ export async function POST(req: NextRequest) {
           statusHistory: { create: { fromStatus: order.status, toStatus: nextStatus, userId: auth.userId } },
         },
       });
+      await audit(auth.userId, isPickup ? "order.collect" : "order.ship", "Order", order.id, { number: order.number }, tx);
+      return updated;
     });
     return ok({ number: result.number, status: result.status });
   } catch (err) {

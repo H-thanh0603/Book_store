@@ -39,6 +39,16 @@ export const MovementType = {
 export type MovementType = (typeof MovementType)[keyof typeof MovementType]
 
 
+export const AdjustmentStatus = {
+  DRAFT: 'DRAFT',
+  PENDING_APPROVAL: 'PENDING_APPROVAL',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED'
+} as const
+
+export type AdjustmentStatus = (typeof AdjustmentStatus)[keyof typeof AdjustmentStatus]
+
+
 export const PoStatus = {
   draft: 'draft',
   pending_approval: 'pending_approval',
@@ -214,6 +224,16 @@ export const WarehouseTaskStatus = {
 } as const
 
 export type WarehouseTaskStatus = (typeof WarehouseTaskStatus)[keyof typeof WarehouseTaskStatus]
+
+
+export const JobStatus = {
+  PENDING: 'PENDING',
+  RUNNING: 'RUNNING',
+  SUCCEEDED: 'SUCCEEDED',
+  FAILED: 'FAILED'
+} as const
+
+export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus]
 
 
 export const LossAlertStatus = {

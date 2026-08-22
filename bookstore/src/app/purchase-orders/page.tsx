@@ -28,6 +28,7 @@ export default function PurchaseOrdersPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
     load();
     fetch("/api/refs?kind=suppliers").then(async (r) => r.ok && setSuppliers((await r.json()).suppliers));
     fetch("/api/refs?kind=warehouses").then(async (r) => r.ok && setWarehouses((await r.json()).warehouses));

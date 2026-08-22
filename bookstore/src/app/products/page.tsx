@@ -24,7 +24,8 @@ export default function ProductsPage() {
     else setErr(d.message);
   }
 
-  useEffect(() => { load(1, ""); }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch; setState fires after await
+  useEffect(() => { void load(1, ""); }, []);
 
   const vnd = (n: number) => n.toLocaleString("vi-VN") + "₫";
 

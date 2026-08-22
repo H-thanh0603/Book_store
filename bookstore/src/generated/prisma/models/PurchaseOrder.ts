@@ -20,8 +20,18 @@ export type PurchaseOrderModel = runtime.Types.Result.DefaultSelection<Prisma.$P
 
 export type AggregatePurchaseOrder = {
   _count: PurchaseOrderCountAggregateOutputType | null
+  _avg: PurchaseOrderAvgAggregateOutputType | null
+  _sum: PurchaseOrderSumAggregateOutputType | null
   _min: PurchaseOrderMinAggregateOutputType | null
   _max: PurchaseOrderMaxAggregateOutputType | null
+}
+
+export type PurchaseOrderAvgAggregateOutputType = {
+  invoiceAmount: number | null
+}
+
+export type PurchaseOrderSumAggregateOutputType = {
+  invoiceAmount: bigint | null
 }
 
 export type PurchaseOrderMinAggregateOutputType = {
@@ -33,6 +43,10 @@ export type PurchaseOrderMinAggregateOutputType = {
   expectedDate: Date | null
   orderedBy: string | null
   approvedBy: string | null
+  supplierConfirmedAt: Date | null
+  invoiceNumber: string | null
+  invoiceAmount: bigint | null
+  payableStatus: string | null
   createdAt: Date | null
 }
 
@@ -45,6 +59,10 @@ export type PurchaseOrderMaxAggregateOutputType = {
   expectedDate: Date | null
   orderedBy: string | null
   approvedBy: string | null
+  supplierConfirmedAt: Date | null
+  invoiceNumber: string | null
+  invoiceAmount: bigint | null
+  payableStatus: string | null
   createdAt: Date | null
 }
 
@@ -57,10 +75,22 @@ export type PurchaseOrderCountAggregateOutputType = {
   expectedDate: number
   orderedBy: number
   approvedBy: number
+  supplierConfirmedAt: number
+  invoiceNumber: number
+  invoiceAmount: number
+  payableStatus: number
   createdAt: number
   _all: number
 }
 
+
+export type PurchaseOrderAvgAggregateInputType = {
+  invoiceAmount?: true
+}
+
+export type PurchaseOrderSumAggregateInputType = {
+  invoiceAmount?: true
+}
 
 export type PurchaseOrderMinAggregateInputType = {
   id?: true
@@ -71,6 +101,10 @@ export type PurchaseOrderMinAggregateInputType = {
   expectedDate?: true
   orderedBy?: true
   approvedBy?: true
+  supplierConfirmedAt?: true
+  invoiceNumber?: true
+  invoiceAmount?: true
+  payableStatus?: true
   createdAt?: true
 }
 
@@ -83,6 +117,10 @@ export type PurchaseOrderMaxAggregateInputType = {
   expectedDate?: true
   orderedBy?: true
   approvedBy?: true
+  supplierConfirmedAt?: true
+  invoiceNumber?: true
+  invoiceAmount?: true
+  payableStatus?: true
   createdAt?: true
 }
 
@@ -95,6 +133,10 @@ export type PurchaseOrderCountAggregateInputType = {
   expectedDate?: true
   orderedBy?: true
   approvedBy?: true
+  supplierConfirmedAt?: true
+  invoiceNumber?: true
+  invoiceAmount?: true
+  payableStatus?: true
   createdAt?: true
   _all?: true
 }
@@ -137,6 +179,18 @@ export type PurchaseOrderAggregateArgs<ExtArgs extends runtime.Types.Extensions.
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: PurchaseOrderAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: PurchaseOrderSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: PurchaseOrderMinAggregateInputType
@@ -167,6 +221,8 @@ export type PurchaseOrderGroupByArgs<ExtArgs extends runtime.Types.Extensions.In
   take?: number
   skip?: number
   _count?: PurchaseOrderCountAggregateInputType | true
+  _avg?: PurchaseOrderAvgAggregateInputType
+  _sum?: PurchaseOrderSumAggregateInputType
   _min?: PurchaseOrderMinAggregateInputType
   _max?: PurchaseOrderMaxAggregateInputType
 }
@@ -180,8 +236,14 @@ export type PurchaseOrderGroupByOutputType = {
   expectedDate: Date | null
   orderedBy: string | null
   approvedBy: string | null
+  supplierConfirmedAt: Date | null
+  invoiceNumber: string | null
+  invoiceAmount: bigint | null
+  payableStatus: string | null
   createdAt: Date
   _count: PurchaseOrderCountAggregateOutputType | null
+  _avg: PurchaseOrderAvgAggregateOutputType | null
+  _sum: PurchaseOrderSumAggregateOutputType | null
   _min: PurchaseOrderMinAggregateOutputType | null
   _max: PurchaseOrderMaxAggregateOutputType | null
 }
@@ -213,6 +275,10 @@ export type PurchaseOrderWhereInput = {
   expectedDate?: Prisma.DateTimeNullableFilter<"PurchaseOrder"> | Date | string | null
   orderedBy?: Prisma.StringNullableFilter<"PurchaseOrder"> | string | null
   approvedBy?: Prisma.StringNullableFilter<"PurchaseOrder"> | string | null
+  supplierConfirmedAt?: Prisma.DateTimeNullableFilter<"PurchaseOrder"> | Date | string | null
+  invoiceNumber?: Prisma.StringNullableFilter<"PurchaseOrder"> | string | null
+  invoiceAmount?: Prisma.BigIntNullableFilter<"PurchaseOrder"> | bigint | number | null
+  payableStatus?: Prisma.StringNullableFilter<"PurchaseOrder"> | string | null
   createdAt?: Prisma.DateTimeFilter<"PurchaseOrder"> | Date | string
   supplier?: Prisma.XOR<Prisma.SupplierScalarRelationFilter, Prisma.SupplierWhereInput>
   warehouse?: Prisma.XOR<Prisma.WarehouseScalarRelationFilter, Prisma.WarehouseWhereInput>
@@ -229,6 +295,10 @@ export type PurchaseOrderOrderByWithRelationInput = {
   expectedDate?: Prisma.SortOrderInput | Prisma.SortOrder
   orderedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   approvedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  supplierConfirmedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  invoiceNumber?: Prisma.SortOrderInput | Prisma.SortOrder
+  invoiceAmount?: Prisma.SortOrderInput | Prisma.SortOrder
+  payableStatus?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   supplier?: Prisma.SupplierOrderByWithRelationInput
   warehouse?: Prisma.WarehouseOrderByWithRelationInput
@@ -248,6 +318,10 @@ export type PurchaseOrderWhereUniqueInput = Prisma.AtLeast<{
   expectedDate?: Prisma.DateTimeNullableFilter<"PurchaseOrder"> | Date | string | null
   orderedBy?: Prisma.StringNullableFilter<"PurchaseOrder"> | string | null
   approvedBy?: Prisma.StringNullableFilter<"PurchaseOrder"> | string | null
+  supplierConfirmedAt?: Prisma.DateTimeNullableFilter<"PurchaseOrder"> | Date | string | null
+  invoiceNumber?: Prisma.StringNullableFilter<"PurchaseOrder"> | string | null
+  invoiceAmount?: Prisma.BigIntNullableFilter<"PurchaseOrder"> | bigint | number | null
+  payableStatus?: Prisma.StringNullableFilter<"PurchaseOrder"> | string | null
   createdAt?: Prisma.DateTimeFilter<"PurchaseOrder"> | Date | string
   supplier?: Prisma.XOR<Prisma.SupplierScalarRelationFilter, Prisma.SupplierWhereInput>
   warehouse?: Prisma.XOR<Prisma.WarehouseScalarRelationFilter, Prisma.WarehouseWhereInput>
@@ -264,10 +338,16 @@ export type PurchaseOrderOrderByWithAggregationInput = {
   expectedDate?: Prisma.SortOrderInput | Prisma.SortOrder
   orderedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   approvedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  supplierConfirmedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  invoiceNumber?: Prisma.SortOrderInput | Prisma.SortOrder
+  invoiceAmount?: Prisma.SortOrderInput | Prisma.SortOrder
+  payableStatus?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.PurchaseOrderCountOrderByAggregateInput
+  _avg?: Prisma.PurchaseOrderAvgOrderByAggregateInput
   _max?: Prisma.PurchaseOrderMaxOrderByAggregateInput
   _min?: Prisma.PurchaseOrderMinOrderByAggregateInput
+  _sum?: Prisma.PurchaseOrderSumOrderByAggregateInput
 }
 
 export type PurchaseOrderScalarWhereWithAggregatesInput = {
@@ -282,6 +362,10 @@ export type PurchaseOrderScalarWhereWithAggregatesInput = {
   expectedDate?: Prisma.DateTimeNullableWithAggregatesFilter<"PurchaseOrder"> | Date | string | null
   orderedBy?: Prisma.StringNullableWithAggregatesFilter<"PurchaseOrder"> | string | null
   approvedBy?: Prisma.StringNullableWithAggregatesFilter<"PurchaseOrder"> | string | null
+  supplierConfirmedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"PurchaseOrder"> | Date | string | null
+  invoiceNumber?: Prisma.StringNullableWithAggregatesFilter<"PurchaseOrder"> | string | null
+  invoiceAmount?: Prisma.BigIntNullableWithAggregatesFilter<"PurchaseOrder"> | bigint | number | null
+  payableStatus?: Prisma.StringNullableWithAggregatesFilter<"PurchaseOrder"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"PurchaseOrder"> | Date | string
 }
 
@@ -292,6 +376,10 @@ export type PurchaseOrderCreateInput = {
   expectedDate?: Date | string | null
   orderedBy?: string | null
   approvedBy?: string | null
+  supplierConfirmedAt?: Date | string | null
+  invoiceNumber?: string | null
+  invoiceAmount?: bigint | number | null
+  payableStatus?: string | null
   createdAt?: Date | string
   supplier: Prisma.SupplierCreateNestedOneWithoutPurchaseOrdersInput
   warehouse: Prisma.WarehouseCreateNestedOneWithoutPurchaseOrdersInput
@@ -308,6 +396,10 @@ export type PurchaseOrderUncheckedCreateInput = {
   expectedDate?: Date | string | null
   orderedBy?: string | null
   approvedBy?: string | null
+  supplierConfirmedAt?: Date | string | null
+  invoiceNumber?: string | null
+  invoiceAmount?: bigint | number | null
+  payableStatus?: string | null
   createdAt?: Date | string
   items?: Prisma.PurchaseOrderItemUncheckedCreateNestedManyWithoutPoInput
   receipts?: Prisma.GoodsReceiptUncheckedCreateNestedManyWithoutPoInput
@@ -320,6 +412,10 @@ export type PurchaseOrderUpdateInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplier?: Prisma.SupplierUpdateOneRequiredWithoutPurchaseOrdersNestedInput
   warehouse?: Prisma.WarehouseUpdateOneRequiredWithoutPurchaseOrdersNestedInput
@@ -336,6 +432,10 @@ export type PurchaseOrderUncheckedUpdateInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.PurchaseOrderItemUncheckedUpdateManyWithoutPoNestedInput
   receipts?: Prisma.GoodsReceiptUncheckedUpdateManyWithoutPoNestedInput
@@ -350,6 +450,10 @@ export type PurchaseOrderCreateManyInput = {
   expectedDate?: Date | string | null
   orderedBy?: string | null
   approvedBy?: string | null
+  supplierConfirmedAt?: Date | string | null
+  invoiceNumber?: string | null
+  invoiceAmount?: bigint | number | null
+  payableStatus?: string | null
   createdAt?: Date | string
 }
 
@@ -360,6 +464,10 @@ export type PurchaseOrderUpdateManyMutationInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -372,6 +480,10 @@ export type PurchaseOrderUncheckedUpdateManyInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -394,7 +506,15 @@ export type PurchaseOrderCountOrderByAggregateInput = {
   expectedDate?: Prisma.SortOrder
   orderedBy?: Prisma.SortOrder
   approvedBy?: Prisma.SortOrder
+  supplierConfirmedAt?: Prisma.SortOrder
+  invoiceNumber?: Prisma.SortOrder
+  invoiceAmount?: Prisma.SortOrder
+  payableStatus?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+}
+
+export type PurchaseOrderAvgOrderByAggregateInput = {
+  invoiceAmount?: Prisma.SortOrder
 }
 
 export type PurchaseOrderMaxOrderByAggregateInput = {
@@ -406,6 +526,10 @@ export type PurchaseOrderMaxOrderByAggregateInput = {
   expectedDate?: Prisma.SortOrder
   orderedBy?: Prisma.SortOrder
   approvedBy?: Prisma.SortOrder
+  supplierConfirmedAt?: Prisma.SortOrder
+  invoiceNumber?: Prisma.SortOrder
+  invoiceAmount?: Prisma.SortOrder
+  payableStatus?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -418,7 +542,15 @@ export type PurchaseOrderMinOrderByAggregateInput = {
   expectedDate?: Prisma.SortOrder
   orderedBy?: Prisma.SortOrder
   approvedBy?: Prisma.SortOrder
+  supplierConfirmedAt?: Prisma.SortOrder
+  invoiceNumber?: Prisma.SortOrder
+  invoiceAmount?: Prisma.SortOrder
+  payableStatus?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+}
+
+export type PurchaseOrderSumOrderByAggregateInput = {
+  invoiceAmount?: Prisma.SortOrder
 }
 
 export type PurchaseOrderScalarRelationFilter = {
@@ -514,6 +646,14 @@ export type EnumPoStatusFieldUpdateOperationsInput = {
   set?: $Enums.PoStatus
 }
 
+export type NullableBigIntFieldUpdateOperationsInput = {
+  set?: bigint | number | null
+  increment?: bigint | number
+  decrement?: bigint | number
+  multiply?: bigint | number
+  divide?: bigint | number
+}
+
 export type PurchaseOrderCreateNestedOneWithoutItemsInput = {
   create?: Prisma.XOR<Prisma.PurchaseOrderCreateWithoutItemsInput, Prisma.PurchaseOrderUncheckedCreateWithoutItemsInput>
   connectOrCreate?: Prisma.PurchaseOrderCreateOrConnectWithoutItemsInput
@@ -549,6 +689,10 @@ export type PurchaseOrderCreateWithoutWarehouseInput = {
   expectedDate?: Date | string | null
   orderedBy?: string | null
   approvedBy?: string | null
+  supplierConfirmedAt?: Date | string | null
+  invoiceNumber?: string | null
+  invoiceAmount?: bigint | number | null
+  payableStatus?: string | null
   createdAt?: Date | string
   supplier: Prisma.SupplierCreateNestedOneWithoutPurchaseOrdersInput
   items?: Prisma.PurchaseOrderItemCreateNestedManyWithoutPoInput
@@ -563,6 +707,10 @@ export type PurchaseOrderUncheckedCreateWithoutWarehouseInput = {
   expectedDate?: Date | string | null
   orderedBy?: string | null
   approvedBy?: string | null
+  supplierConfirmedAt?: Date | string | null
+  invoiceNumber?: string | null
+  invoiceAmount?: bigint | number | null
+  payableStatus?: string | null
   createdAt?: Date | string
   items?: Prisma.PurchaseOrderItemUncheckedCreateNestedManyWithoutPoInput
   receipts?: Prisma.GoodsReceiptUncheckedCreateNestedManyWithoutPoInput
@@ -606,6 +754,10 @@ export type PurchaseOrderScalarWhereInput = {
   expectedDate?: Prisma.DateTimeNullableFilter<"PurchaseOrder"> | Date | string | null
   orderedBy?: Prisma.StringNullableFilter<"PurchaseOrder"> | string | null
   approvedBy?: Prisma.StringNullableFilter<"PurchaseOrder"> | string | null
+  supplierConfirmedAt?: Prisma.DateTimeNullableFilter<"PurchaseOrder"> | Date | string | null
+  invoiceNumber?: Prisma.StringNullableFilter<"PurchaseOrder"> | string | null
+  invoiceAmount?: Prisma.BigIntNullableFilter<"PurchaseOrder"> | bigint | number | null
+  payableStatus?: Prisma.StringNullableFilter<"PurchaseOrder"> | string | null
   createdAt?: Prisma.DateTimeFilter<"PurchaseOrder"> | Date | string
 }
 
@@ -616,6 +768,10 @@ export type PurchaseOrderCreateWithoutSupplierInput = {
   expectedDate?: Date | string | null
   orderedBy?: string | null
   approvedBy?: string | null
+  supplierConfirmedAt?: Date | string | null
+  invoiceNumber?: string | null
+  invoiceAmount?: bigint | number | null
+  payableStatus?: string | null
   createdAt?: Date | string
   warehouse: Prisma.WarehouseCreateNestedOneWithoutPurchaseOrdersInput
   items?: Prisma.PurchaseOrderItemCreateNestedManyWithoutPoInput
@@ -630,6 +786,10 @@ export type PurchaseOrderUncheckedCreateWithoutSupplierInput = {
   expectedDate?: Date | string | null
   orderedBy?: string | null
   approvedBy?: string | null
+  supplierConfirmedAt?: Date | string | null
+  invoiceNumber?: string | null
+  invoiceAmount?: bigint | number | null
+  payableStatus?: string | null
   createdAt?: Date | string
   items?: Prisma.PurchaseOrderItemUncheckedCreateNestedManyWithoutPoInput
   receipts?: Prisma.GoodsReceiptUncheckedCreateNestedManyWithoutPoInput
@@ -668,6 +828,10 @@ export type PurchaseOrderCreateWithoutItemsInput = {
   expectedDate?: Date | string | null
   orderedBy?: string | null
   approvedBy?: string | null
+  supplierConfirmedAt?: Date | string | null
+  invoiceNumber?: string | null
+  invoiceAmount?: bigint | number | null
+  payableStatus?: string | null
   createdAt?: Date | string
   supplier: Prisma.SupplierCreateNestedOneWithoutPurchaseOrdersInput
   warehouse: Prisma.WarehouseCreateNestedOneWithoutPurchaseOrdersInput
@@ -683,6 +847,10 @@ export type PurchaseOrderUncheckedCreateWithoutItemsInput = {
   expectedDate?: Date | string | null
   orderedBy?: string | null
   approvedBy?: string | null
+  supplierConfirmedAt?: Date | string | null
+  invoiceNumber?: string | null
+  invoiceAmount?: bigint | number | null
+  payableStatus?: string | null
   createdAt?: Date | string
   receipts?: Prisma.GoodsReceiptUncheckedCreateNestedManyWithoutPoInput
 }
@@ -710,6 +878,10 @@ export type PurchaseOrderUpdateWithoutItemsInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplier?: Prisma.SupplierUpdateOneRequiredWithoutPurchaseOrdersNestedInput
   warehouse?: Prisma.WarehouseUpdateOneRequiredWithoutPurchaseOrdersNestedInput
@@ -725,6 +897,10 @@ export type PurchaseOrderUncheckedUpdateWithoutItemsInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receipts?: Prisma.GoodsReceiptUncheckedUpdateManyWithoutPoNestedInput
 }
@@ -736,6 +912,10 @@ export type PurchaseOrderCreateWithoutReceiptsInput = {
   expectedDate?: Date | string | null
   orderedBy?: string | null
   approvedBy?: string | null
+  supplierConfirmedAt?: Date | string | null
+  invoiceNumber?: string | null
+  invoiceAmount?: bigint | number | null
+  payableStatus?: string | null
   createdAt?: Date | string
   supplier: Prisma.SupplierCreateNestedOneWithoutPurchaseOrdersInput
   warehouse: Prisma.WarehouseCreateNestedOneWithoutPurchaseOrdersInput
@@ -751,6 +931,10 @@ export type PurchaseOrderUncheckedCreateWithoutReceiptsInput = {
   expectedDate?: Date | string | null
   orderedBy?: string | null
   approvedBy?: string | null
+  supplierConfirmedAt?: Date | string | null
+  invoiceNumber?: string | null
+  invoiceAmount?: bigint | number | null
+  payableStatus?: string | null
   createdAt?: Date | string
   items?: Prisma.PurchaseOrderItemUncheckedCreateNestedManyWithoutPoInput
 }
@@ -778,6 +962,10 @@ export type PurchaseOrderUpdateWithoutReceiptsInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplier?: Prisma.SupplierUpdateOneRequiredWithoutPurchaseOrdersNestedInput
   warehouse?: Prisma.WarehouseUpdateOneRequiredWithoutPurchaseOrdersNestedInput
@@ -793,6 +981,10 @@ export type PurchaseOrderUncheckedUpdateWithoutReceiptsInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.PurchaseOrderItemUncheckedUpdateManyWithoutPoNestedInput
 }
@@ -805,6 +997,10 @@ export type PurchaseOrderCreateManyWarehouseInput = {
   expectedDate?: Date | string | null
   orderedBy?: string | null
   approvedBy?: string | null
+  supplierConfirmedAt?: Date | string | null
+  invoiceNumber?: string | null
+  invoiceAmount?: bigint | number | null
+  payableStatus?: string | null
   createdAt?: Date | string
 }
 
@@ -815,6 +1011,10 @@ export type PurchaseOrderUpdateWithoutWarehouseInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplier?: Prisma.SupplierUpdateOneRequiredWithoutPurchaseOrdersNestedInput
   items?: Prisma.PurchaseOrderItemUpdateManyWithoutPoNestedInput
@@ -829,6 +1029,10 @@ export type PurchaseOrderUncheckedUpdateWithoutWarehouseInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.PurchaseOrderItemUncheckedUpdateManyWithoutPoNestedInput
   receipts?: Prisma.GoodsReceiptUncheckedUpdateManyWithoutPoNestedInput
@@ -842,6 +1046,10 @@ export type PurchaseOrderUncheckedUpdateManyWithoutWarehouseInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -853,6 +1061,10 @@ export type PurchaseOrderCreateManySupplierInput = {
   expectedDate?: Date | string | null
   orderedBy?: string | null
   approvedBy?: string | null
+  supplierConfirmedAt?: Date | string | null
+  invoiceNumber?: string | null
+  invoiceAmount?: bigint | number | null
+  payableStatus?: string | null
   createdAt?: Date | string
 }
 
@@ -863,6 +1075,10 @@ export type PurchaseOrderUpdateWithoutSupplierInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   warehouse?: Prisma.WarehouseUpdateOneRequiredWithoutPurchaseOrdersNestedInput
   items?: Prisma.PurchaseOrderItemUpdateManyWithoutPoNestedInput
@@ -877,6 +1093,10 @@ export type PurchaseOrderUncheckedUpdateWithoutSupplierInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.PurchaseOrderItemUncheckedUpdateManyWithoutPoNestedInput
   receipts?: Prisma.GoodsReceiptUncheckedUpdateManyWithoutPoNestedInput
@@ -890,6 +1110,10 @@ export type PurchaseOrderUncheckedUpdateManyWithoutSupplierInput = {
   expectedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   orderedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supplierConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceAmount?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payableStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -942,6 +1166,10 @@ export type PurchaseOrderSelect<ExtArgs extends runtime.Types.Extensions.Interna
   expectedDate?: boolean
   orderedBy?: boolean
   approvedBy?: boolean
+  supplierConfirmedAt?: boolean
+  invoiceNumber?: boolean
+  invoiceAmount?: boolean
+  payableStatus?: boolean
   createdAt?: boolean
   supplier?: boolean | Prisma.SupplierDefaultArgs<ExtArgs>
   warehouse?: boolean | Prisma.WarehouseDefaultArgs<ExtArgs>
@@ -959,6 +1187,10 @@ export type PurchaseOrderSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   expectedDate?: boolean
   orderedBy?: boolean
   approvedBy?: boolean
+  supplierConfirmedAt?: boolean
+  invoiceNumber?: boolean
+  invoiceAmount?: boolean
+  payableStatus?: boolean
   createdAt?: boolean
   supplier?: boolean | Prisma.SupplierDefaultArgs<ExtArgs>
   warehouse?: boolean | Prisma.WarehouseDefaultArgs<ExtArgs>
@@ -973,6 +1205,10 @@ export type PurchaseOrderSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   expectedDate?: boolean
   orderedBy?: boolean
   approvedBy?: boolean
+  supplierConfirmedAt?: boolean
+  invoiceNumber?: boolean
+  invoiceAmount?: boolean
+  payableStatus?: boolean
   createdAt?: boolean
   supplier?: boolean | Prisma.SupplierDefaultArgs<ExtArgs>
   warehouse?: boolean | Prisma.WarehouseDefaultArgs<ExtArgs>
@@ -987,10 +1223,14 @@ export type PurchaseOrderSelectScalar = {
   expectedDate?: boolean
   orderedBy?: boolean
   approvedBy?: boolean
+  supplierConfirmedAt?: boolean
+  invoiceNumber?: boolean
+  invoiceAmount?: boolean
+  payableStatus?: boolean
   createdAt?: boolean
 }
 
-export type PurchaseOrderOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "supplierId" | "warehouseId" | "status" | "expectedDate" | "orderedBy" | "approvedBy" | "createdAt", ExtArgs["result"]["purchaseOrder"]>
+export type PurchaseOrderOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "supplierId" | "warehouseId" | "status" | "expectedDate" | "orderedBy" | "approvedBy" | "supplierConfirmedAt" | "invoiceNumber" | "invoiceAmount" | "payableStatus" | "createdAt", ExtArgs["result"]["purchaseOrder"]>
 export type PurchaseOrderInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   supplier?: boolean | Prisma.SupplierDefaultArgs<ExtArgs>
   warehouse?: boolean | Prisma.WarehouseDefaultArgs<ExtArgs>
@@ -1024,6 +1264,10 @@ export type $PurchaseOrderPayload<ExtArgs extends runtime.Types.Extensions.Inter
     expectedDate: Date | null
     orderedBy: string | null
     approvedBy: string | null
+    supplierConfirmedAt: Date | null
+    invoiceNumber: string | null
+    invoiceAmount: bigint | null
+    payableStatus: string | null
     createdAt: Date
   }, ExtArgs["result"]["purchaseOrder"]>
   composites: {}
@@ -1460,6 +1704,10 @@ export interface PurchaseOrderFieldRefs {
   readonly expectedDate: Prisma.FieldRef<"PurchaseOrder", 'DateTime'>
   readonly orderedBy: Prisma.FieldRef<"PurchaseOrder", 'String'>
   readonly approvedBy: Prisma.FieldRef<"PurchaseOrder", 'String'>
+  readonly supplierConfirmedAt: Prisma.FieldRef<"PurchaseOrder", 'DateTime'>
+  readonly invoiceNumber: Prisma.FieldRef<"PurchaseOrder", 'String'>
+  readonly invoiceAmount: Prisma.FieldRef<"PurchaseOrder", 'BigInt'>
+  readonly payableStatus: Prisma.FieldRef<"PurchaseOrder", 'String'>
   readonly createdAt: Prisma.FieldRef<"PurchaseOrder", 'DateTime'>
 }
     

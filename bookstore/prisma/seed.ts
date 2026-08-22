@@ -32,7 +32,18 @@ const ROLE_PERMS: Record<string, string[]> = {
   owner: PERMS,
 };
 
+async function getOrCreateOrg() {
+  let org = await prisma.organization.findFirst({ where: { name: "Nhà Sách Melio" } });
+  if (!org) org = await prisma.organization.create({ data: { name: "Nhà Sách Melio" } });
+  let region = await prisma.region.findFirst({ where: { name: "Miền Nam", orgId: org.id } });
+  if (!region) region = await prisma.region.create({ data: { name: "Miền Nam", orgId: org.id } });
+  return { org, region };
+}
+
+// Agent 2: idempotent seed — every create below is guarded by a unique-key lookup
+// (code/sku/barcode/name) so running the seed twice is a no-op.
 async function main() {
+  const { region } = await getOrCreateOrg();
   // Permissions + roles
   const perms = await Promise.all(
     PERMS.map((code) => prisma.permission.upsert({ where: { code }, create: { code }, update: {} }))
@@ -49,23 +60,28 @@ async function main() {
     }
   }
 
-  const org = await prisma.organization.create({ data: { name: "Nhà Sách Melio" } });
-  const region = await prisma.region.create({ data: { name: "Miền Nam", orgId: org.id } });
-
   const storeNames = [
     ["NH", "Nhà sách Nguyễn Huệ"], ["TD", "Nhà sách Tân Định"],
     ["BT", "Nhà sách Bình Thạnh"], ["QT", "Nhà sách Quận 7"], ["GV", "Nhà sách Gò Vấp"],
   ];
   const stores = [];
   for (const [code, name] of storeNames) {
-    const store = await prisma.store.create({ data: { code, name, regionId: region.id } });
-    const stockroom = await prisma.stockLocation.create({ data: { name: `${name} — Kho sau`, type: "STORE_STOCKROOM", storeId: store.id } });
-    await prisma.stockLocation.create({ data: { name: `${name} — Kệ A`, type: "STORE_SHELF", storeId: store.id, parentId: stockroom.id } });
-    await prisma.posTerminal.create({ data: { storeId: store.id, name: `POS-${code}-01` } });
-    stores.push({ store, stockroom });
+    let store = await prisma.store.findUnique({ where: { code } });
+    if (!store) {
+      store = await prisma.store.create({ data: { code, name, regionId: region.id } });
+      const stockroom = await prisma.stockLocation.create({ data: { name: `${name} — Kho sau`, type: "STORE_STOCKROOM", storeId: store.id } });
+      await prisma.stockLocation.create({ data: { name: `${name} — Kệ A`, type: "STORE_SHELF", storeId: store.id, parentId: stockroom.id } });
+      await prisma.posTerminal.create({ data: { storeId: store.id, name: `POS-${code}-01` } });
+    }
+    const stockroom2 = await prisma.stockLocation.findFirstOrThrow({
+      where: { storeId: store.id, type: "STORE_STOCKROOM" },
+    });
+    stores.push({ store, stockroom: stockroom2 });
   }
-  const warehouse = await prisma.warehouse.create({ data: { name: "Kho Trung Tâm", isCentral: true } });
-  const whLoc = await prisma.stockLocation.create({ data: { name: "Kho Trung Tâm — Main", type: "WAREHOUSE", warehouseId: warehouse.id } });
+  let warehouse = await prisma.warehouse.findFirst({ where: { name: "Kho Trung Tâm" } });
+  if (!warehouse) warehouse = await prisma.warehouse.create({ data: { name: "Kho Trung Tâm", isCentral: true } });
+  let whLoc = await prisma.stockLocation.findFirst({ where: { warehouseId: warehouse.id, type: "WAREHOUSE" } });
+  if (!whLoc) whLoc = await prisma.stockLocation.create({ data: { name: "Kho Trung Tâm — Main", type: "WAREHOUSE", warehouseId: warehouse.id } });
 
   // Users
   const users = [
@@ -92,12 +108,15 @@ async function main() {
   // Categories + attributes
   const cats: Record<string, string> = {};
   for (const name of ["Sách", "Văn phòng phẩm", "Đồ chơi", "Lifestyle", "Mỹ thuật", "Quà tặng"]) {
-    const c = await prisma.category.create({ data: { name } });
+    let c = await prisma.category.findFirst({ where: { name, parentId: null } });
+    if (!c) c = await prisma.category.create({ data: { name } });
     cats[name] = c.id;
   }
   const bookCat = cats["Sách"];
   for (const name of ["Văn học", "Kinh tế", "Thiếu nhi", "Manga"]) {
-    await prisma.category.create({ data: { name, parentId: bookCat } });
+    let c = await prisma.category.findFirst({ where: { name, parentId: bookCat } });
+    if (!c) c = await prisma.category.create({ data: { name, parentId: bookCat } });
+    cats[name] = c.id;
   }
   const attrDefs: Record<string, string> = {};
   for (const [cat, attrs] of Object.entries({
@@ -106,7 +125,8 @@ async function main() {
     "Đồ chơi": [["age_range", "Độ tuổi", "enum", ["3+", "6+", "12+"]], ["character", "Nhân vật", "text"]],
   } as Record<string, [string, string, string, string[]?][]>)) {
     for (const [code, label, type, enums] of attrs) {
-      const d = await prisma.attributeDefinition.create({
+      let d = await prisma.attributeDefinition.findUnique({ where: { categoryId_code: { categoryId: cats[cat], code } } });
+      if (!d) d = await prisma.attributeDefinition.create({
         data: { categoryId: cats[cat], code, label, type, enumValues: enums ?? [] },
       });
       attrDefs[code] = d.id;
@@ -116,24 +136,30 @@ async function main() {
   // Brands / authors / publishers
   const brands: Record<string, string> = {};
   for (const n of ["Double A", "Thiên Long", "LEGO", "Sanrio"]) {
-    const b = await prisma.brand.create({ data: { name: n } });
+    let b = await prisma.brand.findUnique({ where: { name: n } });
+    if (!b) b = await prisma.brand.create({ data: { name: n } });
     brands[n] = b.id;
   }
   const authors: Record<string, string> = {};
   for (const n of ["Nguyễn Nhật Ánh", "Tô Hoài", "J.K. Rowling"]) {
-    const a = await prisma.author.create({ data: { name: n } });
+    let a = await prisma.author.findFirst({ where: { name: n } });
+    if (!a) a = await prisma.author.create({ data: { name: n } });
     authors[n] = a.id;
   }
   const pubs: Record<string, string> = {};
   for (const n of ["NXB Kim Đồng", "NXB Trẻ", "NXB Hội Nhà Văn"]) {
-    const p = await prisma.publisher.create({ data: { name: n } });
+    let p = await prisma.publisher.findFirst({ where: { name: n } });
+    if (!p) p = await prisma.publisher.create({ data: { name: n } });
     pubs[n] = p.id;
   }
 
   // Price list
-  const retail = await prisma.priceList.create({ data: { name: "RETAIL", kind: "retail" } });
-  await prisma.priceList.create({ data: { name: "MEMBER", kind: "member" } });
-  await prisma.priceList.create({ data: { name: "ONLINE", kind: "online" } });
+  let retail = await prisma.priceList.findUnique({ where: { name: "RETAIL" } });
+  if (!retail) retail = await prisma.priceList.create({ data: { name: "RETAIL", kind: "retail" } });
+  for (const [name, kind] of [["MEMBER", "member"], ["ONLINE", "online"]] as const) {
+    if (!(await prisma.priceList.findUnique({ where: { name } })))
+      await prisma.priceList.create({ data: { name, kind } });
+  }
 
   // Products — real Vietnamese bookstore items
   type SeedP = { name: string; cat: string; brand?: string; author?: string; pub?: string; sku: string; barcode: string; price: number; attrs?: [string, string][] };
@@ -154,46 +180,60 @@ async function main() {
 
   const variantIds: Record<string, string> = {};
   for (const p of products) {
-    const product = await prisma.product.create({
-      data: {
-        name: p.name,
-        status: "active",
-        categoryId: cats[p.cat],
-        brandId: p.brand ? brands[p.brand] : null,
-        authorId: p.author ? authors[p.author] : null,
-        publisherId: p.pub ? pubs[p.pub] : null,
-        taxRate: 0.08,
-        variants: {
-          create: { sku: p.sku, name: "Default", barcodes: { create: { barcode: p.barcode, type: p.cat === "Sách" ? "ISBN" : "EAN13" } } },
+    // idempotent: skip if SKU already exists
+    let variant = await prisma.productVariant.findUnique({ where: { sku: p.sku } });
+    if (!variant) {
+      const product = await prisma.product.create({
+        data: {
+          name: p.name,
+          status: "active",
+          categoryId: cats[p.cat],
+          brandId: p.brand ? brands[p.brand] : null,
+          authorId: p.author ? authors[p.author] : null,
+          publisherId: p.pub ? pubs[p.pub] : null,
+          taxRate: 0.08,
+          variants: {
+            create: { sku: p.sku, name: "Default", barcodes: { create: { barcode: p.barcode, type: p.cat === "Sách" ? "ISBN" : "EAN13" } } },
+          },
         },
-      },
-      include: { variants: true },
-    });
-    const variant = product.variants[0];
-    variantIds[p.sku] = variant.id;
-    await prisma.price.create({ data: { variantId: variant.id, priceListId: retail.id, amount: BigInt(p.price) } });
-    for (const [code, value] of p.attrs ?? []) {
-      if (attrDefs[code])
-        await prisma.attributeValue.create({ data: { variantId: variant.id, definitionId: attrDefs[code], value } });
+        include: { variants: true },
+      });
+      variant = product.variants[0];
+      for (const [code, value] of p.attrs ?? []) {
+        if (attrDefs[code])
+          await prisma.attributeValue.create({ data: { variantId: variant.id, definitionId: attrDefs[code], value } });
+      }
     }
+    variantIds[p.sku] = variant.id;
+    // price: only insert when no retail price exists yet (unique on variant+list+validFrom)
+    const hasPrice = await prisma.price.findFirst({
+      where: { variantId: variant.id, priceListId: retail.id, validTo: null },
+    });
+    if (!hasPrice)
+      await prisma.price.create({ data: { variantId: variant.id, priceListId: retail.id, amount: BigInt(p.price) } });
   }
 
   // Inventory: stock in warehouse + each store stockroom
   const skus = Object.keys(variantIds);
   for (const { stockroom } of stores) {
     for (const sku of skus) {
-      await prisma.inventoryBalance.create({
-        data: { variantId: variantIds[sku], locationId: stockroom.id, onHand: 15 + Math.floor(Math.random() * 40) },
+      // idempotent: upsert on (variant, location)
+      await prisma.inventoryBalance.upsert({
+        where: { variantId_locationId: { variantId: variantIds[sku], locationId: stockroom.id } },
+        create: { variantId: variantIds[sku], locationId: stockroom.id, onHand: 15 + Math.floor(Math.random() * 40) },
+        update: {},
       });
     }
   }
   for (const sku of skus) {
-    await prisma.inventoryBalance.create({
-      data: { variantId: variantIds[sku], locationId: whLoc.id, onHand: 100 + Math.floor(Math.random() * 200) },
+    await prisma.inventoryBalance.upsert({
+      where: { variantId_locationId: { variantId: variantIds[sku], locationId: whLoc.id } },
+      create: { variantId: variantIds[sku], locationId: whLoc.id, onHand: 100 + Math.floor(Math.random() * 200) },
+      update: {},
     });
   }
 
-  // Suppliers
+  // Suppliers — spec baseline §2360: at least 20
   const suppliers: string[] = [];
   const supplierData: [string, string, string, string, number][] = [
     ["SUP-NKD", "NXB Kim Đồng", "0300123456", "NET30", 7],
@@ -201,39 +241,106 @@ async function main() {
     ["SUP-TL", "Công ty TNHH Thiên Long", "0300345678", "NET15", 3],
     ["SUP-LEGO", "LEGO Vietnam", "0300456789", "NET45", 21],
     ["SUP-PH", "Phương Nam Book", "0300567890", "NET30", 7],
+    ["SUP-FAHASA", "CTCP Phát hành Sách TP.HCM - Fahasa", "0300581231", "NET30", 10],
+    ["SUP-DGT", "Đông A Times", "0305123456", "NET15", 5],
+    ["SUP-ALPHA", "NXB Alpha Books", "0102894567", "NET30", 7],
+    ["SUP-TRETP", "NXB Thanh Niên", "0300987654", "NET30", 7],
+    ["SUP-LAOCT", "NXB Lao Động", "0102134567", "NET30", 10],
+    ["SUP-HNV", "NXB Hội Nhà Văn", "0102345678", "NET30", 12],
+    ["SUP-COLORME", "ColorME Art Supplies", "0312567890", "NET15", 3],
+    ["SUP-BENNGOAI", "Văn phòng phẩm Bến Ngọa", "0312678901", "NET15", 2],
+    ["SUP-DELMAS", "Delmas Stationery Import", "0312789012", "NET30", 14],
+    ["SUP-SCHOLASTIC", "Scholastic Vietnam", "0070456789", "NET60", 30],
+    ["SUP-KIMDONGTOY", "Kim Đồng Toy & Gift", "0300890123", "NET30", 15],
+    ["SUP-MONKEY", "Monkey Edu Toys", "0312890123", "NET15", 7],
+    ["SUP-GO", "Công ty Gốm men Việt", "3501234567", "NET15", 10],
+    ["SUP-BAGVN", "Balo Sài Gòn", "0312901234", "NET15", 5],
+    ["SUP-QUATANG", "Quà Tết Việt", "0312012345", "NET30", 20],
   ];
   for (const [code, name, taxCode, terms, lead] of supplierData) {
-    const s = await prisma.supplier.create({ data: { code, name, taxCode, paymentTerms: terms, leadTimeDays: lead, email: `sales@${code.toLowerCase()}.vn` } });
+    const s = await prisma.supplier.upsert({
+      where: { code },
+      create: { code, name, taxCode, paymentTerms: terms, leadTimeDays: lead, email: `sales@${code.toLowerCase()}.vn` },
+      update: {},
+    });
     suppliers.push(s.id);
   }
 
-  // Customers
-  for (let i = 1; i <= 30; i++) {
-    const c = await prisma.customer.create({
-      data: {
-        code: `CUS-${String(i).padStart(6, "0")}`,
-        name: `Khách hàng ${i}`,
-        phone: `090${String(1000000 + i * 137).slice(0, 7)}`,
-      },
-    });
-    await prisma.loyaltyAccount.create({ data: { customerId: c.id, points: i * 3, tier: i > 20 ? "Gold" : "Member" } });
+  // Customers — spec baseline §2361: at least 100
+  for (let i = 1; i <= 100; i++) {
+    const code = `CUS-${String(i).padStart(6, "0")}`;
+    let c = await prisma.customer.findUnique({ where: { code } });
+    if (!c) {
+      c = await prisma.customer.create({
+        data: {
+          code,
+          name: `Khách hàng ${i}`,
+          phone: `090${String(1000000 + i * 137).slice(0, 7)}`,
+        },
+      });
+      await prisma.loyaltyAccount.create({ data: { customerId: c.id, points: i * 3, tier: i > 80 ? "Gold" : i > 50 ? "Silver" : "Member" } });
+    }
   }
 
-  // Promotions
-  await prisma.promotion.create({
-    data: {
-      name: "Mua 2 manga giảm 10%",
-      type: "percentage", value: 10n, minQty: 2,
-      categoryId: cats["Sách"], channel: "ALL", stackable: false,
-      endAt: new Date(Date.now() + 90 * 86400_000),
-    },
-  });
-  await prisma.promotion.create({
-    data: {
-      name: "Thành viên Gold giảm 5% toàn bộ",
-      type: "percentage", value: 5n, memberOnly: true, stackable: true, priority: 5,
-      endAt: new Date(Date.now() + 365 * 86400_000),
-    },
+  // Promotions (idempotent by name)
+  if (!(await prisma.promotion.findFirst({ where: { name: "Mua 2 manga giảm 10%" } })))
+    await prisma.promotion.create({
+      data: {
+        name: "Mua 2 manga giảm 10%",
+        type: "percentage", value: 10n, minQty: 2,
+        categoryId: cats["Sách"], channel: "ALL", stackable: false,
+        endAt: new Date(Date.now() + 90 * 86400_000),
+      },
+    });
+  if (!(await prisma.promotion.findFirst({ where: { name: "Thành viên Gold giảm 5% toàn bộ" } })))
+    await prisma.promotion.create({
+      data: {
+        name: "Thành viên Gold giảm 5% toàn bộ",
+        type: "percentage", value: 5n, memberOnly: true, stackable: true, priority: 5,
+        endAt: new Date(Date.now() + 365 * 86400_000),
+      },
+    });
+
+  // Bulk product generator — spec baseline §2358: 100–500 products.
+  // Deterministic combos so re-seeding is a no-op via SKU lookup above.
+  const bookTitles = ["Nhật ký Đặng Thùy Trâm", "Mắt Biếc", "Cây Cam Ngọt Của Tôi", "Sapiens", "Atomic Habits", "Đắc Nhân Tâm", "Nhà Giả Kim", "Tuổi Trẻ Đáng Giá Bao Nhiêu", "Cha Giàu Cha Nghèo", "Tâm Lý Học Tiền Bạc"];
+  const stationery = ["Bút gel Thiên Long TL-08", "Bút chì 2B", "Gôm tẩy", "Thước kẻ 30cm", "Compas vẽ tròn", "Hộp bút nhựa", "Sổ tay A6 cứng", "Sticker trang trí", "Keo sữa nhỏ", "Kéo học sinh"];
+  const toys = ["Xe điều khiển từ xa", "Bộ lego thành phố", "Rubik 3x3", "Đồ chơi xếp hình 100 mảnh", "Bóng đá mini", "Yo-yo chuyên nghiệp", "Bộ thí nghiệm khoa học", "Gấu bông Doremon"];
+  const catPool: [string, string[], number][] = [
+    ["Sách", bookTitles, 79000],
+    ["Văn phòng phẩm", stationery, 32000],
+    ["Đồ chơi", toys, 199000],
+  ];
+  for (const [catName, titles, basePrice] of catPool) {
+    for (let i = 0; i < titles.length; i++) {
+      const title = titles[i];
+      for (let vol = 1; vol <= 5; vol++) {
+        const sku = `GEN-${catName.slice(0, 3).toUpperCase()}-${String(i + 1).padStart(2, "0")}-V${vol}`;
+        if (variantIds[sku]) continue;
+        const name = `${title} — Tập ${vol}`;
+        const barcode = `8936000${String(7000000 + Object.keys(variantIds).length * 13).padStart(7, "0")}`.slice(0, 13);
+        variantIds[sku] = await seedGeneratedVariant(sku, name, barcode, cats[catName], basePrice + vol * 5000, retail.id);
+      }
+    }
+  }
+  async function seedGeneratedVariant(sku: string, name: string, barcode: string, categoryId: string, price: number, priceListId: string): Promise<string> {
+    const existing = await prisma.productVariant.findUnique({ where: { sku } });
+    if (existing) return existing.id;
+    if (await prisma.productBarcode.findUnique({ where: { barcode } })) return "";
+    const product = await prisma.product.create({
+      data: {
+        name, status: "active", categoryId, taxRate: 0.08,
+        variants: { create: { sku, name: "Default", barcodes: { create: { barcode, type: "EAN13" } } } },
+      },
+      include: { variants: true },
+    });
+    await prisma.price.create({ data: { variantId: product.variants[0].id, priceListId, amount: BigInt(price) } });
+    return product.variants[0].id;
+  }
+
+  console.log("Seed done:", {
+    stores: stores.length, products: products.length,
+    suppliers: suppliers.length,
   });
 
   // SystemConfig (spec §101) — loyalty rate: 10.000 VND = 1 point
@@ -241,10 +348,6 @@ async function main() {
     where: { key: "loyalty.vndPerPoint" },
     create: { key: "loyalty.vndPerPoint", value: 10000 },
     update: {},
-  });
-
-  console.log("Seed done:", {
-    stores: stores.length, products: products.length, suppliers: suppliers.length,
   });
 }
 

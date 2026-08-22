@@ -1,8 +1,30 @@
 import { NextRequest } from "next/server";
+import { PaymentMethod } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok, fail, toMoney } from "@/lib/api";
-import { completeSale, openShift, closeShift } from "@/lib/pos";
+import { completeSale, openShift, closeShift, refundSale } from "@/lib/pos";
+
+// PUT /api/pos — full refund of a completed transaction (spec Module 18: POS return)
+export async function PUT(req: NextRequest) {
+  try {
+    const body = await req.json();
+    if (!body.txNumber || !body.shiftId) fail(400, "VALIDATION", "txNumber and shiftId required");
+    const auth = await requirePermission("pos.refund", body.storeId);
+    const refund = await refundSale(body.txNumber, body.shiftId, auth.userId, {
+      storeId: body.storeId, reason: typeof body.reason === "string" ? body.reason : undefined,
+    });
+    await prisma.auditLog.create({
+      data: {
+        actorId: auth.userId, action: "pos.refund", entity: "PosTransaction", entityId: refund.id,
+        after: { refundedTx: body.txNumber, reason: body.reason ?? null },
+      },
+    });
+    return ok({ number: refund.number, total: Number(-refund.total), status: "RETURNED" }, 201);
+  } catch (err) {
+    return apiError(err);
+  }
+}
 
 // POST /api/pos  { action: "open_shift"|"close_shift"|"sale", ... }
 export async function POST(req: NextRequest) {
@@ -46,6 +68,19 @@ export async function POST(req: NextRequest) {
       await requirePermission("pos.sell", body.storeId);
       const { getAuth } = await import("@/lib/auth");
       const auth = (await getAuth())!;
+      // Client-supplied unit prices are honored only with pos.override_price; everyone
+      // else gets server-resolved retail prices (no client-trusted payment amounts).
+      let overrides = 0;
+      if (body.items.some((i: { unitPrice?: unknown }) => i.unitPrice != null)) {
+        const canOverride = auth.roles.some(
+          (r) => r.permissions.includes("pos.override_price") &&
+            (r.storeId === null || body.storeId === undefined || r.storeId === body.storeId)
+        );
+        if (!canOverride)
+          for (const i of body.items) delete i.unitPrice;
+        else
+          overrides = body.items.filter((i: { unitPrice?: unknown }) => i.unitPrice != null).length;
+      }
       const txn = await completeSale({
         shiftId: body.shiftId,
         storeId: body.storeId,
@@ -53,14 +88,18 @@ export async function POST(req: NextRequest) {
         items: body.items,
         customerId: body.customerId ?? null,
         redeemPoints: body.redeemPoints,
-        payments: body.payments.map((p: any) => ({
-          method: p.method, amount: toMoney(p.amount, "payment.amount"), idempotencyKey: p.idempotencyKey,
-          giftCardCode: p.giftCardCode,
+        payments: (body.payments as Record<string, unknown>[]).map((p) => ({
+          method: p.method as PaymentMethod, amount: toMoney(p.amount, "payment.amount"),
+          idempotencyKey: typeof p.idempotencyKey === "string" ? p.idempotencyKey : undefined,
+          giftCardCode: typeof p.giftCardCode === "string" ? p.giftCardCode : undefined,
         })),
       });
       // audit
       await prisma.auditLog.create({
-        data: { actorId: auth.userId, action: "pos.sale", entity: "PosTransaction", entityId: txn.id },
+        data: {
+          actorId: auth.userId, action: "pos.sale", entity: "PosTransaction", entityId: txn.id,
+          after: overrides > 0 ? { priceOverrides: overrides } : undefined,
+        },
       });
       return ok({
         number: txn.number, subtotal: Number(txn.subtotal),

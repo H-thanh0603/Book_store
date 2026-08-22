@@ -22,7 +22,8 @@ export default function CustomersPage() {
     if (r.ok) setCustomers((await r.json()).customers);
   }
 
-  useEffect(() => { load(""); }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch; setState fires after await
+  useEffect(() => { void load(""); }, []);
 
   async function create() {
     const r = await fetch("/api/customers", {
@@ -41,6 +42,31 @@ export default function CustomersPage() {
       body: JSON.stringify({ action: "history", customerId: c.id }),
     });
     if (r.ok) setHistory(await r.json());
+  }
+
+  async function adjustPoints() {
+    if (!selected) return;
+    const raw = window.prompt("Cộng/trừ điểm (số nguyên, âm để trừ):");
+    const points = Number(raw);
+    if (!raw || !Number.isInteger(points) || points === 0) return;
+    const r = await fetch("/api/customers", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "adjust", customerId: selected.id, points }),
+    });
+    const d = await r.json();
+    setMsg(r.ok ? `✅ Điểm mới: ${d.points}` : "❌ " + d.message);
+    load(q); showHistory(selected);
+  }
+
+  async function birthdayReward() {
+    if (!selected) return;
+    const r = await fetch("/api/customers", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "birthday_reward", customerId: selected.id }),
+    });
+    const d = await r.json();
+    setMsg(r.ok ? `🎁 +${d.granted} điểm` : "❌ " + d.message);
+    load(q); showHistory(selected);
   }
 
   return (
@@ -84,7 +110,11 @@ export default function CustomersPage() {
           <h2 className="font-bold mb-2">Lịch sử điểm {selected ? `— ${selected.name}` : ""}</h2>
           {!history ? <p className="text-sm text-slate-500">Chọn khách hàng để xem.</p> : (
             <>
-              <p className="text-sm mb-3">Hiện có <b>{history.points}</b> điểm ({history.tier ?? "chưa có tài khoản"})</p>
+              <p className="text-sm mb-2">Hiện có <b>{history.points}</b> điểm ({history.tier ?? "chưa có tài khoản"})</p>
+              <div className="flex gap-2 mb-3">
+                <button onClick={adjustPoints} className="border rounded px-3 py-1 text-xs hover:bg-blue-50">± Điểm</button>
+                <button onClick={birthdayReward} className="border rounded px-3 py-1 text-xs hover:bg-blue-50">🎁 Quà sinh nhật</button>
+              </div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-slate-500 border-b"><th className="p-1">Ngày</th><th>Loại</th><th className="text-right">Điểm</th><th className="text-right p-1">Số dư</th></tr>

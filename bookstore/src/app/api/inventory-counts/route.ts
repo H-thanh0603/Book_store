@@ -5,6 +5,21 @@ import { apiError, fail, nextBusinessNumber, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { MovementType } from "@/generated/prisma/client";
 
+// GET /api/inventory-counts — count review list (drafts first)
+export async function GET() {
+  try {
+    await requirePermission("inventory.view");
+    const counts = await prisma.inventoryCount.findMany({
+      include: { items: true },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      take: 50,
+    });
+    return ok({ counts });
+  } catch (err) {
+    return apiError(err);
+  }
+}
+
 // POST /api/inventory-counts { action: "create"|"post", locationId, items:[{variantId,countedQty}] }
 export async function POST(req: NextRequest) {
   try {
