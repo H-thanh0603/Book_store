@@ -115,6 +115,7 @@ export const ModelName = {
   SequenceCounter: 'SequenceCounter',
   ReplenishmentSuggestion: 'ReplenishmentSuggestion',
   IntegrationJob: 'IntegrationJob',
+  IntegrationProvider: 'IntegrationProvider',
   WarehouseTask: 'WarehouseTask',
   WarehouseTaskItem: 'WarehouseTaskItem',
   JobRun: 'JobRun',
@@ -616,6 +617,7 @@ export type BundleItemScalarFieldEnum = (typeof BundleItemScalarFieldEnum)[keyof
 export const OrderScalarFieldEnum = {
   id: 'id',
   number: 'number',
+  externalId: 'externalId',
   channel: 'channel',
   type: 'type',
   storeId: 'storeId',
@@ -921,6 +923,22 @@ export const IntegrationJobScalarFieldEnum = {
 } as const
 
 export type IntegrationJobScalarFieldEnum = (typeof IntegrationJobScalarFieldEnum)[keyof typeof IntegrationJobScalarFieldEnum]
+
+
+export const IntegrationProviderScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  kind: 'kind',
+  active: 'active',
+  credentials: 'credentials',
+  webhookSecret: 'webhookSecret',
+  lastCatalogSyncAt: 'lastCatalogSyncAt',
+  lastStockSyncAt: 'lastStockSyncAt',
+  lastOrderSyncAt: 'lastOrderSyncAt',
+  createdAt: 'createdAt'
+} as const
+
+export type IntegrationProviderScalarFieldEnum = (typeof IntegrationProviderScalarFieldEnum)[keyof typeof IntegrationProviderScalarFieldEnum]
 
 
 export const WarehouseTaskScalarFieldEnum = {

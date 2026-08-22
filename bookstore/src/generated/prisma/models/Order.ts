@@ -41,6 +41,7 @@ export type OrderSumAggregateOutputType = {
 export type OrderMinAggregateOutputType = {
   id: string | null
   number: string | null
+  externalId: string | null
   channel: string | null
   type: $Enums.OrderType | null
   storeId: string | null
@@ -55,6 +56,7 @@ export type OrderMinAggregateOutputType = {
 export type OrderMaxAggregateOutputType = {
   id: string | null
   number: string | null
+  externalId: string | null
   channel: string | null
   type: $Enums.OrderType | null
   storeId: string | null
@@ -69,6 +71,7 @@ export type OrderMaxAggregateOutputType = {
 export type OrderCountAggregateOutputType = {
   id: number
   number: number
+  externalId: number
   channel: number
   type: number
   storeId: number
@@ -97,6 +100,7 @@ export type OrderSumAggregateInputType = {
 export type OrderMinAggregateInputType = {
   id?: true
   number?: true
+  externalId?: true
   channel?: true
   type?: true
   storeId?: true
@@ -111,6 +115,7 @@ export type OrderMinAggregateInputType = {
 export type OrderMaxAggregateInputType = {
   id?: true
   number?: true
+  externalId?: true
   channel?: true
   type?: true
   storeId?: true
@@ -125,6 +130,7 @@ export type OrderMaxAggregateInputType = {
 export type OrderCountAggregateInputType = {
   id?: true
   number?: true
+  externalId?: true
   channel?: true
   type?: true
   storeId?: true
@@ -226,6 +232,7 @@ export type OrderGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
 export type OrderGroupByOutputType = {
   id: string
   number: string
+  externalId: string | null
   channel: string
   type: $Enums.OrderType
   storeId: string | null
@@ -263,6 +270,7 @@ export type OrderWhereInput = {
   NOT?: Prisma.OrderWhereInput | Prisma.OrderWhereInput[]
   id?: Prisma.StringFilter<"Order"> | string
   number?: Prisma.StringFilter<"Order"> | string
+  externalId?: Prisma.StringNullableFilter<"Order"> | string | null
   channel?: Prisma.StringFilter<"Order"> | string
   type?: Prisma.EnumOrderTypeFilter<"Order"> | $Enums.OrderType
   storeId?: Prisma.StringNullableFilter<"Order"> | string | null
@@ -283,6 +291,7 @@ export type OrderWhereInput = {
 export type OrderOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   number?: Prisma.SortOrder
+  externalId?: Prisma.SortOrderInput | Prisma.SortOrder
   channel?: Prisma.SortOrder
   type?: Prisma.SortOrder
   storeId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -306,6 +315,7 @@ export type OrderWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.OrderWhereInput | Prisma.OrderWhereInput[]
   OR?: Prisma.OrderWhereInput[]
   NOT?: Prisma.OrderWhereInput | Prisma.OrderWhereInput[]
+  externalId?: Prisma.StringNullableFilter<"Order"> | string | null
   channel?: Prisma.StringFilter<"Order"> | string
   type?: Prisma.EnumOrderTypeFilter<"Order"> | $Enums.OrderType
   storeId?: Prisma.StringNullableFilter<"Order"> | string | null
@@ -326,6 +336,7 @@ export type OrderWhereUniqueInput = Prisma.AtLeast<{
 export type OrderOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   number?: Prisma.SortOrder
+  externalId?: Prisma.SortOrderInput | Prisma.SortOrder
   channel?: Prisma.SortOrder
   type?: Prisma.SortOrder
   storeId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -348,6 +359,7 @@ export type OrderScalarWhereWithAggregatesInput = {
   NOT?: Prisma.OrderScalarWhereWithAggregatesInput | Prisma.OrderScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Order"> | string
   number?: Prisma.StringWithAggregatesFilter<"Order"> | string
+  externalId?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
   channel?: Prisma.StringWithAggregatesFilter<"Order"> | string
   type?: Prisma.EnumOrderTypeWithAggregatesFilter<"Order"> | $Enums.OrderType
   storeId?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
@@ -362,6 +374,7 @@ export type OrderScalarWhereWithAggregatesInput = {
 export type OrderCreateInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   status?: $Enums.OrderStatus
@@ -380,6 +393,7 @@ export type OrderCreateInput = {
 export type OrderUncheckedCreateInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   storeId?: string | null
@@ -398,6 +412,7 @@ export type OrderUncheckedCreateInput = {
 export type OrderUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
@@ -416,6 +431,7 @@ export type OrderUpdateInput = {
 export type OrderUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   storeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -434,6 +450,7 @@ export type OrderUncheckedUpdateInput = {
 export type OrderCreateManyInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   storeId?: string | null
@@ -448,6 +465,7 @@ export type OrderCreateManyInput = {
 export type OrderUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
@@ -460,6 +478,7 @@ export type OrderUpdateManyMutationInput = {
 export type OrderUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   storeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -484,6 +503,7 @@ export type OrderOrderByRelationAggregateInput = {
 export type OrderCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   number?: Prisma.SortOrder
+  externalId?: Prisma.SortOrder
   channel?: Prisma.SortOrder
   type?: Prisma.SortOrder
   storeId?: Prisma.SortOrder
@@ -504,6 +524,7 @@ export type OrderAvgOrderByAggregateInput = {
 export type OrderMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   number?: Prisma.SortOrder
+  externalId?: Prisma.SortOrder
   channel?: Prisma.SortOrder
   type?: Prisma.SortOrder
   storeId?: Prisma.SortOrder
@@ -518,6 +539,7 @@ export type OrderMaxOrderByAggregateInput = {
 export type OrderMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   number?: Prisma.SortOrder
+  externalId?: Prisma.SortOrder
   channel?: Prisma.SortOrder
   type?: Prisma.SortOrder
   storeId?: Prisma.SortOrder
@@ -698,6 +720,7 @@ export type OrderUpdateOneWithoutReturnsNestedInput = {
 export type OrderCreateWithoutStoreInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   status?: $Enums.OrderStatus
@@ -715,6 +738,7 @@ export type OrderCreateWithoutStoreInput = {
 export type OrderUncheckedCreateWithoutStoreInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   customerId: string
@@ -761,6 +785,7 @@ export type OrderScalarWhereInput = {
   NOT?: Prisma.OrderScalarWhereInput | Prisma.OrderScalarWhereInput[]
   id?: Prisma.StringFilter<"Order"> | string
   number?: Prisma.StringFilter<"Order"> | string
+  externalId?: Prisma.StringNullableFilter<"Order"> | string | null
   channel?: Prisma.StringFilter<"Order"> | string
   type?: Prisma.EnumOrderTypeFilter<"Order"> | $Enums.OrderType
   storeId?: Prisma.StringNullableFilter<"Order"> | string | null
@@ -775,6 +800,7 @@ export type OrderScalarWhereInput = {
 export type OrderCreateWithoutCustomerInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   status?: $Enums.OrderStatus
@@ -792,6 +818,7 @@ export type OrderCreateWithoutCustomerInput = {
 export type OrderUncheckedCreateWithoutCustomerInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   storeId?: string | null
@@ -835,6 +862,7 @@ export type OrderUpdateManyWithWhereWithoutCustomerInput = {
 export type OrderCreateWithoutItemsInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   status?: $Enums.OrderStatus
@@ -852,6 +880,7 @@ export type OrderCreateWithoutItemsInput = {
 export type OrderUncheckedCreateWithoutItemsInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   storeId?: string | null
@@ -885,6 +914,7 @@ export type OrderUpdateToOneWithWhereWithoutItemsInput = {
 export type OrderUpdateWithoutItemsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
@@ -902,6 +932,7 @@ export type OrderUpdateWithoutItemsInput = {
 export type OrderUncheckedUpdateWithoutItemsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   storeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -919,6 +950,7 @@ export type OrderUncheckedUpdateWithoutItemsInput = {
 export type OrderCreateWithoutStatusHistoryInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   status?: $Enums.OrderStatus
@@ -936,6 +968,7 @@ export type OrderCreateWithoutStatusHistoryInput = {
 export type OrderUncheckedCreateWithoutStatusHistoryInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   storeId?: string | null
@@ -969,6 +1002,7 @@ export type OrderUpdateToOneWithWhereWithoutStatusHistoryInput = {
 export type OrderUpdateWithoutStatusHistoryInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
@@ -986,6 +1020,7 @@ export type OrderUpdateWithoutStatusHistoryInput = {
 export type OrderUncheckedUpdateWithoutStatusHistoryInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   storeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1003,6 +1038,7 @@ export type OrderUncheckedUpdateWithoutStatusHistoryInput = {
 export type OrderCreateWithoutShipmentInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   status?: $Enums.OrderStatus
@@ -1020,6 +1056,7 @@ export type OrderCreateWithoutShipmentInput = {
 export type OrderUncheckedCreateWithoutShipmentInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   storeId?: string | null
@@ -1053,6 +1090,7 @@ export type OrderUpdateToOneWithWhereWithoutShipmentInput = {
 export type OrderUpdateWithoutShipmentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
@@ -1070,6 +1108,7 @@ export type OrderUpdateWithoutShipmentInput = {
 export type OrderUncheckedUpdateWithoutShipmentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   storeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1087,6 +1126,7 @@ export type OrderUncheckedUpdateWithoutShipmentInput = {
 export type OrderCreateWithoutReturnsInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   status?: $Enums.OrderStatus
@@ -1104,6 +1144,7 @@ export type OrderCreateWithoutReturnsInput = {
 export type OrderUncheckedCreateWithoutReturnsInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   storeId?: string | null
@@ -1137,6 +1178,7 @@ export type OrderUpdateToOneWithWhereWithoutReturnsInput = {
 export type OrderUpdateWithoutReturnsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
@@ -1154,6 +1196,7 @@ export type OrderUpdateWithoutReturnsInput = {
 export type OrderUncheckedUpdateWithoutReturnsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   storeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1171,6 +1214,7 @@ export type OrderUncheckedUpdateWithoutReturnsInput = {
 export type OrderCreateManyStoreInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   customerId: string
@@ -1184,6 +1228,7 @@ export type OrderCreateManyStoreInput = {
 export type OrderUpdateWithoutStoreInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
@@ -1201,6 +1246,7 @@ export type OrderUpdateWithoutStoreInput = {
 export type OrderUncheckedUpdateWithoutStoreInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1218,6 +1264,7 @@ export type OrderUncheckedUpdateWithoutStoreInput = {
 export type OrderUncheckedUpdateManyWithoutStoreInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1231,6 +1278,7 @@ export type OrderUncheckedUpdateManyWithoutStoreInput = {
 export type OrderCreateManyCustomerInput = {
   id?: string
   number: string
+  externalId?: string | null
   channel: string
   type: $Enums.OrderType
   storeId?: string | null
@@ -1244,6 +1292,7 @@ export type OrderCreateManyCustomerInput = {
 export type OrderUpdateWithoutCustomerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
@@ -1261,6 +1310,7 @@ export type OrderUpdateWithoutCustomerInput = {
 export type OrderUncheckedUpdateWithoutCustomerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   storeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1278,6 +1328,7 @@ export type OrderUncheckedUpdateWithoutCustomerInput = {
 export type OrderUncheckedUpdateManyWithoutCustomerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   number?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   channel?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumOrderTypeFieldUpdateOperationsInput | $Enums.OrderType
   storeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1340,6 +1391,7 @@ export type OrderCountOutputTypeCountReturnsArgs<ExtArgs extends runtime.Types.E
 export type OrderSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   number?: boolean
+  externalId?: boolean
   channel?: boolean
   type?: boolean
   storeId?: boolean
@@ -1361,6 +1413,7 @@ export type OrderSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
 export type OrderSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   number?: boolean
+  externalId?: boolean
   channel?: boolean
   type?: boolean
   storeId?: boolean
@@ -1377,6 +1430,7 @@ export type OrderSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
 export type OrderSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   number?: boolean
+  externalId?: boolean
   channel?: boolean
   type?: boolean
   storeId?: boolean
@@ -1393,6 +1447,7 @@ export type OrderSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
 export type OrderSelectScalar = {
   id?: boolean
   number?: boolean
+  externalId?: boolean
   channel?: boolean
   type?: boolean
   storeId?: boolean
@@ -1404,7 +1459,7 @@ export type OrderSelectScalar = {
   createdAt?: boolean
 }
 
-export type OrderOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "channel" | "type" | "storeId" | "customerId" | "status" | "subtotal" | "discountTotal" | "total" | "createdAt", ExtArgs["result"]["order"]>
+export type OrderOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "externalId" | "channel" | "type" | "storeId" | "customerId" | "status" | "subtotal" | "discountTotal" | "total" | "createdAt", ExtArgs["result"]["order"]>
 export type OrderInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   store?: boolean | Prisma.Order$storeArgs<ExtArgs>
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
@@ -1436,6 +1491,7 @@ export type $OrderPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     number: string
+    externalId: string | null
     channel: string
     type: $Enums.OrderType
     storeId: string | null
@@ -1876,6 +1932,7 @@ export interface Prisma__OrderClient<T, Null = never, ExtArgs extends runtime.Ty
 export interface OrderFieldRefs {
   readonly id: Prisma.FieldRef<"Order", 'String'>
   readonly number: Prisma.FieldRef<"Order", 'String'>
+  readonly externalId: Prisma.FieldRef<"Order", 'String'>
   readonly channel: Prisma.FieldRef<"Order", 'String'>
   readonly type: Prisma.FieldRef<"Order", 'OrderType'>
   readonly storeId: Prisma.FieldRef<"Order", 'String'>

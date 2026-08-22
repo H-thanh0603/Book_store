@@ -28,10 +28,16 @@ export async function GET(req: NextRequest) {
       } : null });
     }
 
+    // Agent 4: wave filter for the mobile picker view.
+    const waveId = req.nextUrl.searchParams.get("waveId") ?? undefined;
     const [tasks, lowStock] = await Promise.all([
       prisma.warehouseTask.findMany({
-        where: { status: { in: ["OPEN", "IN_PROGRESS"] }, location: locationFilter },
-        include: { location: true }, orderBy: [{ priority: "desc" }, { createdAt: "asc" }], take: 30,
+        where: {
+          status: { in: ["OPEN", "IN_PROGRESS"] }, location: locationFilter,
+          ...(waveId ? { waveId } : {}),
+        },
+        include: { location: true, items: { include: { variant: { select: { sku: true } } } } },
+        orderBy: [{ priority: "desc" }, { createdAt: "asc" }], take: 30,
       }),
       prisma.inventoryBalance.findMany({
         where: { location: locationFilter }, include: { variant: { include: { product: true } }, location: true }, take: 200,

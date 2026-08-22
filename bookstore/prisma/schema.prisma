@@ -611,6 +611,7 @@ enum OrderType {
 model Order {
   id          String @id @default(uuid())
   number      String @unique // ORD-2026-000001
+  externalId  String? // Agent 4: marketplace order id for reconciliation
   channel     String // POS | WEB | APP | MARKETPLACE | CALL_CENTER
   type        OrderType
   storeId     String?

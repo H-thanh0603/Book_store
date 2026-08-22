@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       const registered = await prisma.integrationProvider.findUnique({ where: { name: provider } });
       if (!registered) fail(404, "NOT_FOUND", "Provider not registered — use action=register_provider first");
       const watermarkField = { catalog: "lastCatalogSyncAt", stock: "lastStockSyncAt", orders: "lastOrderSyncAt" }[body.target as "catalog" | "stock" | "orders"];
-      const since = (registered as Record<string, Date | null>)[watermarkField] ?? new Date(Date.now() - 7 * 86_400_000);
+      const since = (registered as unknown as Record<string, Date | null>)[watermarkField] ?? new Date(Date.now() - 7 * 86_400_000);
       let payload: object;
       if (body.target === "catalog") {
         const variants = await prisma.productVariant.findMany({
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       const externalIds = Array.isArray(body.externalOrderIds) ? body.externalOrderIds.filter((v: unknown): v is string => typeof v === "string") : [];
       const localOrders = await prisma.order.findMany({
         where: { channel: "MARKETPLACE", createdAt: { gte: start, lt: end } },
-        select: { id: true, number: true, externalRef: true },
+        select: { id: true, number: true, externalId: true },
       });
       void externalIds;
       return ok({ period: { startAt: start.toISOString(), endAt: end.toISOString() }, localCount: localOrders.length, orders: localOrders });

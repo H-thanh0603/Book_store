@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.integrationJob.findUnique({ where: { idempotencyKey } });
     if (existing?.status === "SUCCEEDED") return ok({ received: true, duplicate: true });
 
-    let result: Record<string, unknown> = {};
+    let result: { orderId?: string; number?: string; ignored?: boolean } = {};
     if (body.event === "order.created") {
       const order = await createReservedOrder(
         { ...(body.data as CreateOrderInput), channel: "MARKETPLACE" },

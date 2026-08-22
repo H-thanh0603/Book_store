@@ -362,6 +362,11 @@ export type ReplenishmentSuggestion = Prisma.ReplenishmentSuggestionModel
  */
 export type IntegrationJob = Prisma.IntegrationJobModel
 /**
+ * Model IntegrationProvider
+ * 
+ */
+export type IntegrationProvider = Prisma.IntegrationProviderModel
+/**
  * Model WarehouseTask
  * 
  */

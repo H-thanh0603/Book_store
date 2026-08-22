@@ -461,6 +461,7 @@ export const ModelName = {
   SequenceCounter: 'SequenceCounter',
   ReplenishmentSuggestion: 'ReplenishmentSuggestion',
   IntegrationJob: 'IntegrationJob',
+  IntegrationProvider: 'IntegrationProvider',
   WarehouseTask: 'WarehouseTask',
   WarehouseTaskItem: 'WarehouseTaskItem',
   JobRun: 'JobRun',
@@ -480,7 +481,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "organization" | "region" | "store" | "warehouse" | "stockLocation" | "user" | "role" | "permission" | "userRole" | "rolePermission" | "session" | "category" | "attributeDefinition" | "brand" | "author" | "publisher" | "product" | "productVariant" | "productBarcode" | "attributeValue" | "priceList" | "price" | "inventoryBalance" | "inventoryMovement" | "inventoryAdjustment" | "inventoryAdjustmentItem" | "supplier" | "supplierProductPrice" | "purchaseOrder" | "purchaseOrderItem" | "goodsReceipt" | "goodsReceiptItem" | "stockTransfer" | "stockTransferItem" | "customer" | "loyaltyAccount" | "loyaltyTransaction" | "promotion" | "promotionStore" | "bundle" | "bundleItem" | "order" | "orderItem" | "orderStatusHistory" | "posTerminal" | "posShift" | "posTransaction" | "posTransactionItem" | "payment" | "shipment" | "returnPayment" | "return" | "returnItem" | "giftCard" | "giftCardTransaction" | "supplierReturn" | "supplierReturnItem" | "inventoryCount" | "inventoryCountItem" | "auditLog" | "systemConfig" | "sequenceCounter" | "replenishmentSuggestion" | "integrationJob" | "warehouseTask" | "warehouseTaskItem" | "jobRun" | "lossAlert"
+    modelProps: "organization" | "region" | "store" | "warehouse" | "stockLocation" | "user" | "role" | "permission" | "userRole" | "rolePermission" | "session" | "category" | "attributeDefinition" | "brand" | "author" | "publisher" | "product" | "productVariant" | "productBarcode" | "attributeValue" | "priceList" | "price" | "inventoryBalance" | "inventoryMovement" | "inventoryAdjustment" | "inventoryAdjustmentItem" | "supplier" | "supplierProductPrice" | "purchaseOrder" | "purchaseOrderItem" | "goodsReceipt" | "goodsReceiptItem" | "stockTransfer" | "stockTransferItem" | "customer" | "loyaltyAccount" | "loyaltyTransaction" | "promotion" | "promotionStore" | "bundle" | "bundleItem" | "order" | "orderItem" | "orderStatusHistory" | "posTerminal" | "posShift" | "posTransaction" | "posTransactionItem" | "payment" | "shipment" | "returnPayment" | "return" | "returnItem" | "giftCard" | "giftCardTransaction" | "supplierReturn" | "supplierReturnItem" | "inventoryCount" | "inventoryCountItem" | "auditLog" | "systemConfig" | "sequenceCounter" | "replenishmentSuggestion" | "integrationJob" | "integrationProvider" | "warehouseTask" | "warehouseTaskItem" | "jobRun" | "lossAlert"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -5220,6 +5221,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    IntegrationProvider: {
+      payload: Prisma.$IntegrationProviderPayload<ExtArgs>
+      fields: Prisma.IntegrationProviderFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.IntegrationProviderFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationProviderPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.IntegrationProviderFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationProviderPayload>
+        }
+        findFirst: {
+          args: Prisma.IntegrationProviderFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationProviderPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.IntegrationProviderFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationProviderPayload>
+        }
+        findMany: {
+          args: Prisma.IntegrationProviderFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationProviderPayload>[]
+        }
+        create: {
+          args: Prisma.IntegrationProviderCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationProviderPayload>
+        }
+        createMany: {
+          args: Prisma.IntegrationProviderCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.IntegrationProviderCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationProviderPayload>[]
+        }
+        delete: {
+          args: Prisma.IntegrationProviderDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationProviderPayload>
+        }
+        update: {
+          args: Prisma.IntegrationProviderUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationProviderPayload>
+        }
+        deleteMany: {
+          args: Prisma.IntegrationProviderDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.IntegrationProviderUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.IntegrationProviderUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationProviderPayload>[]
+        }
+        upsert: {
+          args: Prisma.IntegrationProviderUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IntegrationProviderPayload>
+        }
+        aggregate: {
+          args: Prisma.IntegrationProviderAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateIntegrationProvider>
+        }
+        groupBy: {
+          args: Prisma.IntegrationProviderGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IntegrationProviderGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.IntegrationProviderCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IntegrationProviderCountAggregateOutputType> | number
+        }
+      }
+    }
     WarehouseTask: {
       payload: Prisma.$WarehouseTaskPayload<ExtArgs>
       fields: Prisma.WarehouseTaskFieldRefs
@@ -6034,6 +6109,7 @@ export type BundleItemScalarFieldEnum = (typeof BundleItemScalarFieldEnum)[keyof
 export const OrderScalarFieldEnum = {
   id: 'id',
   number: 'number',
+  externalId: 'externalId',
   channel: 'channel',
   type: 'type',
   storeId: 'storeId',
@@ -6339,6 +6415,22 @@ export const IntegrationJobScalarFieldEnum = {
 } as const
 
 export type IntegrationJobScalarFieldEnum = (typeof IntegrationJobScalarFieldEnum)[keyof typeof IntegrationJobScalarFieldEnum]
+
+
+export const IntegrationProviderScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  kind: 'kind',
+  active: 'active',
+  credentials: 'credentials',
+  webhookSecret: 'webhookSecret',
+  lastCatalogSyncAt: 'lastCatalogSyncAt',
+  lastStockSyncAt: 'lastStockSyncAt',
+  lastOrderSyncAt: 'lastOrderSyncAt',
+  createdAt: 'createdAt'
+} as const
+
+export type IntegrationProviderScalarFieldEnum = (typeof IntegrationProviderScalarFieldEnum)[keyof typeof IntegrationProviderScalarFieldEnum]
 
 
 export const WarehouseTaskScalarFieldEnum = {
@@ -7087,6 +7179,7 @@ export type GlobalOmitConfig = {
   sequenceCounter?: Prisma.SequenceCounterOmit
   replenishmentSuggestion?: Prisma.ReplenishmentSuggestionOmit
   integrationJob?: Prisma.IntegrationJobOmit
+  integrationProvider?: Prisma.IntegrationProviderOmit
   warehouseTask?: Prisma.WarehouseTaskOmit
   warehouseTaskItem?: Prisma.WarehouseTaskItemOmit
   jobRun?: Prisma.JobRunOmit
