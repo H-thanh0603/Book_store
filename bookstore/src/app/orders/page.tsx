@@ -111,6 +111,7 @@ export default function OrdersPage() {
     const r = await fetch("/api/returns", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        action: "create",
         orderId: order.id, locationId,
         items: order.items.map((i) => ({ orderItemId: i.id, quantity: i.quantity })),
         reason: "Khách trả hàng",

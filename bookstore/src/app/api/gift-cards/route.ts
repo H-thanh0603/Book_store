@@ -23,8 +23,8 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (body.action === "adjust") {
-      if (body.amount === undefined || body.amount === null) fail(400, "VALIDATION", "amount required");
-      const delta = toMoney(body.amount, "amount");
+      if (!Number.isInteger(body.amount)) fail(400, "VALIDATION", "amount must be an integer");
+      const delta = BigInt(body.amount); // signed — toMoney rejects negatives, adjust needs them
       if (card.balance + delta < 0n) fail(400, "VALIDATION", "Adjustment would make balance negative");
       const updated = await prisma.giftCard.update({
         where: { id: card.id }, data: { balance: { increment: delta } },
