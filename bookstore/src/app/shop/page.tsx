@@ -2,80 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowRight,
-  Award,
-  Backpack,
-  Bell,
-  BookMarked,
-  BookOpen,
-  Box,
-  Camera,
-  Check,
-  CheckCircle2,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Clock3,
-  Coffee,
-  Compass,
-  Copy,
-  Crown,
-  Eye,
-  Feather,
-  Flame,
-  Gift,
-  GraduationCap,
-  Grid3X3,
-  Heart,
-  HelpCircle,
-  Image as ImageIcon,
-  Info,
-  Layers,
-  LayoutGrid,
-  Library,
-  List,
-  Mail,
-  MapPin,
-  Medal,
-  Menu,
-  MessageSquare,
-  Minus,
-  Moon,
-  Navigation,
-  Newspaper,
-  Palette,
-  PenTool,
-  Phone,
-  Plus,
-  Quote,
-  RotateCcw,
-  Search,
-  Share2,
-  ShieldCheck,
-  ShoppingBag,
-  Shuffle,
-  SlidersHorizontal,
-  Smile,
-  Sparkles,
-  Star,
-  Store,
-  Sun,
-  Tag,
-  TicketPercent,
-  ToyBrick,
-  Trash2,
-  TrendingUp,
-  Trophy,
-  Truck,
-  User,
-  UserRound,
-  Volume2,
-  VolumeX,
-  X,
-  Zap,
-} from "lucide-react";
+import { ArrowRight, Award, Backpack, BookMarked, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Copy, Feather, Flame, Gift, Grid3X3, Heart, LayoutGrid, List, MapPin, Minus, Palette, PenTool, Phone, Plus, RotateCcw, Search, ShoppingBag, SlidersHorizontal, Sparkles, Star, Store, ToyBrick, Trash2, Trophy, Truck, X } from "lucide-react";
 
 import AIConciergeModal from "@/components/AIConciergeModal";
 import LuckyWheelModal from "@/components/LuckyWheelModal";
@@ -358,10 +285,19 @@ export default function ShopPage() {
 
   // Load cart & wishlist from localStorage
   useEffect(() => {
+    let storedCart: CartLine[] = [];
+    let storedWishlist: string[] = [];
     try {
-      setCart(JSON.parse(localStorage.getItem(CART_KEY) ?? "[]"));
-      setWishlist(JSON.parse(localStorage.getItem(WISHLIST_KEY) ?? "[]"));
+      storedCart = JSON.parse(localStorage.getItem(CART_KEY) ?? "[]");
+      storedWishlist = JSON.parse(localStorage.getItem(WISHLIST_KEY) ?? "[]");
     } catch {}
+    // Defer past mount so the first client render matches SSR and hydration
+    // happens without a synchronous setState cascade.
+    const t = setTimeout(() => {
+      setCart(storedCart);
+      setWishlist(storedWishlist);
+    }, 0);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
@@ -441,7 +377,8 @@ export default function ShopPage() {
   const wrappingFee = giftWrapping === "vintage" ? 25000 : giftWrapping === "heritage" ? 45000 : 0;
   const grandTotal = subtotal + wrappingFee;
   const activeStore = catalog?.stores.find((store) => store.id === storeId);
-  const allProducts = catalog?.products ?? [];
+  // Stable identity across renders even while catalog is still null.
+  const allProducts = useMemo(() => catalog?.products ?? [], [catalog]);
 
   // Live autocomplete search matching products
   const searchMatches = useMemo(() => {
@@ -1395,7 +1332,7 @@ export default function ShopPage() {
                 <SlidersHorizontal className="w-3.5 h-3.5 text-[#8c2d19]" />
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
+                  onChange={(e) => setSortBy(e.target.value as "popular" | "price_asc" | "price_desc" | "name_asc" | "newest")}
                   className="bg-transparent text-slate-800 font-semibold outline-none cursor-pointer text-xs"
                 >
                   <option value="popular">Phổ biến &amp; Nổi bật</option>
@@ -1484,7 +1421,7 @@ export default function ShopPage() {
                 ].map((pr) => (
                   <button
                     key={pr.id}
-                    onClick={() => setPriceRange(pr.id as any)}
+                    onClick={() => setPriceRange(pr.id as "all" | "under100" | "100to250" | "250to500" | "above500")}
                     className={`px-3 py-1 rounded-xl transition-all ${
                       priceRange === pr.id
                         ? "bg-[#8c2d19] text-white font-bold"
@@ -2498,7 +2435,7 @@ export default function ShopPage() {
                     <button
                       key={g.id}
                       type="button"
-                      onClick={() => setGiftWrapping(g.id as any)}
+                      onClick={() => setGiftWrapping(g.id as "none" | "vintage" | "heritage")}
                       className={`p-2 rounded-xl text-[11px] font-bold border transition-all ${
                         giftWrapping === g.id
                           ? "bg-[#1c1917] text-white border-[#1c1917]"

@@ -50,6 +50,12 @@ async function getOrCreateOrg() {
 // Agent 2: idempotent seed — every create below is guarded by a unique-key lookup
 // (code/sku/barcode/name) so running the seed twice is a no-op.
 async function main() {
+  // Production guard: seeding creates well-known demo accounts — never run it
+  // against a production database without an explicit override flag.
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_SEED_PRODUCTION !== "true")
+    throw new Error(
+      "Refusing to seed a production database. Set ALLOW_SEED_PRODUCTION=true only if you understand demo accounts will exist."
+    );
   const { region } = await getOrCreateOrg();
   // Permissions + roles
   const perms = await Promise.all(
@@ -100,10 +106,13 @@ async function main() {
   ] as const;
   for (const [email, role, storeId] of users) {
     const passwordHash = hash(seedUserPassword);
+    // Create-only: re-seeding must NEVER reset an existing account's password
+    // (that would silently hand production owner access to whoever ran seed).
+    // Local dev: delete the user row if you need a fresh password.
     const u = await prisma.user.upsert({
       where: { email },
       create: { email, passwordHash },
-      update: { passwordHash },
+      update: {},
     });
     const r = await prisma.role.findUniqueOrThrow({ where: { name: role } });
     await prisma.userRole.upsert({

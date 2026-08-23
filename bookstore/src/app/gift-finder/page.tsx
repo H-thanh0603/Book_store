@@ -2,26 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import {
-  ArrowRight,
-  Baby,
-  BookOpen,
-  Briefcase,
-  Check,
-  CheckCircle2,
-  Gift,
-  Heart,
-  HelpCircle,
-  Palette,
-  RotateCcw,
-  ShoppingBag,
-  Smile,
-  Sparkles,
-  User,
-  Users,
-  X,
-  Zap,
-} from "lucide-react";
+import { ArrowRight, Baby, BookOpen, Briefcase, Check, CheckCircle2, Gift, Heart, Palette, RotateCcw, ShoppingBag, Smile, Sparkles, Users } from "lucide-react";
 
 const recipients = [
   { id: "kids", label: "Bé Yêu / Thiếu Nhi", icon: Baby, desc: "Đồ chơi LEGO, truyện tranh & màu vẽ" },

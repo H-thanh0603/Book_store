@@ -2,25 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import {
-  Award,
-  BookMarked,
-  BookOpen,
-  Check,
-  CheckCircle2,
-  Clock,
-  Copy,
-  Heart,
-  Plus,
-  Quote,
-  Share2,
-  Sparkles,
-  Star,
-  Target,
-  Trophy,
-  User,
-  X,
-} from "lucide-react";
+import { BookOpen, Quote, Share2, Star, Target } from "lucide-react";
 
 const mockUserBooks = [
   { id: "1", name: "Tôi Thấy Hoa Vàng Trên Cỏ Xanh", status: "completed", rating: 5, author: "Nguyễn Nhật Ánh" },
@@ -42,8 +24,8 @@ function getStatusBadgeClass(status: string) {
 }
 
 export default function ReadingChallengePage() {
-  const [goal, setGoal] = useState(20);
-  const [completedCount, setCompletedCount] = useState(6);
+  const [goal] = useState(20);
+  const [completedCount] = useState(6);
   const [activeTab, setActiveTab] = useState<"all" | "reading" | "completed" | "want">("all");
   const [currentQuoteIdx, setCurrentQuoteIdx] = useState(0);
   const [copiedQuote, setCopiedQuote] = useState(false);
@@ -182,7 +164,7 @@ export default function ReadingChallengePage() {
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as "all" | "reading" | "completed" | "want")}
                   className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
                     activeTab === tab.id
                       ? "bg-[#14532d] text-white shadow-xs"

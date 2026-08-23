@@ -16,6 +16,10 @@ function create() {
     connectionTimeoutMillis: 5_000,
     idleTimeoutMillis: 30_000,
   });
+  // Without this handler, an idle-client network error crashes the Node process.
+  pool.on("error", (err) => {
+    console.error(JSON.stringify({ level: "error", event: "pg_pool_idle_client_error", message: err.message }));
+  });
   const client = new PrismaClient({ adapter: new PrismaPg(pool), log: ["error", "warn"] });
   return { pool, client };
 }

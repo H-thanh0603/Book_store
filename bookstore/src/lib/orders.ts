@@ -106,8 +106,21 @@ export async function createReservedOrder(
       variantId: line.variantId, locationId: location.id, type: "RESERVATION",
       quantityDelta: 0, reservedDelta: line.quantity, refType: "order", refId: order.id, userId: actorId,
     });
-    for (const promo of applied)
-      await tx.promotion.update({ where: { id: promo.promoId }, data: { usedCount: { increment: 1 } } });
+    // Promotion usage counters — atomic claim identical to the POS path so a
+    // usage-limited promo can never be over-applied by concurrent web/webhook orders.
+    for (const promo of applied) {
+      const row = await tx.promotion.findUniqueOrThrow({
+        where: { id: promo.promoId }, select: { usageLimit: true },
+      });
+      const claimed = await tx.promotion.updateMany({
+        where: {
+          id: promo.promoId,
+          ...(row.usageLimit === null ? {} : { usedCount: { lt: row.usageLimit } }),
+        },
+        data: { usedCount: { increment: 1 } },
+      });
+      if (claimed.count !== 1) fail(409, "VALIDATION", "Promotion usage limit reached");
+    }
     return order;
   };
   return client ? create(client) : prisma.$transaction(create);

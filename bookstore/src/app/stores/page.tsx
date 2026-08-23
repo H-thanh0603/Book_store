@@ -2,25 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import {
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Coffee,
-  Compass,
-  Heart,
-  MapPin,
-  Navigation,
-  Phone,
-  QrCode,
-  Search,
-  Sparkles,
-  Store,
-  Ticket,
-  Users,
-  Wifi,
-  X,
-} from "lucide-react";
+import { CheckCircle2, MapPin, Navigation, Store, Ticket } from "lucide-react";
 
 const storeBranches = [
   {

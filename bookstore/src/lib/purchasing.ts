@@ -2,8 +2,10 @@
 import { prisma } from "./db";
 import { fail, nextBusinessNumber } from "./api";
 import { applyMovement } from "./inventory";
-import { MovementType, TransferStatus } from "../generated/prisma/client";
+import { MovementType, Prisma, TransferStatus } from "../generated/prisma/client";
 import { PoStatus } from "../generated/prisma/enums";
+
+type Db = Prisma.TransactionClient | typeof prisma;
 
 // ── Purchase Orders ──────────────────────────────────────────
 
@@ -13,10 +15,13 @@ export async function createPurchaseOrder(input: {
   expectedDate?: Date;
   userId: string;
   items: { variantId: string; quantity: number; unitCost: bigint }[];
+  /** Pass a transaction client to create the PO atomically with other writes. */
+  client?: Db;
 }) {
   if (input.items.length === 0) fail(400, "VALIDATION", "PO needs items");
+  const db = input.client ?? prisma;
   const number = await nextBusinessNumber("PO");
-  return prisma.purchaseOrder.create({
+  return db.purchaseOrder.create({
     data: {
       number,
       supplierId: input.supplierId,
@@ -167,12 +172,15 @@ export async function createTransfer(input: {
   toLocationId: string;
   requestedBy: string;
   items: { variantId: string; quantity: number }[];
+  /** Pass a transaction client to create the transfer atomically with other writes. */
+  client?: Db;
 }) {
   if (input.fromLocationId === input.toLocationId)
     fail(400, "VALIDATION", "Source and destination must differ");
   if (input.items.length === 0) fail(400, "VALIDATION", "Transfer needs items");
+  const db = input.client ?? prisma;
   const number = await nextBusinessNumber("TRF");
-  return prisma.stockTransfer.create({
+  return db.stockTransfer.create({
     data: {
       number,
       fromLocationId: input.fromLocationId,

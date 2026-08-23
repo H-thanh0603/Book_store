@@ -7,23 +7,19 @@ import {
   Check,
   Package,
   Phone,
-  Search,
   Truck,
 } from "lucide-react";
 
-type OrderItem = { id: string; name: string; category: string; brand: string | null; quantity: number; price: number };
+type OrderItem = { id: string; name: string; quantity: number; price: number };
 type Stage = { label: string; time: string; done: boolean; desc: string };
+type Shipment = { carrier: string | null; trackingNumber: string | null; status: string } | null;
 type OrderData = {
-  id: string;
   number: string;
   status: string;
   createdAt: string;
   total: number;
-  subtotal: number;
-  discountTotal: number;
-  channel: string;
   storeName: string;
-  customer: { name: string; phone: string; address: string };
+  shipment: Shipment;
   items: OrderItem[];
   stages: Stage[];
 };
@@ -33,21 +29,23 @@ function money(v: number) {
 }
 
 export default function TrackPage() {
-  const [query, setQuery] = useState("");
+  const [number, setNumber] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderData | null>(null);
 
   async function handleSearch(e?: React.FormEvent) {
     if (e) e.preventDefault();
-    if (!query.trim()) return;
+    if (!number.trim() || !phone.trim()) return;
     setLoading(true);
     setSearched(true);
     try {
-      const res = await fetch(`/api/storefront/track?q=${encodeURIComponent(query.trim())}`);
+      const params = new URLSearchParams({ number: number.trim(), phone: phone.trim() });
+      const res = await fetch(`/api/storefront/track?${params.toString()}`);
       const data = await res.json();
       if (res.ok) {
-        setSelectedOrder(data.orders?.[0] ?? null);
+        setSelectedOrder(data.order ?? null);
       }
     } catch {}
     setLoading(false);
@@ -111,26 +109,38 @@ export default function TrackPage() {
             Theo Dõi Hành Trình Đơn Hàng
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">
-            Nhập <b>Mã đơn hàng</b> (VD: ORD-...) hoặc <b>Số điện thoại</b> đặt hàng để kiểm tra tiến trình đóng gói và vị trí bưu kiện.
+            Nhập <b>Mã đơn hàng</b> (VD: ORD-...) <b>và</b> Số điện thoại đặt hàng để kiểm tra tiến trình đóng gói và vị trí bưu kiện.
           </p>
 
-          <form onSubmit={handleSearch} className="max-w-xl mx-auto pt-2 flex gap-2">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <form onSubmit={handleSearch} className="max-w-xl mx-auto pt-2 space-y-2">
+            <div className="relative">
+              <Package className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Nhập mã đơn hàng hoặc số điện thoại..."
+                value={number}
+                onChange={(e) => setNumber(e.target.value)}
+                placeholder="Mã đơn hàng (VD: ORD-2026-000123)"
                 className="w-full bg-white border border-slate-300 rounded-2xl pl-10 pr-4 py-3.5 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-xs"
               />
             </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-3.5 rounded-2xl bg-[#0284c7] hover:bg-sky-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all shrink-0 flex items-center gap-2"
-            >
-              {loading ? "Đang tra cứu..." : "Tra Cứu Ngay"}
-            </button>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Số điện thoại đặt hàng"
+                  autoComplete="tel"
+                  className="w-full bg-white border border-slate-300 rounded-2xl pl-10 pr-4 py-3.5 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-xs"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-3.5 rounded-2xl bg-[#0284c7] hover:bg-sky-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all shrink-0 flex items-center gap-2"
+              >
+                {loading ? "Đang tra cứu..." : "Tra Cứu Ngay"}
+              </button>
+            </div>
           </form>
         </div>
 
@@ -187,7 +197,7 @@ export default function TrackPage() {
               </div>
             </div>
 
-            {/* Live Shipper & Map Simulation Card */}
+            {/* Shipment info card */}
             <div className="rounded-2xl bg-gradient-to-r from-sky-900 to-indigo-950 text-white p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
               <div className="flex items-center gap-3.5">
                 <div className="size-12 rounded-2xl bg-sky-500/30 border border-sky-400/40 text-amber-300 flex items-center justify-center shrink-0">
@@ -195,13 +205,24 @@ export default function TrackPage() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <b className="text-sm font-black">Tài Xế Giao Hàng: Nguyễn Văn Nam</b>
-                    <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">
-                      Đang Giao
-                    </span>
+                    <b className="text-sm font-black">Đơn Vị Vận Chuyển: Melio Express</b>
+                    {selectedOrder.shipment && (
+                      <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">
+                        {selectedOrder.shipment.status}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-sky-200 mt-0.5">
-                    Biển số xe: <b>59-X1 888.99</b> · Vị trí cách điểm giao ~1.2 km
+                    {selectedOrder.shipment?.carrier ? (
+                      <>
+                        Hãng vận chuyển: <b>{selectedOrder.shipment.carrier}</b>
+                        {selectedOrder.shipment.trackingNumber && (
+                          <> · Mã bưu kiện: <b>{selectedOrder.shipment.trackingNumber}</b></>
+                        )}
+                      </>
+                    ) : (
+                      <>Hotline hỗ trợ: <b>19006868</b></>
+                    )}
                   </p>
                 </div>
               </div>
@@ -211,44 +232,26 @@ export default function TrackPage() {
                   href="tel:19006868"
                   className="px-4 py-2 rounded-xl bg-white text-slate-900 font-bold text-xs flex items-center gap-1.5 shadow"
                 >
-                  <Phone className="w-3.5 h-3.5 text-sky-700" /> Gọi Tài Xế
+                  <Phone className="w-3.5 h-3.5 text-sky-700" /> Gọi Hỗ Trợ
                 </a>
               </div>
             </div>
 
-            {/* Order Items & Customer Address */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2 border-t border-slate-100">
-              <div className="space-y-3">
-                <h4 className="font-bold text-xs uppercase tracking-wider text-slate-400">
-                  Danh Sách Ấn Phẩm Trong Kiện ({selectedOrder.items.length} món)
-                </h4>
-                <div className="space-y-2">
-                  {selectedOrder.items.map((it) => (
-                    <div key={it.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
-                      <div>
-                        <b className="block text-slate-900 line-clamp-1">{it.name}</b>
-                        <span className="text-[11px] text-slate-500">Số lượng: x{it.quantity}</span>
-                      </div>
-                      <span className="font-mono font-bold text-slate-900">{money(it.price * it.quantity)}</span>
+            {/* Order items */}
+            <div className="pt-2 border-t border-slate-100">
+              <h4 className="font-bold text-xs uppercase tracking-wider text-slate-400">
+                Danh Sách Ấn Phẩm Trong Kiện ({selectedOrder.items.length} món)
+              </h4>
+              <div className="mt-3 space-y-2">
+                {selectedOrder.items.map((it) => (
+                  <div key={it.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                    <div>
+                      <b className="block text-slate-900 line-clamp-1">{it.name}</b>
+                      <span className="text-[11px] text-slate-500">Số lượng: x{it.quantity}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="font-bold text-xs uppercase tracking-wider text-slate-400">
-                  Địa Chỉ Nhận Hàng &amp; Liên Hệ
-                </h4>
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">NGƯỜI NHẬN</span>
-                    <b className="text-slate-900 text-sm">{selectedOrder.customer.name}</b> · {selectedOrder.customer.phone}
+                    <span className="font-mono font-bold text-slate-900">{money(it.price * it.quantity)}</span>
                   </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">ĐỊA CHỈ GIAO</span>
-                    <p className="text-slate-700">{selectedOrder.customer.address}</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
@@ -257,7 +260,7 @@ export default function TrackPage() {
             <Package className="w-12 h-12 mx-auto text-slate-300" />
             <h3 className="text-lg font-bold text-slate-800">Không tìm thấy thông tin đơn hàng</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Vui lòng kiểm tra lại Mã đơn hàng (VD: ORD-...) hoặc Số điện thoại bạn đã sử dụng khi mua sách.
+              Vui lòng kiểm tra lại Mã đơn hàng (VD: ORD-...) <b>và</b> Số điện thoại bạn đã dùng khi đặt hàng. Cả hai phải trùng khớp với đơn hàng.
             </p>
           </div>
         ) : null}

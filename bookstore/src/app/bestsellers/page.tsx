@@ -2,25 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import {
-  ArrowRight,
-  Award,
-  BookOpen,
-  Crown,
-  Flame,
-  Heart,
-  Medal,
-  Plus,
-  Search,
-  ShoppingBag,
-  Sparkles,
-  Star,
-  Store,
-  TrendingUp,
-  Trophy,
-  X,
-  Zap,
-} from "lucide-react";
+import { Award, Crown, Flame, Medal, Plus, ShoppingBag, Sparkles, Trophy } from "lucide-react";
 
 type Variant = { id: string; name: string; sku: string; price: number; available: number };
 type Product = {
@@ -56,9 +38,14 @@ export default function BestsellersPage() {
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
+    let stored: CartLine[] = [];
     try {
-      setCart(JSON.parse(localStorage.getItem(CART_KEY) ?? "[]"));
+      stored = JSON.parse(localStorage.getItem(CART_KEY) ?? "[]");
     } catch {}
+    // Defer past mount so the first client render matches SSR and the cart
+    // hydrates without a synchronous setState cascade.
+    const t = setTimeout(() => setCart(stored), 0);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
@@ -88,7 +75,8 @@ export default function BestsellersPage() {
     showToast(`🏆 Đã thêm "${p.name}" vào giỏ hàng!`);
   }
 
-  const products = catalog?.products ?? [];
+  // Stable identity across renders even while catalog is still null.
+  const products = useMemo(() => catalog?.products ?? [], [catalog]);
   const filtered = useMemo(() => {
     if (selectedCategory === "all") return products;
     return products.filter((p) =>
@@ -179,7 +167,7 @@ export default function BestsellersPage() {
               ].map((t) => (
                 <button
                   key={t.id}
-                  onClick={() => setTimeframe(t.id as any)}
+                  onClick={() => setTimeframe(t.id as "week" | "month" | "year")}
                   className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all ${
                     timeframe === t.id
                       ? "bg-amber-400 text-amber-950 shadow-md font-black"

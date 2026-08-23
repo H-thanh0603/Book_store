@@ -1,16 +1,38 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission, resolveStoreScope } from "@/lib/auth";
-import { apiError, ok } from "@/lib/api";
+import { assertStoreAccess, requirePermission, resolveStoreScope } from "@/lib/auth";
+import { apiError, ok, fail } from "@/lib/api";
 import { createReservedOrder, type CreateOrderInput } from "@/lib/orders";
 
 // POST /api/orders — create order (WEB/APP), reserve stock at store/warehouse
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const auth = await requirePermission("pos.sell", body.storeId);
+    const auth = await requirePermission("pos.sell");
+    // Resolve scope explicitly — passing client-controlled storeId into
+    // requirePermission would skip the binding when omitted (auth.ts treats
+    // undefined as "caller clamps later"). Here we clamp/verify up front.
+    const scope = resolveStoreScope(auth, body.storeId ?? undefined, "pos.sell");
+
+    let locationStoreId: string | null | undefined;
+    if (body.locationId) {
+      const loc = await prisma.stockLocation.findUnique({
+        where: { id: body.locationId }, select: { storeId: true },
+      });
+      if (!loc) fail(404, "NOT_FOUND", "Fulfillment location not found");
+      // Warehouse locations (storeId null) are org-wide; store-scoped callers
+      // may only reserve at their own stores.
+      assertStoreAccess(auth, loc.storeId, "pos.sell");
+      locationStoreId = loc.storeId;
+    }
+    // Scoped callers must name an in-scope store or an in-scope location —
+    // never fall through to the org-wide warehouse default.
+    if (scope !== null && !body.storeId && !body.locationId)
+      fail(400, "VALIDATION", "storeId or locationId is required for your role");
+    const effectiveStoreId = (body.storeId ?? locationStoreId ?? null) as string | null;
+
     const result = await createReservedOrder({
-      channel: body.channel ?? "WEB", type: body.type, storeId: body.storeId,
+      channel: body.channel ?? "WEB", type: body.type, storeId: effectiveStoreId,
       customerId: body.customerId, locationId: body.locationId, couponCode: body.couponCode,
       items: body.items,
     } as CreateOrderInput, auth.userId);
