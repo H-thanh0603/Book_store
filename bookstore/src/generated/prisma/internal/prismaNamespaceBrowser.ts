@@ -62,6 +62,7 @@ export const ModelName = {
   UserRole: 'UserRole',
   RolePermission: 'RolePermission',
   Session: 'Session',
+  RateLimitBucket: 'RateLimitBucket',
   Category: 'Category',
   AttributeDefinition: 'AttributeDefinition',
   Brand: 'Brand',
@@ -215,9 +216,11 @@ export type PermissionScalarFieldEnum = (typeof PermissionScalarFieldEnum)[keyof
 
 
 export const UserRoleScalarFieldEnum = {
+  id: 'id',
   userId: 'userId',
   roleId: 'roleId',
-  storeId: 'storeId'
+  storeId: 'storeId',
+  scopeKey: 'scopeKey'
 } as const
 
 export type UserRoleScalarFieldEnum = (typeof UserRoleScalarFieldEnum)[keyof typeof UserRoleScalarFieldEnum]
@@ -240,6 +243,16 @@ export const SessionScalarFieldEnum = {
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
+
+
+export const RateLimitBucketScalarFieldEnum = {
+  key: 'key',
+  count: 'count',
+  resetAt: 'resetAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RateLimitBucketScalarFieldEnum = (typeof RateLimitBucketScalarFieldEnum)[keyof typeof RateLimitBucketScalarFieldEnum]
 
 
 export const CategoryScalarFieldEnum = {
@@ -980,6 +993,8 @@ export const JobRunScalarFieldEnum = {
   maxAttempts: 'maxAttempts',
   nextRunAt: 'nextRunAt',
   startedAt: 'startedAt',
+  leaseExpiresAt: 'leaseExpiresAt',
+  workerId: 'workerId',
   finishedAt: 'finishedAt',
   result: 'result',
   error: 'error',

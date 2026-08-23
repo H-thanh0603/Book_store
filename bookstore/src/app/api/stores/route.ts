@@ -1,13 +1,17 @@
 // Agent 2: Store CRUD. GET is a lookup (existing behavior preserved), POST/PATCH add management.
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission, requireAuth } from "@/lib/auth";
+import { requirePermission, requireAuth, resolveStoreScope } from "@/lib/auth";
 import { apiError, ok, fail } from "@/lib/api";
 
 export async function GET() {
   try {
-    await requireAuth();
-    const stores = await prisma.store.findMany({ select: { id: true, name: true, code: true } });
+    const auth = await requireAuth();
+    const scope = resolveStoreScope(auth);
+    const stores = await prisma.store.findMany({
+      where: scope ? { id: { in: scope } } : undefined,
+      select: { id: true, name: true, code: true },
+    });
     return ok({ stores });
   } catch (err) {
     return apiError(err);

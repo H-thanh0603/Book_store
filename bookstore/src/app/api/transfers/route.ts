@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission, assertStoreAccess, audit } from "@/lib/auth";
+import { requirePermission, assertStoreAccess, audit, resolveStoreScope } from "@/lib/auth";
 import { apiError, ok, fail, nextBusinessNumber } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { TransferStatus } from "@/generated/prisma/client";
@@ -80,13 +80,22 @@ export async function POST(req: NextRequest) {
           assertStoreAccess(auth, loc?.storeId, "inventory.transfer");
         }
         assertTransition(trf.status, to);
+        const claimed = await tx.stockTransfer.updateMany({
+          where: { id: trf.id, status: trf.status },
+          data: { status: to as TransferStatus, approvedBy: to === "APPROVED" ? auth.userId : trf.approvedBy },
+        });
+        if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Transfer was already updated");
 
         if (to === "IN_TRANSIT") {
-          // reserve now: deduct on_hand at source
           for (const item of trf.items) {
             await applyMovement(tx, {
               variantId: item.variantId, locationId: trf.fromLocationId,
               type: "TRANSFER_OUT", quantityDelta: -item.quantity,
+              refType: "stock_transfer", refId: trf.id, userId: auth.userId,
+            });
+            await applyMovement(tx, {
+              variantId: item.variantId, locationId: trf.toLocationId,
+              type: "TRANSFER_IN", quantityDelta: 0, inTransitDelta: item.quantity,
               refType: "stock_transfer", refId: trf.id, userId: auth.userId,
             });
           }
@@ -95,16 +104,13 @@ export async function POST(req: NextRequest) {
           for (const item of trf.items) {
             await applyMovement(tx, {
               variantId: item.variantId, locationId: trf.toLocationId,
-              type: "TRANSFER_IN", quantityDelta: item.quantity,
+              type: "TRANSFER_IN", quantityDelta: item.quantity, inTransitDelta: -item.quantity,
               refType: "stock_transfer", refId: trf.id, userId: auth.userId,
             });
           }
         }
 
-        const updated = await tx.stockTransfer.update({
-          where: { id: trf.id },
-          data: { status: to as TransferStatus, approvedBy: to === "APPROVED" ? auth.userId : trf.approvedBy },
-        });
+        const updated = await tx.stockTransfer.findUniqueOrThrow({ where: { id: trf.id } });
         await audit(auth.userId, `transfer.${to.toLowerCase()}`, "StockTransfer", trf.id, undefined, tx);
         return updated;
       });
@@ -119,8 +125,15 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   try {
-    await requirePermission("inventory.view");
+    const auth = await requirePermission("inventory.view");
+    const scope = resolveStoreScope(auth, undefined, "inventory.view");
     const transfers = await prisma.stockTransfer.findMany({
+      where: scope ? {
+        OR: [
+          { fromLocation: { storeId: { in: scope } } },
+          { toLocation: { storeId: { in: scope } } },
+        ],
+      } : undefined,
       include: { fromLocation: true, toLocation: true, items: { include: { variant: true } } },
       orderBy: { createdAt: "desc" },
       take: 50,

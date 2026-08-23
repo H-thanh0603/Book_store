@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { PaymentMethod } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { requirePermission } from "@/lib/auth";
+import { assertStoreAccess, requirePermission } from "@/lib/auth";
 import { apiError, ok, fail, toMoney } from "@/lib/api";
 import { completeSale, openShift, closeShift, refundSale } from "@/lib/pos";
 
@@ -10,9 +10,14 @@ export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
     if (!body.txNumber || !body.shiftId) fail(400, "VALIDATION", "txNumber and shiftId required");
-    const auth = await requirePermission("pos.refund", body.storeId);
+    const auth = await requirePermission("pos.refund");
+    const target = await prisma.posTransaction.findUnique({
+      where: { number: body.txNumber }, select: { storeId: true },
+    });
+    if (!target) fail(404, "NOT_FOUND", "Transaction not found");
+    assertStoreAccess(auth, target.storeId, "pos.refund");
     const refund = await refundSale(body.txNumber, body.shiftId, auth.userId, {
-      storeId: body.storeId, reason: typeof body.reason === "string" ? body.reason : undefined,
+      storeId: target.storeId, reason: typeof body.reason === "string" ? body.reason : undefined,
     });
     await prisma.auditLog.create({
       data: {
@@ -31,21 +36,27 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     if (body.action === "open_shift") {
-      await requirePermission("pos.sell", body.storeId);
       if (!body.terminalId || typeof body.openingCash !== "number")
         fail(400, "VALIDATION", "terminalId and openingCash required");
-      const { getAuth } = await import("@/lib/auth");
-      const auth = (await getAuth())!;
+      const terminal = await prisma.posTerminal.findFirst({
+        where: { id: body.terminalId, active: true }, select: { storeId: true },
+      });
+      if (!terminal) fail(404, "NOT_FOUND", "Terminal not found or inactive");
+      if (body.storeId && body.storeId !== terminal.storeId)
+        fail(400, "VALIDATION", "Terminal does not belong to store");
+      const auth = await requirePermission("pos.sell", terminal.storeId);
       const shift = await openShift(body.terminalId, auth.userId, toMoney(body.openingCash, "openingCash"));
       return ok({ shiftId: shift.id });
     }
 
     if (body.action === "close_shift") {
-      await requirePermission("pos.sell");
       if (!body.shiftId || typeof body.closingCash !== "number")
         fail(400, "VALIDATION", "shiftId and closingCash required");
-      const { getAuth } = await import("@/lib/auth");
-      const auth = (await getAuth())!;
+      const target = await prisma.posShift.findUnique({
+        where: { id: body.shiftId }, select: { terminal: { select: { storeId: true } } },
+      });
+      if (!target) fail(404, "NOT_FOUND", "Shift not found");
+      const auth = await requirePermission("pos.sell", target.terminal.storeId);
       const shift = await closeShift(body.shiftId, toMoney(body.closingCash, "closingCash"), auth.userId);
       return ok({
         expectedCash: Number(shift.expectedCash),
@@ -55,6 +66,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (body.action === "sale") {
+      if (!body.shiftId || !body.storeId || typeof body.idempotencyKey !== "string" || !body.idempotencyKey.trim())
+        fail(400, "VALIDATION", "shiftId, storeId and idempotencyKey required");
       if (!Array.isArray(body.items) || body.items.length === 0)
         fail(400, "VALIDATION", "items required");
       for (const i of body.items)
@@ -65,9 +78,13 @@ export async function POST(req: NextRequest) {
       for (const p of body.payments)
         if (!p.method || !Number.isFinite(p.amount) || p.amount < 0)
           fail(400, "VALIDATION", "each payment needs method and non-negative amount");
-      await requirePermission("pos.sell", body.storeId);
-      const { getAuth } = await import("@/lib/auth");
-      const auth = (await getAuth())!;
+      const shift = await prisma.posShift.findUnique({
+        where: { id: body.shiftId }, select: { terminal: { select: { storeId: true } } },
+      });
+      if (!shift) fail(404, "NOT_FOUND", "Shift not found");
+      if (shift.terminal.storeId !== body.storeId)
+        fail(400, "VALIDATION", "Shift does not belong to store");
+      const auth = await requirePermission("pos.sell", shift.terminal.storeId);
       // Client-supplied unit prices are honored only with pos.override_price; everyone
       // else gets server-resolved retail prices (no client-trusted payment amounts).
       let overrides = 0;
@@ -88,9 +105,9 @@ export async function POST(req: NextRequest) {
         items: body.items,
         customerId: body.customerId ?? null,
         redeemPoints: body.redeemPoints,
+        idempotencyKey: body.idempotencyKey.trim().slice(0, 128),
         payments: (body.payments as Record<string, unknown>[]).map((p) => ({
           method: p.method as PaymentMethod, amount: toMoney(p.amount, "payment.amount"),
-          idempotencyKey: typeof p.idempotencyKey === "string" ? p.idempotencyKey : undefined,
           giftCardCode: typeof p.giftCardCode === "string" ? p.giftCardCode : undefined,
         })),
       });

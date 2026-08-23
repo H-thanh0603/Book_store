@@ -2,7 +2,7 @@ import { prisma } from "./db";
 import { fail, nextBusinessNumber } from "./api";
 import { applyMovement } from "./inventory";
 import { evaluatePromotions, mergeLineDiscounts, type CartLine } from "./promotions";
-import { OrderType } from "../generated/prisma/client";
+import { OrderType, Prisma } from "../generated/prisma/client";
 
 export type CreateOrderInput = {
   channel: "WEB" | "APP" | "MARKETPLACE" | "CALL_CENTER";
@@ -10,11 +10,17 @@ export type CreateOrderInput = {
   storeId?: string | null;
   customerId: string;
   locationId?: string | null;
+  externalId?: string | null;
   couponCode?: string | null;
+  shipping?: { recipientName: string; recipientPhone: string; address: string } | null;
   items: { variantId: string; quantity: number }[];
 };
 
-export async function createReservedOrder(input: CreateOrderInput, actorId?: string) {
+export async function createReservedOrder(
+  input: CreateOrderInput,
+  actorId?: string,
+  client?: Prisma.TransactionClient,
+) {
   if (!["WEB", "APP", "MARKETPLACE", "CALL_CENTER"].includes(input.channel))
     fail(400, "VALIDATION", "Invalid order channel");
   if (input.type && !Object.values(OrderType).includes(input.type))
@@ -24,13 +30,16 @@ export async function createReservedOrder(input: CreateOrderInput, actorId?: str
   if (input.storeId != null && typeof input.storeId !== "string") fail(400, "VALIDATION", "Invalid storeId");
   if (input.locationId != null && typeof input.locationId !== "string") fail(400, "VALIDATION", "Invalid locationId");
   if (input.couponCode != null && typeof input.couponCode !== "string") fail(400, "VALIDATION", "Invalid couponCode");
+  if (input.shipping && (!input.shipping.recipientName.trim() || !input.shipping.recipientPhone.trim() || !input.shipping.address.trim()))
+    fail(400, "VALIDATION", "Shipping recipient, phone and address are required");
   if (new Set(input.items.map((item) => item.variantId)).size !== input.items.length)
     fail(400, "VALIDATION", "A variant may appear only once");
   for (const item of input.items)
     if (typeof item.variantId !== "string" || !item.variantId || !Number.isInteger(item.quantity) || item.quantity <= 0)
       fail(400, "VALIDATION", "Each item needs a variantId and positive integer quantity");
 
-  const variants = await prisma.productVariant.findMany({
+  const db = client ?? prisma;
+  const variants = await db.productVariant.findMany({
     where: { id: { in: input.items.map((item) => item.variantId) }, active: true },
     include: {
       product: true,
@@ -53,11 +62,11 @@ export async function createReservedOrder(input: CreateOrderInput, actorId?: str
   });
   const applied = await evaluatePromotions({
     lines, storeId: input.storeId, channel: "WEB", customerId: input.customerId, couponCode: input.couponCode,
-  });
+  }, db);
   const discounts = mergeLineDiscounts(applied, lines);
   const subtotal = lines.reduce((sum, line) => sum + line.unitPrice * BigInt(line.quantity), 0n);
 
-  return prisma.$transaction(async (tx) => {
+  const create = async (tx: Prisma.TransactionClient) => {
     // Customer must exist and be active-ish (real FK target, not a guessed id).
     const customer = await tx.customer.findUnique({ where: { id: input.customerId } });
     if (!customer) fail(404, "NOT_FOUND", "Unknown customer");
@@ -77,12 +86,18 @@ export async function createReservedOrder(input: CreateOrderInput, actorId?: str
     const order = await tx.order.create({
       data: {
         number: await nextBusinessNumber("ORD"), channel: input.channel, type: input.type ?? "delivery",
-        storeId: input.storeId ?? null, customerId: input.customerId, status: "CONFIRMED",
+        storeId: input.storeId ?? null, customerId: input.customerId,
+        externalId: input.externalId?.trim() || null, status: "CONFIRMED",
         subtotal, discountTotal: discounts.total, total: subtotal - discounts.total,
         items: { create: lines.map((line) => ({
           variantId: line.variantId, quantity: line.quantity, unitPrice: line.unitPrice,
           discount: discounts.byVariant.get(line.variantId) ?? 0n,
         })) },
+        shipment: input.shipping ? { create: {
+          recipientName: input.shipping.recipientName.trim(),
+          recipientPhone: input.shipping.recipientPhone.trim(),
+          address: input.shipping.address.trim(),
+        } } : undefined,
         statusHistory: { create: { fromStatus: null, toStatus: "CONFIRMED", userId: actorId } },
       },
       include: { items: true },
@@ -94,5 +109,6 @@ export async function createReservedOrder(input: CreateOrderInput, actorId?: str
     for (const promo of applied)
       await tx.promotion.update({ where: { id: promo.promoId }, data: { usedCount: { increment: 1 } } });
     return order;
-  });
+  };
+  return client ? create(client) : prisma.$transaction(create);
 }

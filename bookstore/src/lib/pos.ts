@@ -4,7 +4,7 @@ import { fail } from "./api";
 import { applyMovement } from "./inventory";
 import { evaluatePromotions, mergeLineDiscounts, CartLine } from "./promotions";
 import { nextBusinessNumber, getSystemConfig } from "./api";
-import { MovementType, PaymentMethod } from "../generated/prisma/client";
+import { MovementType, PaymentMethod, Prisma } from "../generated/prisma/client";
 const LOYALTY_RATE_FALLBACK = 10_000n; // 10.000 VND = 1 point (spec §101: override via SystemConfig "loyalty.vndPerPoint")
 
 export type CompleteSaleInput = {
@@ -15,26 +15,30 @@ export type CompleteSaleInput = {
   customerId?: string | null;
   redeemPoints?: number;
   couponCode?: string | null; // Phase 2
-  payments: { method: PaymentMethod; amount: bigint; idempotencyKey?: string; giftCardCode?: string }[];
+  idempotencyKey: string;
+  payments: { method: PaymentMethod; amount: bigint; giftCardCode?: string }[];
 };
 
 export async function completeSale(input: CompleteSaleInput) {
   const totalPaid = input.payments.reduce((s, p) => s + p.amount, 0n);
   const rate = BigInt(await getSystemConfig<number>("loyalty.vndPerPoint", Number(LOYALTY_RATE_FALLBACK)));
+  const existing = await prisma.payment.findUnique({
+    where: { idempotencyKey: input.idempotencyKey }, include: { tx: true },
+  });
+  if (existing) {
+    if (existing.tx.storeId !== input.storeId)
+      fail(409, "DUPLICATE", "Idempotency key belongs to another sale");
+    return existing.tx;
+  }
 
-  return prisma.$transaction(async (tx) => {
-    // Idempotency: same key → return existing tx
-    const key = input.payments.find((p) => p.idempotencyKey)?.idempotencyKey;
-    if (key) {
-      const existing = await prisma.payment.findUnique({
-        where: { idempotencyKey: key },
-        include: { tx: true },
-      });
-      if (existing) return existing.tx;
-    }
-
-    const shift = await tx.posShift.findUnique({ where: { id: input.shiftId } });
+  try {
+    return await prisma.$transaction(async (tx) => {
+    const shift = await tx.posShift.findUnique({
+      where: { id: input.shiftId }, include: { terminal: true },
+    });
     if (!shift || shift.status !== "OPEN") fail(400, "VALIDATION", "Shift not open");
+    if (shift.terminal.storeId !== input.storeId)
+      fail(400, "VALIDATION", "Shift does not belong to store");
 
     // Build lines with retail prices
     const variantIds = input.items.map((i) => i.variantId);
@@ -74,7 +78,7 @@ export async function completeSale(input: CompleteSaleInput) {
       channel: "POS",
       customerId: input.customerId,
       couponCode: input.couponCode,
-    });
+    }, tx);
     const { byVariant, total: discountTotal } = mergeLineDiscounts(applied, lines);
 
     // Loyalty redemption
@@ -82,8 +86,14 @@ export async function completeSale(input: CompleteSaleInput) {
     let redeemDiscount = 0n;
     if (input.redeemPoints && input.redeemPoints > 0) {
       if (!input.customerId) fail(400, "VALIDATION", "Redeem requires customer");
-      const acct = await tx.loyaltyAccount.findUnique({ where: { customerId: input.customerId } });
-      if (!acct || acct.points < input.redeemPoints)
+      await tx.loyaltyAccount.upsert({
+        where: { customerId: input.customerId }, create: { customerId: input.customerId }, update: {},
+      });
+      const reserved = await tx.loyaltyAccount.updateMany({
+        where: { customerId: input.customerId, points: { gte: input.redeemPoints } },
+        data: { points: { decrement: input.redeemPoints } },
+      });
+      if (reserved.count !== 1)
         fail(400, "VALIDATION", "Insufficient loyalty points");
       loyaltyRedeemed = input.redeemPoints;
       redeemDiscount = BigInt(loyaltyRedeemed) * rate;
@@ -102,28 +112,19 @@ export async function completeSale(input: CompleteSaleInput) {
       const card = await tx.giftCard.findUnique({ where: { code } });
       if (!card || !card.active || (card.expiresAt && card.expiresAt <= new Date()))
         fail(400, "VALIDATION", "Gift card is inactive or expired");
-      if (card.balance < payment.amount) fail(400, "VALIDATION", "Insufficient gift card balance");
-      const updated = await tx.giftCard.update({ where: { id: card.id }, data: { balance: { decrement: payment.amount } } });
+      const debited = await tx.giftCard.updateMany({
+        where: { id: card.id, active: true, balance: { gte: payment.amount } },
+        data: { balance: { decrement: payment.amount } },
+      });
+      if (debited.count !== 1) fail(400, "VALIDATION", "Insufficient gift card balance");
+      const updated = await tx.giftCard.findUniqueOrThrow({ where: { id: card.id } });
       giftCards.set(index, { id: card.id, balance: updated.balance });
     }
 
-    // Deduct inventory atomically per line
     const saleLocation = await tx.stockLocation.findFirst({
       where: { storeId: input.storeId, type: "STORE_STOCKROOM" },
     });
     if (!saleLocation) fail(400, "VALIDATION", `No stockroom for store ${input.storeId}`);
-
-    for (const l of lines) {
-      await applyMovement(tx, {
-        variantId: l.variantId,
-        locationId: saleLocation.id,
-        type: MovementType.SALE,
-        quantityDelta: -l.quantity,
-        refType: "pos_transaction",
-        refId: null as unknown as string, // patched below
-        userId: input.userId,
-      });
-    }
 
     const earned = total / rate;
 
@@ -153,24 +154,26 @@ export async function completeSale(input: CompleteSaleInput) {
           create: input.payments.map((p, index) => ({
             method: p.method,
             amount: p.amount,
-            idempotencyKey: p.idempotencyKey,
+            idempotencyKey: index === 0 ? input.idempotencyKey : undefined,
             giftCardId: giftCards.get(index)?.id ?? null,
           })),
         },
       },
     });
 
+    for (const l of lines) {
+      await applyMovement(tx, {
+        variantId: l.variantId, locationId: saleLocation.id, type: MovementType.SALE,
+        quantityDelta: -l.quantity, refType: "pos_transaction", refId: txn.id,
+        userId: input.userId,
+      });
+    }
+
     for (const [index, card] of giftCards) {
       await tx.giftCardTransaction.create({
         data: { giftCardId: card.id, amount: -input.payments[index].amount, balanceAfter: card.balance, refType: "pos_transaction", refId: txn.id },
       });
     }
-
-    // Patch movements' refId to the created txn
-    await tx.inventoryMovement.updateMany({
-      where: { refType: "pos_transaction", refId: null, createdAt: { gte: new Date(Date.now() - 5000) }, variantId: { in: variantIds } },
-      data: { refId: txn.id },
-    });
 
     // Loyalty ledger updates
     if (input.customerId && (earned > 0n || loyaltyRedeemed > 0)) {
@@ -182,7 +185,7 @@ export async function completeSale(input: CompleteSaleInput) {
       const net = Number(earned) - loyaltyRedeemed;
       const updated = await tx.loyaltyAccount.update({
         where: { id: acct.id },
-        data: { points: { increment: net } },
+        data: { points: { increment: Number(earned) } },
       });
       if (net !== 0)
         await tx.loyaltyTransaction.create({
@@ -198,11 +201,35 @@ export async function completeSale(input: CompleteSaleInput) {
     }
 
     // Promotion usage counters
-    for (const ap of applied)
-      await tx.promotion.update({ where: { id: ap.promoId }, data: { usedCount: { increment: 1 } } });
+    for (const ap of applied) {
+      const promotion = await tx.promotion.findUniqueOrThrow({
+        where: { id: ap.promoId }, select: { usageLimit: true },
+      });
+      const claimed = await tx.promotion.updateMany({
+        where: {
+          id: ap.promoId,
+          ...(promotion.usageLimit === null ? {} : { usedCount: { lt: promotion.usageLimit } }),
+        },
+        data: { usedCount: { increment: 1 } },
+      });
+      if (claimed.count !== 1) fail(409, "VALIDATION", "Promotion usage limit reached");
+    }
 
     return txn;
-  });
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const duplicate = await prisma.payment.findUnique({
+        where: { idempotencyKey: input.idempotencyKey }, include: { tx: true },
+      });
+      if (duplicate) {
+        if (duplicate.tx.storeId !== input.storeId)
+          fail(409, "DUPLICATE", "Idempotency key belongs to another sale");
+        return duplicate.tx;
+      }
+    }
+    throw error;
+  }
 }
 
 /** Price a cart without side effects — POS UI preview so the client never guesses totals. */
@@ -281,6 +308,10 @@ export async function refundSale(txNumber: string, shiftId: string, userId: stri
     const shift = await tx.posShift.findUnique({ where: { id: shiftId }, include: { terminal: true } });
     if (!shift || shift.status !== "OPEN") fail(400, "VALIDATION", "Refund shift not open");
     if (shift.terminal.storeId !== orig.storeId) fail(403, "FORBIDDEN", "Refund shift belongs to another store");
+    const claimed = await tx.posTransaction.updateMany({
+      where: { id: orig.id, status: "COMPLETED" }, data: { status: "RETURNED" },
+    });
+    if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Transaction was already refunded");
 
     const location = await tx.stockLocation.findFirst({
       where: { storeId: orig.storeId, type: "STORE_STOCKROOM" },
@@ -308,8 +339,12 @@ export async function refundSale(txNumber: string, shiftId: string, userId: stri
         update: {},
       });
       const net = orig.loyaltyRedeemed - orig.loyaltyEarned;
-      if (acct.points + net < 0) fail(400, "VALIDATION", "Customer no longer has enough points to revoke");
-      const updated = await tx.loyaltyAccount.update({ where: { id: acct.id }, data: { points: { increment: net } } });
+      const adjusted = await tx.loyaltyAccount.updateMany({
+        where: { id: acct.id, ...(net < 0 ? { points: { gte: -net } } : {}) },
+        data: { points: { increment: net } },
+      });
+      if (adjusted.count !== 1) fail(400, "VALIDATION", "Customer no longer has enough points to revoke");
+      const updated = await tx.loyaltyAccount.findUniqueOrThrow({ where: { id: acct.id } });
       if (net !== 0)
         await tx.loyaltyTransaction.create({
           data: {
@@ -329,7 +364,6 @@ export async function refundSale(txNumber: string, shiftId: string, userId: stri
         payments: { create: orig.payments.map((p) => ({ method: p.method, amount: -p.amount })) },
       },
     });
-    await tx.posTransaction.update({ where: { id: orig.id }, data: { status: "RETURNED" } });
     void opts.reason; // recorded in the audit log by the route
     return refund;
   });
@@ -340,9 +374,13 @@ export async function openShift(terminalId: string, cashierId: string, openingCa
     where: { terminalId, status: "OPEN" },
   });
   if (existing) fail(409, "VALIDATION", "Terminal already has an open shift");
-  return prisma.posShift.create({
-    data: { terminalId, cashierId, openingCash },
-  });
+  try {
+    return await prisma.posShift.create({ data: { terminalId, cashierId, openingCash } });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")
+      fail(409, "VALIDATION", "Terminal already has an open shift");
+    throw error;
+  }
 }
 
 export async function closeShift(shiftId: string, closingCash: bigint, userId?: string) {
@@ -356,8 +394,8 @@ export async function closeShift(shiftId: string, closingCash: bigint, userId?: 
     for (const t of shift.transactions)
       for (const p of t.payments) if (p.method === "CASH") cashTotal += p.amount;
     const expected = shift.openingCash + cashTotal;
-    const closed = await tx.posShift.update({
-      where: { id: shiftId },
+    const claimed = await tx.posShift.updateMany({
+      where: { id: shiftId, status: "OPEN" },
       data: {
         status: "CLOSED",
         closingCash,
@@ -366,6 +404,8 @@ export async function closeShift(shiftId: string, closingCash: bigint, userId?: 
         closedAt: new Date(),
       },
     });
+    if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Shift was already closed");
+    const closed = await tx.posShift.findUniqueOrThrow({ where: { id: shiftId } });
     await tx.auditLog.create({
       data: {
         actorId: userId ?? null, action: "shift.close", entity: "PosShift", entityId: shiftId,

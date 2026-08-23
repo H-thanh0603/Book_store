@@ -13,17 +13,21 @@ export async function GET() {
     startOfDay.setHours(0, 0, 0, 0);
     const startOfMonth = new Date(startOfDay.getFullYear(), startOfDay.getMonth(), 1);
 
-    // ponytail: raw SQL keeps the store filter as a simple IN list; fine at this scale
-    const storeFilter = storeScope ? `AND t."storeId" IN (${storeScope.map((s) => `'${s.replace(/'/g, "''")}'`).join(",")})` : "";
+    const transactionStoreFilter = storeScope
+      ? Prisma.sql`AND t."storeId" IN (${Prisma.join(storeScope)})`
+      : Prisma.empty;
+    const locationStoreFilter = storeScope
+      ? Prisma.sql`AND l."storeId" IN (${Prisma.join(storeScope)})`
+      : Prisma.empty;
 
     const [todayAgg, monthAgg, orderCount, customerCount, lowStock, topProducts, recentTxns] =
       await Promise.all([
         prisma.$queryRaw<{ total: string; count: bigint }[]>`
           SELECT COALESCE(SUM(total),0)::text AS total, COUNT(*) AS count FROM "PosTransaction" t
-          WHERE t.status = 'COMPLETED' AND t."createdAt" >= ${startOfDay} ${Prisma.raw(storeFilter)}`,
+          WHERE t.status = 'COMPLETED' AND t."createdAt" >= ${startOfDay} ${transactionStoreFilter}`,
         prisma.$queryRaw<{ total: string; count: bigint }[]>`
           SELECT COALESCE(SUM(total),0)::text AS total, COUNT(*) AS count FROM "PosTransaction" t
-          WHERE t.status = 'COMPLETED' AND t."createdAt" >= ${startOfMonth} ${Prisma.raw(storeFilter)}`,
+          WHERE t.status = 'COMPLETED' AND t."createdAt" >= ${startOfMonth} ${transactionStoreFilter}`,
         prisma.order.count({
           where: { createdAt: { gte: startOfMonth }, ...(storeScope ? { storeId: { in: storeScope } } : {}) },
         }),
@@ -35,7 +39,7 @@ export async function GET() {
           JOIN "ProductVariant" v ON v.id = b."variantId"
           JOIN "Product" p ON p.id = v."productId"
           JOIN "StockLocation" l ON l.id = b."locationId"
-          WHERE l."storeId" IS NOT NULL AND (b."onHand" - b.reserved) <= 5
+          WHERE l."storeId" IS NOT NULL AND (b."onHand" - b.reserved) <= 5 ${locationStoreFilter}
           ORDER BY (b."onHand" - b.reserved) ASC LIMIT 20`,
         // top products MTD by revenue
         prisma.$queryRaw<{ name: string; units: number; revenue: string }[]>`
@@ -44,7 +48,7 @@ export async function GET() {
           JOIN "PosTransaction" t ON t.id = i."txId"
           JOIN "ProductVariant" v ON v.id = i."variantId"
           JOIN "Product" p ON p.id = v."productId"
-          WHERE t.status = 'COMPLETED' AND t."createdAt" >= ${startOfMonth} ${storeScope ? Prisma.raw(`AND t."storeId" IN (${storeScope.map((s) => `'${s.replace(/'/g, "''")}'`).join(",")})`) : Prisma.empty}
+          WHERE t.status = 'COMPLETED' AND t."createdAt" >= ${startOfMonth} ${transactionStoreFilter}
           GROUP BY p.name ORDER BY SUM(i.quantity * i."unitPrice") DESC LIMIT 10`,
         prisma.posTransaction.findMany({
           where: storeScope ? { shift: { terminal: { storeId: { in: storeScope } } } } : undefined,

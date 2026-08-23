@@ -73,6 +73,11 @@ export type RolePermission = Prisma.RolePermissionModel
  */
 export type Session = Prisma.SessionModel
 /**
+ * Model RateLimitBucket
+ * 
+ */
+export type RateLimitBucket = Prisma.RateLimitBucketModel
+/**
  * Model Category
  * 
  */

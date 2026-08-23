@@ -1,6 +1,6 @@
 // Promotion engine — rule-based, Phase 1 scope.
 import { prisma } from "./db";
-import { PromoChannel } from "../generated/prisma/client";
+import { Prisma, PromoChannel } from "../generated/prisma/client";
 
 export type CartLine = {
   variantId: string;
@@ -27,9 +27,9 @@ export async function evaluatePromotions(args: {
   channel: keyof typeof PromoChannel;
   customerId?: string | null;
   couponCode?: string | null;
-}): Promise<AppliedPromo[]> {
+}, client: Prisma.TransactionClient | typeof prisma = prisma): Promise<AppliedPromo[]> {
   const now = new Date();
-  const promos = await prisma.promotion.findMany({
+  const promos = await client.promotion.findMany({
     where: {
       active: true,
       startAt: { lte: now },

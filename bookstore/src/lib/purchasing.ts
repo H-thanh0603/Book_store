@@ -47,14 +47,19 @@ export function assertPoTransition(from: PoStatus, to: PoStatus) {
 }
 
 export async function transitionPo(poId: string, to: PoStatus, userId: string) {
-  const po = await prisma.purchaseOrder.findUnique({ where: { id: poId } });
-  if (!po) fail(404, "NOT_FOUND", "PO not found");
-  assertPoTransition(po.status, to);
   return prisma.$transaction(async (tx) => {
+    const po = await tx.purchaseOrder.findUnique({ where: { id: poId } });
+    if (!po) fail(404, "NOT_FOUND", "PO not found");
+    assertPoTransition(po.status, to);
+    const claimed = await tx.purchaseOrder.updateMany({
+      where: { id: po.id, status: po.status },
+      data: { status: to, approvedBy: to === "approved" ? userId : po.approvedBy },
+    });
+    if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "PO was already updated");
     await tx.auditLog.create({
       data: { actorId: userId, action: "po.transition", entity: "purchase_order", entityId: po.id, before: { status: po.status }, after: { status: to } },
     });
-    return tx.purchaseOrder.update({ where: { id: po.id }, data: { status: to, approvedBy: to === "approved" ? userId : po.approvedBy } });
+    return tx.purchaseOrder.findUniqueOrThrow({ where: { id: po.id } });
   });
 }
 
@@ -70,6 +75,7 @@ export async function receiveGoods(input: {
   items: { variantId: string; quantity: number; damagedQty?: number }[];
 }) {
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "PurchaseOrder" WHERE id = ${input.poId} FOR UPDATE`;
     const po = await tx.purchaseOrder.findUnique({
       where: { id: input.poId },
       include: { items: true },
@@ -102,6 +108,7 @@ export async function receiveGoods(input: {
     if (!loc) fail(400, "VALIDATION", "Warehouse has no stock location");
 
     for (const item of input.items) {
+      const poItem = po.items.find((candidate) => candidate.variantId === item.variantId)!;
       await applyMovement(tx, {
         variantId: item.variantId,
         locationId: loc!.id,
@@ -112,10 +119,14 @@ export async function receiveGoods(input: {
         refId: receipt.id,
         userId: input.receivedBy,
       });
-      await tx.purchaseOrderItem.updateMany({
-        where: { poId: po.id, variantId: item.variantId },
+      const received = await tx.purchaseOrderItem.updateMany({
+        where: {
+          poId: po.id, variantId: item.variantId,
+          receivedQty: { lte: poItem.quantity - item.quantity },
+        },
         data: { receivedQty: { increment: item.quantity } },
       });
+      if (received.count !== 1) fail(409, "VALIDATION", `Receive exceeds ordered qty for variant ${item.variantId}`);
     }
 
     // Recompute PO status
@@ -179,6 +190,10 @@ export async function dispatchTransfer(transferId: string, userId: string) {
     const t = await tx.stockTransfer.findUnique({ where: { id: transferId }, include: { items: true } });
     if (!t) fail(404, "NOT_FOUND", "Transfer not found");
     assertTransferTransition(t.status, "IN_TRANSIT");
+    const claimed = await tx.stockTransfer.updateMany({
+      where: { id: t.id, status: t.status }, data: { status: "IN_TRANSIT" },
+    });
+    if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Transfer was already dispatched");
     for (const item of t.items) {
       await applyMovement(tx, {
         variantId: item.variantId,
@@ -200,7 +215,6 @@ export async function dispatchTransfer(transferId: string, userId: string) {
         userId,
       });
     }
-    await tx.stockTransfer.update({ where: { id: t.id }, data: { status: "IN_TRANSIT" } });
     await tx.auditLog.create({ data: { actorId: userId, action: "transfer.dispatch", entity: "stock_transfer", entityId: t.id, after: { number: t.number } } });
     return { ok: true };
   });
@@ -212,6 +226,10 @@ export async function receiveTransfer(transferId: string, userId: string) {
     const t = await tx.stockTransfer.findUnique({ where: { id: transferId }, include: { items: true } });
     if (!t) fail(404, "NOT_FOUND", "Transfer not found");
     assertTransferTransition(t.status, "RECEIVED");
+    const claimed = await tx.stockTransfer.updateMany({
+      where: { id: t.id, status: t.status }, data: { status: "COMPLETED" },
+    });
+    if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Transfer was already received");
     for (const item of t.items) {
       await applyMovement(tx, {
         variantId: item.variantId,
@@ -225,7 +243,6 @@ export async function receiveTransfer(transferId: string, userId: string) {
       });
       await tx.stockTransferItem.update({ where: { id: item.id }, data: { receivedQty: item.quantity } });
     }
-    await tx.stockTransfer.update({ where: { id: t.id }, data: { status: "COMPLETED" } });
     await tx.auditLog.create({ data: { actorId: userId, action: "transfer.receive", entity: "stock_transfer", entityId: t.id, after: { number: t.number } } });
     return { ok: true };
   });

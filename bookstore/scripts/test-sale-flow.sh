@@ -1,6 +1,7 @@
 #!/bin/bash
 # Task 2: full HTTP flow test — sale, over-sell block, inventory deduction
 set -e
+: "${SEED_USER_PASSWORD:?SEED_USER_PASSWORD is required}"
 CJ=/tmp/cj
 B=http://localhost:3000
 STORE=2d94993e-4acb-4cba-8215-e1425a45ceb1   # Nguyễn Huệ (cashier scope)
@@ -8,7 +9,7 @@ V=105d20f1-5cea-4020-b28f-27bf1d8ee454       # Dế Mèn Phiêu Lưu Ký
 
 echo "== login =="
 curl -s -c $CJ -X POST $B/api/auth -H 'Content-Type: application/json' \
-  -d '{"action":"login","email":"cashier.nh@melio.vn","password":"Passw0rd!"}'; echo
+  -d "{\"action\":\"login\",\"email\":\"cashier.nh@melio.vn\",\"password\":\"$SEED_USER_PASSWORD\"}"; echo
 
 SHIFT=$(psql "postgresql://bookstore:bookstore@localhost:5432/bookstore" -t -A -c "SELECT id FROM \"PosShift\" WHERE status='OPEN' LIMIT 1")
 if [ -z "$SHIFT" ]; then

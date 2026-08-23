@@ -1,18 +1,37 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../nav";
+import {
+  ShoppingBag,
+  Truck,
+  Store,
+  Package,
+  Plus,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Search,
+  AlertCircle,
+} from "lucide-react";
 
 type Product = {
-  id: string; name: string;
+  id: string;
+  name: string;
   variants: { id: string; sku: string; prices: { amount: string }[] }[];
 };
 type Line = { variantId: string; name: string; quantity: number; unitPrice: number };
 type Order = {
-  id: string; number: string; channel: string; type: string; status: string;
-  total: number; createdAt: string;
+  id: string;
+  number: string;
+  channel: string;
+  type: string;
+  status: string;
+  total: number;
+  createdAt: string;
   customer: { name: string };
   items: { id: string; variantId: string; quantity: number; unitPrice: number }[];
 };
+
 const CART_KEY = "web.cart";
 
 export default function OrdersPage() {
@@ -24,8 +43,10 @@ export default function OrdersPage() {
   const [storeId, setStoreId] = useState("");
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
   const [couponCode, setCouponCode] = useState("");
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [searchFilter, setSearchFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   async function loadOrders() {
     const r = await fetch("/api/orders");
@@ -33,13 +54,23 @@ export default function OrdersPage() {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate cart from localStorage on mount
-    try { setLines(JSON.parse(localStorage.getItem(CART_KEY) ?? "[]")); } catch { /* fresh cart */ }
-    fetch("/api/products").then(async (r) => { if (r.ok) setProducts((await r.json()).products); });
-    fetch("/api/customers").then(async (r) => { if (r.ok) setCustomers((await r.json()).customers); });
-    fetch("/api/stores").then(async (r) => { if (r.ok) setStores((await r.json()).stores); });
-    loadOrders();
+    const timer = window.setTimeout(() => {
+      try { setLines(JSON.parse(localStorage.getItem(CART_KEY) ?? "[]")); }
+      catch { /* fresh cart */ }
+      void loadOrders();
+    }, 0);
+    fetch("/api/products").then(async (r) => {
+      if (r.ok) setProducts((await r.json()).products);
+    });
+    fetch("/api/customers").then(async (r) => {
+      if (r.ok) setCustomers((await r.json()).customers);
+    });
+    fetch("/api/stores").then(async (r) => {
+      if (r.ok) setStores((await r.json()).stores);
+    });
+    return () => window.clearTimeout(timer);
   }, []);
+
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(lines));
   }, [lines]);
@@ -50,7 +81,15 @@ export default function OrdersPage() {
     setLines((ls) => {
       const ex = ls.find((l) => l.variantId === v.id);
       if (ex) return ls.map((l) => (l.variantId === v.id ? { ...l, quantity: l.quantity + 1 } : l));
-      return [...ls, { variantId: v.id, name: p.name, quantity: 1, unitPrice: Number(v.prices[0]?.amount ?? 0n) }];
+      return [
+        ...ls,
+        {
+          variantId: v.id,
+          name: p.name,
+          quantity: 1,
+          unitPrice: Number(v.prices[0]?.amount ?? 0n),
+        },
+      ];
     });
   }
 
@@ -58,11 +97,16 @@ export default function OrdersPage() {
 
   async function checkout() {
     if (!customerId || !lines.length) return;
-    if (orderType === "ship_from_store" && !storeId) { setMsg("❌ Chọn cửa hàng"); return; }
+    if (orderType === "ship_from_store" && !storeId) {
+      setMsg({ text: "Vui lòng chọn cửa hàng xuất hàng", type: "error" });
+      return;
+    }
     const r = await fetch("/api/orders", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        channel: "WEB", type: orderType,
+        channel: "WEB",
+        type: orderType,
         customerId,
         storeId: orderType !== "delivery" ? storeId : undefined,
         couponCode: couponCode || undefined,
@@ -71,150 +115,424 @@ export default function OrdersPage() {
     });
     const d = await r.json();
     if (r.ok) {
-      setMsg(`✅ Đã tạo ${d.number} (${d.status})`);
-      setLines([]); setCouponCode(""); loadOrders();
-    } else setMsg("❌ " + d.message);
+      setMsg({ text: `Đã tạo đơn hàng ${d.number} (${d.status}) thành công!`, type: "success" });
+      setLines([]);
+      setCouponCode("");
+      loadOrders();
+    } else {
+      setMsg({ text: d.message, type: "error" });
+    }
   }
 
   async function fulfill(order: Order, action: "ship" | "collect" | "cancel") {
     const body: Record<string, unknown> = { orderId: order.id, action };
-    if (action === "ship") Object.assign(body, {
-      recipientName: order.customer.name, recipientPhone: "0000000000",
-      address: window.prompt("Địa chỉ giao:") ?? "",
-    });
-    if (action === "cancel" && !window.confirm(`Huỷ đơn ${order.number}?`)) return;
+    if (action === "ship") {
+      const address = window.prompt("Nhập địa chỉ giao hàng:", "123 Đường Sách, Q.1, TP.HCM");
+      if (!address) return;
+      Object.assign(body, {
+        recipientName: order.customer.name,
+        recipientPhone: "0901234567",
+        address,
+      });
+    }
+    if (action === "cancel" && !window.confirm(`Xác nhận huỷ đơn hàng ${order.number}?`)) return;
     const r = await fetch("/api/fulfillment", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     });
     const d = await r.json();
-    setMsg(r.ok ? `✅ ${order.number}: ${d.status}` : "❌ " + d.message);
-    if (r.ok) loadOrders();
+    if (r.ok) {
+      setMsg({ text: `Đơn ${order.number}: ${d.status}`, type: "success" });
+      loadOrders();
+    } else {
+      setMsg({ text: d.message, type: "error" });
+    }
   }
 
   async function deliver(order: Order) {
     const r = await fetch("/api/fulfillment", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orderId: order.id, action: "deliver" }),
     });
     const d = await r.json();
-    setMsg(r.ok ? `✅ ${order.number}: ${d.status}` : "❌ " + d.message);
-    if (r.ok) loadOrders();
+    if (r.ok) {
+      setMsg({ text: `Đơn ${order.number}: Đã xác nhận giao thành công`, type: "success" });
+      loadOrders();
+    } else {
+      setMsg({ text: d.message, type: "error" });
+    }
   }
 
   async function createReturn(order: Order) {
-    if (!window.confirm(`Tạo yêu cầu trả hàng cho ${order.number} (toàn bộ các món)?`)) return;
+    if (!window.confirm(`Tạo yêu cầu đổi trả hàng cho đơn ${order.number} (toàn bộ các món)?`)) return;
     const locations = await (await fetch("/api/refs?kind=locations")).json();
-    // ponytail: returns go to the first stockroom/warehouse — per-order location choice
-    // needs a picker dialog; add when staff actually need it.
     const locationId = locations.locations?.[0]?.id;
-    if (!locationId) { setMsg("❌ Không có kho"); return; }
+    if (!locationId) {
+      setMsg({ text: "Không tìm thấy kho nhận trả hàng", type: "error" });
+      return;
+    }
     const r = await fetch("/api/returns", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "create",
-        orderId: order.id, locationId,
+        orderId: order.id,
+        locationId,
         items: order.items.map((i) => ({ orderItemId: i.id, quantity: i.quantity })),
         reason: "Khách trả hàng",
       }),
     });
     const d = await r.json();
-    if (!r.ok) { setMsg("❌ " + d.message); return; }
-    // receive immediately so inventory updates in one demo pass
+    if (!r.ok) {
+      setMsg({ text: d.message, type: "error" });
+      return;
+    }
     const rr = await fetch("/api/returns", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ returnId: d.id, action: "receive" }),
     });
-    setMsg(rr.ok ? `✅ ${order.number}: đã nhận trả hàng (${d.number})` : "❌ Nhận hàng: " + (await rr.json()).message);
-    loadOrders();
+    if (rr.ok) {
+      setMsg({ text: `Đã nhận hàng trả và hoàn nhập kho (${d.number})`, type: "success" });
+      loadOrders();
+    } else {
+      setMsg({ text: (await rr.json()).message, type: "error" });
+    }
   }
 
-  return (
-    <main className="min-h-screen bg-slate-100">
-      <Nav />
-      <div className="p-6 grid grid-cols-[380px_1fr] gap-6 items-start">
-        <section className="bg-white rounded-xl p-4 shadow-sm space-y-2">
-          <h2 className="font-bold">Đơn online mới</h2>
-          <select className="w-full border rounded px-3 py-2 text-sm" value={customerId}
-            onChange={(e) => setCustomerId(e.target.value)}>
-            <option value="">Chọn khách…</option>
-            {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <div className="flex gap-2">
-            <select className="border rounded px-3 py-2 flex-1 text-sm" value={orderType}
-              onChange={(e) => setOrderType(e.target.value)}>
-              <option value="delivery">Giao tận nơi</option>
-              <option value="pickup">Click &amp; collect</option>
-              <option value="ship_from_store">Ship từ cửa hàng</option>
-            </select>
-            {orderType !== "delivery" && (
-              <select className="border rounded px-3 py-2 flex-1 text-sm" value={storeId}
-                onChange={(e) => setStoreId(e.target.value)}>
-                <option value="">Cửa hàng…</option>
-                {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            )}
-          </div>
-          <input className="w-full border rounded px-3 py-2 text-sm" placeholder="Mã giảm giá…"
-            value={couponCode} onChange={(e) => setCouponCode(e.target.value)} />
-          <div className="max-h-48 overflow-y-auto border rounded p-2 space-y-1">
-            {products.slice(0, 30).map((p) => (
-              <button key={p.id} onClick={() => addLine(p)}
-                className="block w-full text-left text-sm px-2 py-1 rounded hover:bg-blue-50">
-                {p.name} <span className="text-slate-400">{Number(p.variants[0]?.prices[0]?.amount ?? 0n).toLocaleString("vi-VN")}₫</span>
-              </button>
-            ))}
-          </div>
-          {lines.map((l) => (
-            <div key={l.variantId} className="flex justify-between text-sm">
-              <span>{l.name} ×{l.quantity}</span>
-              <span>{(l.quantity * l.unitPrice).toLocaleString("vi-VN")}₫</span>
-            </div>
-          ))}
-          <p className="text-right font-bold">Tạm tính: {subtotal.toLocaleString("vi-VN")}₫</p>
-          <button onClick={checkout} disabled={!customerId || !lines.length}
-            className="bg-blue-600 disabled:bg-slate-300 text-white rounded px-4 py-2 w-full">Đặt hàng</button>
-          {msg && <p className="text-sm">{msg}</p>}
-        </section>
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "DELIVERED":
+        return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><CheckCircle2 className="w-3 h-3" /> Đã giao</span>;
+      case "SHIPPED":
+        return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200"><Truck className="w-3 h-3" /> Đang giao</span>;
+      case "CANCELLED":
+        return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200"><XCircle className="w-3 h-3" /> Đã huỷ</span>;
+      default:
+        return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200"><Clock className="w-3 h-3" /> {status}</span>;
+    }
+  };
 
-        <section className="bg-white rounded-xl p-4 shadow-sm overflow-x-auto">
-          <h2 className="font-bold mb-3">Đơn gần đây</h2>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-slate-500 border-b">
-                <th className="p-2">Số ĐH</th><th>Khách</th><th>Loại</th><th>Trạng thái</th><th>Tổng</th><th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((o) => (
-                <tr key={o.id} className="border-b align-top">
-                  <td className="p-2 font-medium">{o.number}<br /><span className="text-xs text-slate-400">{o.channel}</span></td>
-                  <td>{o.customer?.name}</td>
-                  <td>{o.type}</td>
-                  <td>{o.status}</td>
-                  <td>{Number(o.total).toLocaleString("vi-VN")}₫</td>
-                  <td className="space-x-2 whitespace-nowrap">
-                    {["CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(o.status) && o.type === "pickup" && (
-                      <button onClick={() => fulfill(o, "collect")} className="text-blue-600 hover:underline">Thu khách</button>
-                    )}
-                    {["CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(o.status) && o.type !== "pickup" && (
-                      <>
-                        <button onClick={() => fulfill(o, "ship")} className="text-blue-600 hover:underline">Giao HVC</button>
-                        <button onClick={() => fulfill(o, "cancel")} className="text-red-600 hover:underline">Huỷ</button>
-                      </>
-                    )}
-                    {o.status === "SHIPPED" && (
-                      <button onClick={() => deliver(o)} className="text-blue-600 hover:underline">Đã giao</button>
-                    )}
-                    {["DELIVERED", "SHIPPED"].includes(o.status) && (
-                      <button onClick={() => createReturn(o)} className="text-orange-600 hover:underline">Trả hàng</button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {orders.length === 0 && <p className="text-sm text-slate-500 mt-2">Chưa có đơn.</p>}
-        </section>
+  const filteredOrders = orders.filter((o) => {
+    const matchesSearch =
+      o.number.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      o.customer?.name?.toLowerCase().includes(searchFilter.toLowerCase());
+    const matchesStatus =
+      statusFilter === "ALL" ||
+      (statusFilter === "PROCESSING" && ["CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(o.status)) ||
+      (statusFilter === "SHIPPED" && o.status === "SHIPPED") ||
+      (statusFilter === "DELIVERED" && o.status === "DELIVERED") ||
+      (statusFilter === "CANCELLED" && o.status === "CANCELLED");
+    return matchesSearch && matchesStatus;
+  });
+
+  return (
+    <main className="min-h-screen bg-slate-50/60 pb-16">
+      <Nav />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
+        {/* Header Title */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Quản Lý Đơn Hàng &amp; Vận Chuyển</h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Xử lý luồng đơn hàng đa kênh: Web bán lẻ, Click &amp; Collect nhận tại shop và giao hàng tận nơi
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700">
+              Tổng cộng: <b>{orders.length}</b> đơn
+            </span>
+          </div>
+        </div>
+
+        {/* Global Toast */}
+        {msg && (
+          <div
+            className={`p-4 rounded-2xl flex items-center justify-between gap-2 text-xs font-semibold ${
+              msg.type === "success"
+                ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
+                : "bg-red-50 border border-red-200 text-red-800"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {msg.type === "success" ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-red-600" />}
+              <span>{msg.text}</span>
+            </div>
+            <button onClick={() => setMsg(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Form: Create Online Order (4 cols) */}
+          <div className="lg:col-span-4 bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <Plus className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="font-bold text-slate-900 text-sm">Tạo Đơn Online Mới</h2>
+                <p className="text-[11px] text-slate-400">Kênh Web / Hotline</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Khách hàng</label>
+                <select
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                >
+                  <option value="">— Chọn khách hàng —</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Phương thức nhận hàng</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { id: "delivery", label: "Giao tận nơi", icon: Truck },
+                    { id: "pickup", label: "Tại shop", icon: Store },
+                    { id: "ship_from_store", label: "Ship từ shop", icon: Package },
+                  ].map((t) => {
+                    const Icon = t.icon;
+                    const active = orderType === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setOrderType(t.id)}
+                        className={`p-2 rounded-xl text-center text-[11px] font-semibold border flex flex-col items-center gap-1 transition-all ${
+                          active
+                            ? "bg-indigo-50 border-indigo-300 text-indigo-700"
+                            : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span>{t.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {orderType !== "delivery" && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Cửa hàng phục vụ</label>
+                  <select
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    value={storeId}
+                    onChange={(e) => setStoreId(e.target.value)}
+                  >
+                    <option value="">— Chọn chi nhánh —</option>
+                    {stores.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Mã khuyến mãi</label>
+                <input
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs placeholder:text-slate-400 uppercase font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  placeholder="COUPON..."
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Chọn sản phẩm thêm vào đơn</label>
+                <div className="max-h-36 overflow-y-auto border border-slate-200 rounded-xl p-1.5 space-y-1 bg-slate-50">
+                  {products.slice(0, 30).map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => addLine(p)}
+                      className="w-full text-left p-1.5 rounded-lg text-xs hover:bg-white hover:shadow-2xs transition-all flex items-center justify-between group"
+                    >
+                      <span className="truncate max-w-[170px] text-slate-800 font-medium">{p.name}</span>
+                      <span className="text-[11px] font-bold text-indigo-600 shrink-0">
+                        {Number(p.variants[0]?.prices[0]?.amount ?? 0n).toLocaleString("vi-VN")} ₫
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cart List */}
+              <div className="pt-2 space-y-1.5">
+                {lines.map((l) => (
+                  <div key={l.variantId} className="flex justify-between items-center text-xs p-1.5 bg-slate-50 rounded-lg">
+                    <span className="truncate max-w-[180px] font-medium text-slate-800">
+                      {l.name} <b className="text-indigo-600">×{l.quantity}</b>
+                    </span>
+                    <span className="font-bold text-slate-900">
+                      {(l.quantity * l.unitPrice).toLocaleString("vi-VN")} ₫
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-xs text-slate-500 font-medium">Tạm tính:</span>
+                <span className="text-base font-black text-slate-900">
+                  {subtotal.toLocaleString("vi-VN")} ₫
+                </span>
+              </div>
+
+              <button
+                onClick={checkout}
+                disabled={!customerId || !lines.length}
+                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold text-xs shadow-md shadow-indigo-600/20 transition-all hover:scale-[1.01]"
+              >
+                Xác nhận tạo đơn hàng
+              </button>
+            </div>
+          </div>
+
+          {/* Right Section: Orders List (8 cols) */}
+          <div className="lg:col-span-8 space-y-4">
+            {/* Filter Tabs & Search Bar */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-1 overflow-x-auto">
+                {[
+                  { id: "ALL", label: "Tất cả" },
+                  { id: "PROCESSING", label: "Chờ xử lý" },
+                  { id: "SHIPPED", label: "Đang giao" },
+                  { id: "DELIVERED", label: "Đã giao" },
+                  { id: "CANCELLED", label: "Đã huỷ" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setStatusFilter(tab.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                      statusFilter === tab.id
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative min-w-[200px]">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  placeholder="Lọc số đơn, tên khách..."
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Orders Table */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
+                    <tr>
+                      <th className="p-4">Mã ĐH &amp; Kênh</th>
+                      <th className="p-4">Khách hàng</th>
+                      <th className="p-4">Phương thức</th>
+                      <th className="p-4">Trạng thái</th>
+                      <th className="p-4 text-right">Tổng tiền</th>
+                      <th className="p-4 text-right">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredOrders.map((o) => (
+                      <tr key={o.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="p-4 font-medium text-slate-900">
+                          <span className="font-bold text-indigo-700">{o.number}</span>
+                          <span className="block text-[10px] text-slate-400 font-mono mt-0.5">
+                            {o.channel} · {new Date(o.createdAt).toLocaleDateString("vi-VN")}
+                          </span>
+                        </td>
+                        <td className="p-4 text-slate-800">
+                          <span className="font-semibold">{o.customer?.name ?? "Khách vãng lai"}</span>
+                        </td>
+                        <td className="p-4 text-slate-600 font-medium">
+                          {o.type === "delivery" && <span className="inline-flex items-center gap-1"><Truck className="w-3.5 h-3.5 text-slate-400" /> Giao tận nơi</span>}
+                          {o.type === "pickup" && <span className="inline-flex items-center gap-1"><Store className="w-3.5 h-3.5 text-slate-400" /> Tại quầy</span>}
+                          {o.type === "ship_from_store" && <span className="inline-flex items-center gap-1"><Package className="w-3.5 h-3.5 text-slate-400" /> Ship từ shop</span>}
+                        </td>
+                        <td className="p-4">
+                          {getStatusBadge(o.status)}
+                        </td>
+                        <td className="p-4 text-right font-black text-slate-900">
+                          {Number(o.total).toLocaleString("vi-VN")} ₫
+                        </td>
+                        <td className="p-4 text-right whitespace-nowrap space-x-1.5">
+                          {["CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(o.status) && o.type === "pickup" && (
+                            <button
+                              onClick={() => fulfill(o, "collect")}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                            >
+                              Thu khách
+                            </button>
+                          )}
+                          {["CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(o.status) && o.type !== "pickup" && (
+                            <>
+                              <button
+                                onClick={() => fulfill(o, "ship")}
+                                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                              >
+                                Giao HVC
+                              </button>
+                              <button
+                                onClick={() => fulfill(o, "cancel")}
+                                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                              >
+                                Huỷ
+                              </button>
+                            </>
+                          )}
+                          {o.status === "SHIPPED" && (
+                            <button
+                              onClick={() => deliver(o)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                            >
+                              Đã giao
+                            </button>
+                          )}
+                          {["DELIVERED", "SHIPPED"].includes(o.status) && (
+                            <button
+                              onClick={() => createReturn(o)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors"
+                            >
+                              Trả hàng
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredOrders.length === 0 && (
+                <div className="py-12 text-center text-slate-400 text-xs">
+                  <ShoppingBag className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  Không tìm thấy đơn hàng nào phù hợp với bộ lọc.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );

@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
         fail(400, "VALIDATION", "orderId, locationId and items required");
       const location = await prisma.stockLocation.findUnique({ where: { id: body.locationId } });
       if (!location) fail(404, "NOT_FOUND", "Return location not found");
-      await requirePermission("inventory.adjust", location.storeId ?? undefined);
+      await requirePermission("inventory.adjust", location.storeId);
       const result = await prisma.$transaction(async (tx) => {
         const order = await tx.order.findUnique({ where: { id: body.orderId }, include: { items: true } });
         if (!order) fail(404, "NOT_FOUND", "Order not found");
@@ -66,9 +66,13 @@ export async function POST(req: NextRequest) {
         if (current.status !== "RECEIVED")
           fail(409, "INVALID_STATUS_TRANSITION", `Cannot refund a return in status ${current.status}`);
         const method = typeof body.method === "string" ? body.method : "CASH";
+        const claimed = await tx.return.updateMany({
+          where: { id: current.id, status: "RECEIVED" }, data: { status: "REFUNDED" },
+        });
+        if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Return was already refunded");
         const updated = await tx.return.update({
           where: { id: current.id },
-          data: { status: "REFUNDED", payments: { create: { method, amount: current.refundTotal, receivedBy: auth.userId } } },
+          data: { payments: { create: { method, amount: current.refundTotal, receivedBy: auth.userId } } },
         });
         await audit(auth.userId, "return.refund", "Return", current.id, { amount: Number(current.refundTotal), method }, tx);
         return updated;
@@ -81,9 +85,14 @@ export async function POST(req: NextRequest) {
       const current = await tx.return.findUnique({ where: { id: body.returnId }, include: { items: true } });
       if (!current) fail(404, "NOT_FOUND", "Return not found");
       const location = await tx.stockLocation.findUnique({ where: { id: current.locationId } });
-      await requirePermission("inventory.adjust", location?.storeId ?? undefined);
+      await requirePermission("inventory.adjust", location?.storeId ?? null);
       assertStoreAccess(auth, location?.storeId, "inventory.adjust");
       if (current.status !== "REQUESTED") fail(409, "INVALID_STATUS_TRANSITION", "Return was already processed");
+      const claimed = await tx.return.updateMany({
+        where: { id: current.id, status: "REQUESTED" },
+        data: { status: "RECEIVED", receivedBy: auth.userId },
+      });
+      if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Return was already processed");
       for (const item of current.items) {
         await applyMovement(tx, {
           variantId: item.variantId, locationId: current.locationId,
@@ -93,7 +102,7 @@ export async function POST(req: NextRequest) {
           refType: "return", refId: current.id, userId: auth.userId,
         });
       }
-      const updated = await tx.return.update({ where: { id: current.id }, data: { status: "RECEIVED", receivedBy: auth.userId } });
+      const updated = await tx.return.findUniqueOrThrow({ where: { id: current.id } });
       await audit(auth.userId, "return.receive", "Return", current.id, { number: current.number }, tx);
       return updated;
     });

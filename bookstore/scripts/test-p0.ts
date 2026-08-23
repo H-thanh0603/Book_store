@@ -5,6 +5,8 @@ import "dotenv/config";
 import { prisma } from "../src/lib/db";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
+const TEST_PASSWORD = process.env.SEED_USER_PASSWORD;
+if (!TEST_PASSWORD) throw new Error("SEED_USER_PASSWORD is required");
 let failures = 0;
 function check(name: string, cond: boolean, detail?: unknown) {
   if (cond) console.log(`✅ ${name}`);
@@ -34,7 +36,7 @@ async function main() {
 
   // ── HTTP PROOF: Store A session gets 403 for Store B list & mutation ──
   const mgrA: Jar = {};
-  const login = await api(mgrA, "POST", "/api/auth", { action: "login", email: "manager.nh@melio.vn", password: "Passw0rd!" });
+  const login = await api(mgrA, "POST", "/api/auth", { action: "login", email: "manager.nh@melio.vn", password: TEST_PASSWORD });
   check("login manager.nh (Store A scoped)", login.status === 200, login);
 
   const listB = await api(mgrA, "GET", `/api/inventory?storeId=${storeB.id}`);

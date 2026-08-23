@@ -2,14 +2,21 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { createSession, destroySession, verifyPassword } from "@/lib/auth";
 import { apiError, ok, fail } from "@/lib/api";
+import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
     const { action, email, password } = await req.json();
-    if (!email || !password) fail(400, "VALIDATION", "email and password required");
 
     if (action === "login") {
-      const user = await prisma.user.findUnique({ where: { email } });
+      if (typeof email !== "string" || typeof password !== "string" || !email || !password)
+        fail(400, "VALIDATION", "email and password required");
+      const normalizedEmail = email.trim().toLowerCase();
+      await Promise.all([
+        enforceRateLimit("login-ip", clientIp(req.headers), 20, 60_000),
+        enforceRateLimit("login-account", normalizedEmail, 10, 5 * 60_000),
+      ]);
+      const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (!user || !user.active || !verifyPassword(password, user.passwordHash))
         fail(401, "BAD_REQUEST", "Invalid credentials");
       await createSession(user.id);

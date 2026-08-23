@@ -68,10 +68,12 @@ export async function POST(req: NextRequest) {
         if (!current) fail(404, "NOT_FOUND", "PO not found");
         if (current.status !== "draft")
           fail(409, "INVALID_STATUS_TRANSITION", `Cannot submit PO in status ${current.status}`);
-        const updated = await tx.purchaseOrder.update({
-          where: { id: current.id },
+        const claimed = await tx.purchaseOrder.updateMany({
+          where: { id: current.id, status: "draft" },
           data: { status: "pending_approval" },
         });
+        if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "PO was already submitted");
+        const updated = await tx.purchaseOrder.findUniqueOrThrow({ where: { id: current.id } });
         await audit(auth.userId, "purchase_order.submit", "PurchaseOrder", current.id, { number: current.number }, tx);
         return updated;
       });
@@ -88,10 +90,12 @@ export async function POST(req: NextRequest) {
           fail(403, "FORBIDDEN", "Cannot approve your own purchase order");
         if (current.status !== "pending_approval")
           fail(409, "INVALID_STATUS_TRANSITION", `Cannot approve PO in status ${current.status}`);
-        const updated = await tx.purchaseOrder.update({
-          where: { id: current.id },
+        const claimed = await tx.purchaseOrder.updateMany({
+          where: { id: current.id, status: "pending_approval" },
           data: { status: "approved", approvedBy: auth.userId },
         });
+        if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "PO was already reviewed");
+        const updated = await tx.purchaseOrder.findUniqueOrThrow({ where: { id: current.id } });
         await audit(auth.userId, "purchase_order.approve", "PurchaseOrder", current.id, { number: current.number }, tx);
         return updated;
       });
@@ -103,6 +107,7 @@ export async function POST(req: NextRequest) {
       if (!Array.isArray(body.items)) fail(400, "VALIDATION", "items required");
 
       const result = await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "PurchaseOrder" WHERE id = ${body.poId} FOR UPDATE`;
         const po = await tx.purchaseOrder.findUnique({
           where: { id: body.poId },
           include: { items: true },
@@ -142,10 +147,11 @@ export async function POST(req: NextRequest) {
           const goodQty = item.quantity - damagedQty;
           if (poItem.receivedQty + item.quantity > poItem.quantity)
             fail(400, "VALIDATION", `Over-receipt for ${item.variantId}`);
-          await tx.purchaseOrderItem.update({
-            where: { id: poItem.id },
+          const received = await tx.purchaseOrderItem.updateMany({
+            where: { id: poItem.id, receivedQty: { lte: poItem.quantity - item.quantity } },
             data: { receivedQty: { increment: item.quantity } },
           });
+          if (received.count !== 1) fail(409, "VALIDATION", `Over-receipt for ${item.variantId}`);
           // damaged goes into balance as damaged, good qty into on_hand — both ledgered
           await applyMovement(tx, {
             variantId: item.variantId, locationId: loc.id,

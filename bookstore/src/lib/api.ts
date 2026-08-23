@@ -1,17 +1,25 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import { prisma } from "./db";
 
-export function apiError(err: unknown) {
-  const e = err as { status?: number; code?: string; message: string };
-  const status = e.status ?? 500;
-  if (status === 500) console.error(err);
+export async function apiError(err: unknown) {
+  const e = err as { status?: number; code?: string; message: string; retryAfter?: number; stack?: string };
+  const malformedJson = err instanceof SyntaxError;
+  const status = e.status ?? (malformedJson ? 400 : 500);
+  const requestId = (await headers()).get("x-request-id") ?? undefined;
+  if (status === 500) console.error(JSON.stringify({
+    level: "error", event: "api_error", requestId, message: e.message ?? "Unknown error", stack: e.stack,
+  }));
   // Never leak raw DB errors.
   const known = [
     "INSUFFICIENT_STOCK", "INVALID_STATUS_TRANSITION", "DUPLICATE",
-    "NOT_FOUND", "VALIDATION",
+    "NOT_FOUND", "VALIDATION", "RATE_LIMITED",
   ];
   const code = known.includes(e.code ?? "") ? e.code! : status === 500 ? "INTERNAL" : "BAD_REQUEST";
-  return NextResponse.json({ code, message: e.message }, { status });
+  const message = status === 500 ? "Internal server error" : malformedJson ? "Malformed JSON request" : e.message;
+  const response = NextResponse.json({ code, message, requestId }, { status });
+  if (e.retryAfter) response.headers.set("Retry-After", String(e.retryAfter));
+  return response;
 }
 
 /**
@@ -29,7 +37,11 @@ export function fail(status: number, code: string, message: string, details?: un
 }
 
 export function ok(data: unknown, status = 200) {
-  return NextResponse.json(JSON.parse(JSON.stringify(data, (_, v) => (typeof v === "bigint" ? Number(v) : v))), { status });
+  return NextResponse.json(JSON.parse(JSON.stringify(data, (_, value) => {
+    if (typeof value !== "bigint") return value;
+    return value <= BigInt(Number.MAX_SAFE_INTEGER) && value >= BigInt(Number.MIN_SAFE_INTEGER)
+      ? Number(value) : value.toString();
+  })), { status });
 }
 
 export async function nextBusinessNumber(prefix: string): Promise<string> {
@@ -45,16 +57,18 @@ export async function nextBusinessNumber(prefix: string): Promise<string> {
 
 // ponytail: in-memory cache, refresh only on miss. No TTL — config changes are rare;
 // restart server to pick up a changed value. Swap for DB-listen/period refresh if needed.
-const configCache = new Map<string, unknown>();
+const configCache = new Map<string, { value: unknown; expiresAt: number }>();
+const CONFIG_TTL_MS = 30_000;
 
 /**
  * Read a SystemConfig JSON value (spec §101). Falls back to `fallback` when the
  * row is missing so callers never crash on an un-seeded key.
  */
 export async function getSystemConfig<T>(key: string, fallback: T): Promise<T> {
-  if (configCache.has(key)) return configCache.get(key) as T;
+  const cached = configCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.value as T;
   const row = await prisma.systemConfig.findUnique({ where: { key } });
   const value = (row?.value as T) ?? fallback;
-  configCache.set(key, value);
+  configCache.set(key, { value, expiresAt: Date.now() + CONFIG_TTL_MS });
   return value;
 }

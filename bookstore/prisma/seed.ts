@@ -14,6 +14,13 @@ function hash(password: string) {
   return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
 }
 
+const seedUserPassword = (() => {
+  const value = process.env.SEED_USER_PASSWORD;
+  if (!value || value.length < 12)
+    throw new Error("SEED_USER_PASSWORD must be set to at least 12 characters");
+  return value;
+})();
+
 const PERMS = [
   "product.view", "product.update", "inventory.view", "inventory.adjust",
   "inventory.transfer", "pos.sell", "pos.refund", "pos.override_price",
@@ -92,15 +99,16 @@ async function main() {
     ["purchasing@melio.vn", "purchasing", null],
   ] as const;
   for (const [email, role, storeId] of users) {
+    const passwordHash = hash(seedUserPassword);
     const u = await prisma.user.upsert({
       where: { email },
-      create: { email, passwordHash: hash("Passw0rd!") },
-      update: {},
+      create: { email, passwordHash },
+      update: { passwordHash },
     });
     const r = await prisma.role.findUniqueOrThrow({ where: { name: role } });
     await prisma.userRole.upsert({
-      where: { userId_roleId: { userId: u.id, roleId: r.id } },
-      create: { userId: u.id, roleId: r.id, storeId },
+      where: { userId_roleId_scopeKey: { userId: u.id, roleId: r.id, scopeKey: storeId ?? "*" } },
+      create: { userId: u.id, roleId: r.id, storeId, scopeKey: storeId ?? "*" },
       update: {},
     });
   }

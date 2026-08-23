@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission, requireAuth, resolveStoreScope } from "@/lib/auth";
+import { requirePermission, resolveStoreScope } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { createReservedOrder, type CreateOrderInput } from "@/lib/orders";
 
@@ -8,9 +8,7 @@ import { createReservedOrder, type CreateOrderInput } from "@/lib/orders";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const auth = await requireAuth();
-    // Store-scoped callers may only order for their own store (resolveStoreScope throws 403 otherwise).
-    resolveStoreScope(auth, body.storeId);
+    const auth = await requirePermission("pos.sell", body.storeId);
     const result = await createReservedOrder({
       channel: body.channel ?? "WEB", type: body.type, storeId: body.storeId,
       customerId: body.customerId, locationId: body.locationId, couponCode: body.couponCode,

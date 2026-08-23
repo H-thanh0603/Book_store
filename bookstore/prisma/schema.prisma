@@ -53,9 +53,9 @@ model StockLocation {
   name       String
   type       String  // STORE_STOCKROOM | STORE_SHELF | WAREHOUSE
   storeId    String?
-  store      Store?  @relation(fields: [storeId], references: [id])
+  store      Store?  @relation(fields: [storeId], references: [id], onDelete: Restrict)
   warehouseId String?
-  warehouse  Warehouse? @relation(fields: [warehouseId], references: [id])
+  warehouse  Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
   parentId   String?
   parent     StockLocation? @relation("LocTree", fields: [parentId], references: [id])
   children   StockLocation[] @relation("LocTree")
@@ -99,14 +99,15 @@ model Permission {
 }
 
 model UserRole {
+  id     String @id @default(uuid())
   userId String
   roleId String
   storeId String? // scope: null = all stores
+  scopeKey String // storeId, or "*" for organisation-wide access
   user   User @relation(fields: [userId], references: [id])
   role   Role @relation(fields: [roleId], references: [id])
-  store  Store? @relation(fields: [storeId], references: [id])
-  @@id([userId, roleId])
-  @@unique([userId, roleId, storeId])
+  store  Store? @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  @@unique([userId, roleId, scopeKey])
 }
 
 model RolePermission {
@@ -125,6 +126,15 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
   @@index([userId])
+}
+
+// Shared abuse-control state. Keys contain only SHA-256 digests, never raw IP/email.
+model RateLimitBucket {
+  key       String   @id
+  count     Int
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+  @@index([resetAt])
 }
 
 // ── Catalog ───────────────────────────────────────────────────
@@ -383,6 +393,7 @@ model SupplierProductPrice {
   currency   String   @default("VND")
   recordedAt DateTime @default(now())
   @@index([supplierId, variantId, recordedAt])
+  @@index([variantId, recordedAt])
 }
 
 enum PoStatus {
@@ -629,6 +640,7 @@ model Order {
   createdAt   DateTime @default(now())
   @@index([status])
   @@index([customerId])
+  @@index([storeId, createdAt])
 }
 
 model OrderItem {
@@ -709,6 +721,7 @@ model PosTransaction {
   payments    Payment[]
   createdAt   DateTime @default(now())
   @@index([shiftId])
+  @@index([storeId, status, createdAt])
 }
 
 model PosTransactionItem {
@@ -916,6 +929,7 @@ model AuditLog {
   createdAt DateTime @default(now())
   @@index([entity, entityId])
   @@index([actorId])
+  @@index([createdAt, id])
 }
 
 // ── Config / Counters ─────────────────────────────────────────
@@ -1060,11 +1074,14 @@ model JobRun {
   maxAttempts Int @default(3)
   nextRunAt  DateTime @default(now()) // backoff schedule
   startedAt  DateTime?
+  leaseExpiresAt DateTime?
+  workerId   String?
   finishedAt DateTime?
   result     Json?
   error      String?
   createdAt  DateTime @default(now())
   @@index([status, nextRunAt])
+  @@index([status, leaseExpiresAt])
   @@index([kind])
 }
 

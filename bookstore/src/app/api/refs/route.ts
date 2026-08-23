@@ -2,25 +2,29 @@
 // Small lookup endpoint for the management pages' dropdowns.
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, resolveStoreScope } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth();
+    const auth = await requireAuth();
     const kind = req.nextUrl.searchParams.get("kind");
     if (kind === "suppliers")
       return ok({ suppliers: await prisma.supplier.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }) });
     if (kind === "warehouses")
       return ok({ warehouses: await prisma.warehouse.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }) });
-    if (kind === "locations")
+    if (kind === "locations") {
+      const scope = resolveStoreScope(auth);
       return ok({
         locations: await prisma.stockLocation.findMany({
           select: { id: true, name: true, type: true },
-          where: { OR: [{ type: "STORE_STOCKROOM" }, { type: "WAREHOUSE" }] },
+          where: scope
+            ? { type: "STORE_STOCKROOM", storeId: { in: scope } }
+            : { OR: [{ type: "STORE_STOCKROOM" }, { type: "WAREHOUSE" }] },
           orderBy: { name: "asc" },
         }),
       });
+    }
     if (kind === "variants")
       return ok({
         variants: await prisma.productVariant.findMany({

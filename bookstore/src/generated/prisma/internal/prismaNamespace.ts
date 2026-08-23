@@ -408,6 +408,7 @@ export const ModelName = {
   UserRole: 'UserRole',
   RolePermission: 'RolePermission',
   Session: 'Session',
+  RateLimitBucket: 'RateLimitBucket',
   Category: 'Category',
   AttributeDefinition: 'AttributeDefinition',
   Brand: 'Brand',
@@ -481,7 +482,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "organization" | "region" | "store" | "warehouse" | "stockLocation" | "user" | "role" | "permission" | "userRole" | "rolePermission" | "session" | "category" | "attributeDefinition" | "brand" | "author" | "publisher" | "product" | "productVariant" | "productBarcode" | "attributeValue" | "priceList" | "price" | "inventoryBalance" | "inventoryMovement" | "inventoryAdjustment" | "inventoryAdjustmentItem" | "supplier" | "supplierProductPrice" | "purchaseOrder" | "purchaseOrderItem" | "goodsReceipt" | "goodsReceiptItem" | "stockTransfer" | "stockTransferItem" | "customer" | "loyaltyAccount" | "loyaltyTransaction" | "promotion" | "promotionStore" | "bundle" | "bundleItem" | "order" | "orderItem" | "orderStatusHistory" | "posTerminal" | "posShift" | "posTransaction" | "posTransactionItem" | "payment" | "shipment" | "returnPayment" | "return" | "returnItem" | "giftCard" | "giftCardTransaction" | "supplierReturn" | "supplierReturnItem" | "inventoryCount" | "inventoryCountItem" | "auditLog" | "systemConfig" | "sequenceCounter" | "replenishmentSuggestion" | "integrationJob" | "integrationProvider" | "warehouseTask" | "warehouseTaskItem" | "jobRun" | "lossAlert"
+    modelProps: "organization" | "region" | "store" | "warehouse" | "stockLocation" | "user" | "role" | "permission" | "userRole" | "rolePermission" | "session" | "rateLimitBucket" | "category" | "attributeDefinition" | "brand" | "author" | "publisher" | "product" | "productVariant" | "productBarcode" | "attributeValue" | "priceList" | "price" | "inventoryBalance" | "inventoryMovement" | "inventoryAdjustment" | "inventoryAdjustmentItem" | "supplier" | "supplierProductPrice" | "purchaseOrder" | "purchaseOrderItem" | "goodsReceipt" | "goodsReceiptItem" | "stockTransfer" | "stockTransferItem" | "customer" | "loyaltyAccount" | "loyaltyTransaction" | "promotion" | "promotionStore" | "bundle" | "bundleItem" | "order" | "orderItem" | "orderStatusHistory" | "posTerminal" | "posShift" | "posTransaction" | "posTransactionItem" | "payment" | "shipment" | "returnPayment" | "return" | "returnItem" | "giftCard" | "giftCardTransaction" | "supplierReturn" | "supplierReturnItem" | "inventoryCount" | "inventoryCountItem" | "auditLog" | "systemConfig" | "sequenceCounter" | "replenishmentSuggestion" | "integrationJob" | "integrationProvider" | "warehouseTask" | "warehouseTaskItem" | "jobRun" | "lossAlert"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1296,6 +1297,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.SessionCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.SessionCountAggregateOutputType> | number
+        }
+      }
+    }
+    RateLimitBucket: {
+      payload: Prisma.$RateLimitBucketPayload<ExtArgs>
+      fields: Prisma.RateLimitBucketFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.RateLimitBucketFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RateLimitBucketPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.RateLimitBucketFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RateLimitBucketPayload>
+        }
+        findFirst: {
+          args: Prisma.RateLimitBucketFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RateLimitBucketPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.RateLimitBucketFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RateLimitBucketPayload>
+        }
+        findMany: {
+          args: Prisma.RateLimitBucketFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RateLimitBucketPayload>[]
+        }
+        create: {
+          args: Prisma.RateLimitBucketCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RateLimitBucketPayload>
+        }
+        createMany: {
+          args: Prisma.RateLimitBucketCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.RateLimitBucketCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RateLimitBucketPayload>[]
+        }
+        delete: {
+          args: Prisma.RateLimitBucketDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RateLimitBucketPayload>
+        }
+        update: {
+          args: Prisma.RateLimitBucketUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RateLimitBucketPayload>
+        }
+        deleteMany: {
+          args: Prisma.RateLimitBucketDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.RateLimitBucketUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.RateLimitBucketUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RateLimitBucketPayload>[]
+        }
+        upsert: {
+          args: Prisma.RateLimitBucketUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RateLimitBucketPayload>
+        }
+        aggregate: {
+          args: Prisma.RateLimitBucketAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRateLimitBucket>
+        }
+        groupBy: {
+          args: Prisma.RateLimitBucketGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RateLimitBucketGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.RateLimitBucketCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RateLimitBucketCountAggregateOutputType> | number
         }
       }
     }
@@ -5707,9 +5782,11 @@ export type PermissionScalarFieldEnum = (typeof PermissionScalarFieldEnum)[keyof
 
 
 export const UserRoleScalarFieldEnum = {
+  id: 'id',
   userId: 'userId',
   roleId: 'roleId',
-  storeId: 'storeId'
+  storeId: 'storeId',
+  scopeKey: 'scopeKey'
 } as const
 
 export type UserRoleScalarFieldEnum = (typeof UserRoleScalarFieldEnum)[keyof typeof UserRoleScalarFieldEnum]
@@ -5732,6 +5809,16 @@ export const SessionScalarFieldEnum = {
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
+
+
+export const RateLimitBucketScalarFieldEnum = {
+  key: 'key',
+  count: 'count',
+  resetAt: 'resetAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RateLimitBucketScalarFieldEnum = (typeof RateLimitBucketScalarFieldEnum)[keyof typeof RateLimitBucketScalarFieldEnum]
 
 
 export const CategoryScalarFieldEnum = {
@@ -6472,6 +6559,8 @@ export const JobRunScalarFieldEnum = {
   maxAttempts: 'maxAttempts',
   nextRunAt: 'nextRunAt',
   startedAt: 'startedAt',
+  leaseExpiresAt: 'leaseExpiresAt',
+  workerId: 'workerId',
   finishedAt: 'finishedAt',
   result: 'result',
   error: 'error',
@@ -6588,20 +6677,6 @@ export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaM
 
 
 /**
- * Reference to a field of type 'ProductStatus'
- */
-export type EnumProductStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ProductStatus'>
-    
-
-
-/**
- * Reference to a field of type 'ProductStatus[]'
- */
-export type ListEnumProductStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ProductStatus[]'>
-    
-
-
-/**
  * Reference to a field of type 'Int'
  */
 export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
@@ -6612,6 +6687,20 @@ export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'In
  * Reference to a field of type 'Int[]'
  */
 export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+/**
+ * Reference to a field of type 'ProductStatus'
+ */
+export type EnumProductStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ProductStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'ProductStatus[]'
+ */
+export type ListEnumProductStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ProductStatus[]'>
     
 
 
@@ -7126,6 +7215,7 @@ export type GlobalOmitConfig = {
   userRole?: Prisma.UserRoleOmit
   rolePermission?: Prisma.RolePermissionOmit
   session?: Prisma.SessionOmit
+  rateLimitBucket?: Prisma.RateLimitBucketOmit
   category?: Prisma.CategoryOmit
   attributeDefinition?: Prisma.AttributeDefinitionOmit
   brand?: Prisma.BrandOmit

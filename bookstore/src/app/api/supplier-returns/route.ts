@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission } from "@/lib/auth";
+import { requirePermission, resolveStoreScope } from "@/lib/auth";
 import { apiError, fail, nextBusinessNumber, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { MovementType } from "@/generated/prisma/client";
@@ -8,8 +8,10 @@ import { MovementType } from "@/generated/prisma/client";
 // GET /api/supplier-returns — list with items (credit-note review)
 export async function GET() {
   try {
-    await requirePermission("inventory.view");
+    const auth = await requirePermission("inventory.view");
+    const scope = resolveStoreScope(auth, undefined, "inventory.view");
     const returns = await prisma.supplierReturn.findMany({
+      where: scope ? { location: { storeId: { in: scope } } } : undefined,
       include: { supplier: true, items: { include: { variant: true } } },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -30,7 +32,7 @@ export async function POST(req: NextRequest) {
         fail(400, "VALIDATION", "supplierId, locationId and items required");
       const location = await prisma.stockLocation.findUnique({ where: { id: body.locationId } });
       if (!location) fail(404, "NOT_FOUND", "Supplier-return location not found");
-      await requirePermission("purchase.receive", location.storeId ?? undefined);
+      await requirePermission("purchase.receive", location.storeId);
       for (const item of body.items)
         if (!item.variantId || !Number.isInteger(item.quantity) || item.quantity <= 0)
           fail(400, "VALIDATION", "each item needs a variantId and positive quantity");
@@ -48,15 +50,19 @@ export async function POST(req: NextRequest) {
       const current = await tx.supplierReturn.findUnique({ where: { id: body.supplierReturnId }, include: { items: true } });
       if (!current) fail(404, "NOT_FOUND", "Supplier return not found");
       const location = await tx.stockLocation.findUnique({ where: { id: current.locationId } });
-      await requirePermission("purchase.receive", location?.storeId ?? undefined);
+      await requirePermission("purchase.receive", location?.storeId ?? null);
       if (current.status !== "DRAFT") fail(409, "INVALID_STATUS_TRANSITION", "Supplier return was already shipped");
+      const claimed = await tx.supplierReturn.updateMany({
+        where: { id: current.id, status: "DRAFT" }, data: { status: "SHIPPED" },
+      });
+      if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Supplier return was already shipped");
       for (const item of current.items) {
         await applyMovement(tx, {
           variantId: item.variantId, locationId: current.locationId, type: MovementType.SUPPLIER_RETURN,
           quantityDelta: -item.quantity, refType: "supplier_return", refId: current.id, userId: auth.userId,
         });
       }
-      return tx.supplierReturn.update({ where: { id: current.id }, data: { status: "SHIPPED" } });
+      return tx.supplierReturn.findUniqueOrThrow({ where: { id: current.id } });
     });
     return ok({ number: supplierReturn.number, status: supplierReturn.status });
   } catch (err) {

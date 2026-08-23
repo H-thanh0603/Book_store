@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission } from "@/lib/auth";
+import { requirePermission, resolveStoreScope } from "@/lib/auth";
 import { apiError, fail, nextBusinessNumber, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { MovementType } from "@/generated/prisma/client";
@@ -8,8 +8,10 @@ import { MovementType } from "@/generated/prisma/client";
 // GET /api/inventory-counts — count review list (drafts first)
 export async function GET() {
   try {
-    await requirePermission("inventory.view");
+    const auth = await requirePermission("inventory.view");
+    const scope = resolveStoreScope(auth, undefined, "inventory.view");
     const counts = await prisma.inventoryCount.findMany({
+      where: scope ? { location: { storeId: { in: scope } } } : undefined,
       include: { items: true },
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       take: 50,
@@ -30,7 +32,7 @@ export async function POST(req: NextRequest) {
         fail(400, "VALIDATION", "locationId and items required");
       const location = await prisma.stockLocation.findUnique({ where: { id: body.locationId } });
       if (!location) fail(404, "NOT_FOUND", "Count location not found");
-      await requirePermission("inventory.adjust", location.storeId ?? undefined);
+      await requirePermission("inventory.adjust", location.storeId);
       const ids = body.items.map((item: { variantId: string }) => item.variantId);
       if (new Set(ids).size !== ids.length) fail(400, "VALIDATION", "A variant may be counted only once");
       const balances = await prisma.inventoryBalance.findMany({ where: { locationId: body.locationId, variantId: { in: ids } } });
@@ -51,8 +53,13 @@ export async function POST(req: NextRequest) {
       const current = await tx.inventoryCount.findUnique({ where: { id: body.inventoryCountId }, include: { items: true } });
       if (!current) fail(404, "NOT_FOUND", "Inventory count not found");
       const location = await tx.stockLocation.findUnique({ where: { id: current.locationId } });
-      await requirePermission("inventory.adjust", location?.storeId ?? undefined);
+      await requirePermission("inventory.adjust", location?.storeId ?? null);
       if (current.status !== "DRAFT") fail(409, "INVALID_STATUS_TRANSITION", "Inventory count was already posted");
+      const claimed = await tx.inventoryCount.updateMany({
+        where: { id: current.id, status: "DRAFT" },
+        data: { status: "POSTED", postedBy: auth.userId, postedAt: new Date() },
+      });
+      if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Inventory count was already posted");
       for (const item of current.items) {
         const balance = await tx.inventoryBalance.findUnique({ where: { variantId_locationId: { variantId: item.variantId, locationId: current.locationId } } });
         const delta = item.countedQty - (balance?.onHand ?? 0);
@@ -62,7 +69,7 @@ export async function POST(req: NextRequest) {
         });
         await tx.inventoryBalance.updateMany({ where: { variantId: item.variantId, locationId: current.locationId }, data: { lastCountAt: new Date() } });
       }
-      return tx.inventoryCount.update({ where: { id: current.id }, data: { status: "POSTED", postedBy: auth.userId, postedAt: new Date() } });
+      return tx.inventoryCount.findUniqueOrThrow({ where: { id: current.id } });
     });
     return ok({ number: count.number, status: count.status });
   } catch (err) {

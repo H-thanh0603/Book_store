@@ -9,6 +9,7 @@ async function main() {
       shiftId: shift.id,
       storeId: "2d94993e-4acb-4cba-8215-e1425a45ceb1",
       userId: "test",
+      idempotencyKey: crypto.randomUUID(),
       items: [{ variantId: "105d20f1-5cea-4020-b28f-27bf1d8ee454", quantity: 2 }],
       payments: [{ method: "CASH", amount: BigInt(178000) }],
     });

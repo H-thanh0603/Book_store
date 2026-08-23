@@ -8,6 +8,9 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://bookstore:bookstore@localhost:5432/bookstore
+      SEED_USER_PASSWORD: ci-only-password-123
     services:
       postgres:
         image: postgres:16
@@ -30,11 +33,15 @@ jobs:
           cache-dependency-path: bookstore/package-lock.json
       - run: npm ci
       - run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: postgresql://bookstore:bookstore@localhost:5432/bookstore
+      - run: npx prisma db seed
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm run test:phase3
       - run: npm run build
-        env:
-          DATABASE_URL: postgresql://bookstore:bookstore@localhost:5432/bookstore
+      - name: Start application
+        run: npm run start > /tmp/bookstore.log 2>&1 &
+      - name: Wait for readiness
+        run: curl --fail --retry 20 --retry-delay 1 --retry-connrefused http://localhost:3000/api/health/ready
+      - run: npm run test:p0
+      - run: npm run test:storefront
+      - run: npm run test:hardening

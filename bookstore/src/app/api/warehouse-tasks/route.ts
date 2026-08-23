@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission } from "@/lib/auth";
+import { assertStoreAccess, requirePermission } from "@/lib/auth";
 import { apiError, fail, nextBusinessNumber, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { WarehouseTaskStatus, WarehouseTaskType } from "@/generated/prisma/client";
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       if (!body.locationId) fail(400, "VALIDATION", "locationId required");
       const location = await prisma.stockLocation.findUnique({ where: { id: body.locationId } });
       if (!location) fail(404, "NOT_FOUND", "Warehouse location not found");
-      await requirePermission("inventory.adjust", location.storeId ?? undefined);
+      await requirePermission("inventory.adjust", location.storeId);
       const waveId = `wave-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const updated = await prisma.warehouseTask.updateMany({
         where: { locationId: body.locationId, type: "PICK", status: "OPEN", waveId: null },
@@ -60,7 +60,8 @@ export async function POST(req: NextRequest) {
         include: { location: true, items: { include: { variant: { include: { product: true } } } } },
       });
       if (tasks.length === 0) fail(404, "NOT_FOUND", "No tasks found");
-      await requirePermission("inventory.view");
+      const auth = await requirePermission("inventory.view");
+      for (const task of tasks) assertStoreAccess(auth, task.location.storeId, "inventory.view");
       return ok({
         labels: tasks.map((task) => ({
           taskNumber: task.number, type: task.type, location: task.location.name, waveId: task.waveId,
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
         fail(400, "VALIDATION", "locationId and valid task type required");
       const location = await prisma.stockLocation.findUnique({ where: { id: body.locationId } });
       if (!location) fail(404, "NOT_FOUND", "Warehouse location not found");
-      await requirePermission("inventory.adjust", location.storeId ?? undefined);
+      await requirePermission("inventory.adjust", location.storeId);
       if (body.items !== undefined && (!Array.isArray(body.items) || body.items.some((i: unknown) =>
         typeof i !== "object" || i === null || typeof (i as { variantId?: unknown }).variantId !== "string"
         || !Number.isInteger((i as { quantity?: unknown }).quantity) || (i as { quantity?: number }).quantity! <= 0)))
@@ -105,10 +106,13 @@ export async function POST(req: NextRequest) {
       });
       if (!item) fail(404, "NOT_FOUND", "Task item not found");
       if (item.task.status !== "IN_PROGRESS") fail(409, "INVALID_STATUS_TRANSITION", "Task must be IN_PROGRESS to scan");
-      await requirePermission("inventory.adjust", item.task.location.storeId ?? undefined);
+      await requirePermission("inventory.adjust", item.task.location.storeId);
       const processedQty = Math.min(item.processedQty + body.quantity, item.quantity);
-      const taskDone = await prisma.$transaction(async (tx) => {
-        await tx.warehouseTaskItem.update({ where: { id: item.id }, data: { processedQty } });
+      await prisma.$transaction(async (tx) => {
+        const claimed = await tx.warehouseTaskItem.updateMany({
+          where: { id: item.id, processedQty: item.processedQty }, data: { processedQty },
+        });
+        if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Task item was already scanned");
         if (["PICK", "PUTAWAY"].includes(item.task.type)) {
           const delta = processedQty - item.processedQty;
           if (delta !== 0)
@@ -120,11 +124,17 @@ export async function POST(req: NextRequest) {
             });
         }
         const siblings = await tx.warehouseTaskItem.findMany({ where: { taskId: item.taskId } });
-        return siblings.every((sibling) => sibling.processedQty >= sibling.quantity);
+        const done = siblings.every((sibling) => sibling.processedQty >= sibling.quantity);
+        if (done) {
+          const completed = await tx.warehouseTask.updateMany({
+            where: { id: item.taskId, status: "IN_PROGRESS" },
+            data: { status: "COMPLETED", completedAt: new Date() },
+          });
+          if (completed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Task was already updated");
+        }
+        return done;
       });
-      const task = taskDone
-        ? await prisma.warehouseTask.update({ where: { id: item.taskId }, data: { status: "COMPLETED", completedAt: new Date() } })
-        : await prisma.warehouseTask.findUnique({ where: { id: item.taskId } });
+      const task = await prisma.warehouseTask.findUnique({ where: { id: item.taskId } });
       return ok({ taskItemId: item.id, processedQty, taskStatus: task?.status });
     }
 
@@ -132,13 +142,20 @@ export async function POST(req: NextRequest) {
       fail(400, "VALIDATION", "Unknown action");
     const current = await prisma.warehouseTask.findUnique({ where: { id: body.taskId }, include: { location: true, items: true } });
     if (!current) fail(404, "NOT_FOUND", "Warehouse task not found");
-    await requirePermission("inventory.adjust", current.location.storeId ?? undefined);
+    await requirePermission("inventory.adjust", current.location.storeId);
     if (!(TRANSITIONS[current.status] ?? []).includes(body.status))
       fail(409, "INVALID_STATUS_TRANSITION", `Cannot transition ${current.status} -> ${body.status}`);
-    // Completing manually still applies un-scanned PICK/PUTAWAY quantities so the
-    // ledger never diverges from the task board.
-    if (body.status === "COMPLETED" && ["PICK", "PUTAWAY"].includes(current.type)) {
-      await prisma.$transaction(async (tx) => {
+    const task = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.warehouseTask.updateMany({
+        where: { id: current.id, status: current.status },
+        data: {
+          status: body.status, assignedTo: body.assignedTo ?? current.assignedTo,
+          completedAt: body.status === "COMPLETED" ? new Date() : null,
+        },
+      });
+      if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Warehouse task was already updated");
+      // Completing manually applies un-scanned quantities in the same transaction.
+      if (body.status === "COMPLETED" && ["PICK", "PUTAWAY"].includes(current.type)) {
         for (const item of current.items) {
           const remaining = item.quantity - item.processedQty;
           if (remaining <= 0) continue;
@@ -148,12 +165,9 @@ export async function POST(req: NextRequest) {
             await applyMovement(tx, { variantId: item.variantId, locationId: current.locationId, type: "PURCHASE_RECEIPT", quantityDelta: remaining, refType: "warehouse_task", refId: current.id, userId: "wms-complete" });
           await tx.warehouseTaskItem.update({ where: { id: item.id }, data: { processedQty: item.quantity } });
         }
-      });
-    }
-    const task = await prisma.warehouseTask.update({ where: { id: current.id }, data: {
-      status: body.status, assignedTo: body.assignedTo ?? current.assignedTo,
-      completedAt: body.status === "COMPLETED" ? new Date() : null,
-    } });
+      }
+      return tx.warehouseTask.findUniqueOrThrow({ where: { id: current.id } });
+    });
     return ok({ task });
   } catch (err) {
     return apiError(err);

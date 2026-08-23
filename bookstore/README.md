@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Melio Book Store
 
-## Getting Started
+Modular monolith cho vận hành nhà sách và storefront khách hàng. Next.js phục vụ UI/API; PostgreSQL là nguồn dữ liệu duy nhất; Prisma quản lý schema và migration.
 
-First, run the development server:
+## Chạy local
+
+1. Sao chép `.env.example` thành `.env` và đặt mật khẩu seed local tối thiểu 12 ký tự.
+2. Chạy PostgreSQL rồi cài schema: `npx prisma migrate deploy`.
+3. Tạo dữ liệu demo: `npx prisma db seed`.
+4. Khởi động: `npm run dev`.
+
+- Storefront: `http://localhost:3000/shop`
+- Staff: `http://localhost:3000/login`
+- Readiness: `http://localhost:3000/api/health/ready`
+
+## Quality gate
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npx tsc --noEmit
+npm run build
+npm run test:phase3
+npm run test:p0
+npm run test:storefront
+npm run test:hardening
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ba test HTTP cần app đang chạy và `SEED_USER_PASSWORD`; có thể đổi URL bằng `BASE_URL`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Không chạy `prisma db seed` trên production: seed chứa tài khoản và dữ liệu demo.
+- Chạy `prisma migrate deploy` trước khi chuyển traffic sang release mới.
+- Đặt `APP_ORIGIN` đúng URL public và chỉ bật `TRUST_PROXY_HEADERS=true` khi reverse proxy ghi đè header IP từ client.
+- Secret chỉ tồn tại trong secret manager của môi trường deploy, không commit `.env`.
+- Trước lần deploy hardening đầu tiên, đặt `INTEGRATION_ENCRYPTION_KEY` rồi chạy `npm run security:encrypt-integrations`; giữ nguyên key cho tới khi có quy trình rotation.
+- Dùng `/api/health/live` cho liveness và `/api/health/ready` cho readiness.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Quy trình backup, restore, rollback và sự cố nằm trong [RUNBOOK.md](RUNBOOK.md).

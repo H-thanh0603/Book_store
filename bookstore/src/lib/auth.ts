@@ -1,9 +1,13 @@
-import { scryptSync, randomBytes, timingSafeEqual, randomUUID } from "crypto";
+import { createHash, scryptSync, randomBytes, timingSafeEqual, randomUUID } from "crypto";
 import { cookies } from "next/headers";
 import { prisma } from "./db";
 
 const SESSION_COOKIE = "bs_session";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+
+function hashSessionToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
@@ -20,7 +24,7 @@ export function verifyPassword(password: string, stored: string): boolean {
 export async function createSession(userId: string) {
   const token = randomUUID() + randomBytes(24).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-  await prisma.session.create({ data: { userId, token, expiresAt } });
+  await prisma.session.create({ data: { userId, token: hashSessionToken(token), expiresAt } });
   const jar = await cookies();
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -34,7 +38,7 @@ export async function createSession(userId: string) {
 export async function destroySession() {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
-  if (token) await prisma.session.deleteMany({ where: { token } });
+  if (token) await prisma.session.deleteMany({ where: { token: hashSessionToken(token) } });
   jar.delete(SESSION_COOKIE);
 }
 
@@ -49,7 +53,7 @@ export async function getAuth(): Promise<AuthContext | null> {
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const session = await prisma.session.findUnique({
-    where: { token },
+    where: { token: hashSessionToken(token) },
     include: {
       user: {
         include: {
@@ -73,15 +77,15 @@ export async function getAuth(): Promise<AuthContext | null> {
 }
 
 /** Backend authorization check. Throws 401/403-shaped Error. */
-export async function requirePermission(code: string, storeId?: string) {
+export async function requirePermission(code: string, storeId?: string | null) {
   const auth = await getAuth();
   if (!auth) throw Object.assign(new Error("Unauthorized"), { status: 401 });
   const allowed = auth.roles.some(
     (r) =>
       r.permissions.includes(code) &&
-      // role scoped to a store only satisfies requests for that store;
-      // unscoped requests are satisfied by any matching role
-      (r.storeId === null || storeId === undefined || r.storeId === storeId)
+      // undefined means the caller will clamp a list with resolveStoreScope;
+      // null explicitly means an organisation-wide resource.
+      (storeId === undefined || r.storeId === null || r.storeId === storeId)
   );
   if (!allowed)
     throw Object.assign(new Error(`Forbidden: ${code}`), { status: 403 });
@@ -127,7 +131,7 @@ export function assertStoreAccess(
   dataStoreId: string | null | undefined,
   permission?: string
 ) {
-  const scope = resolveStoreScope(auth, dataStoreId ?? undefined, permission);
+  const scope = resolveStoreScope(auth, dataStoreId, permission);
   if (scope === null) return;
   if (!dataStoreId || !scope.includes(dataStoreId))
     throw Object.assign(new Error("Forbidden: store scope"), { status: 403 });
@@ -156,4 +160,8 @@ export async function requireAuth(): Promise<AuthContext> {
   const auth = await getAuth();
   if (!auth) throw Object.assign(new Error("Unauthorized"), { status: 401 });
   return auth;
+}
+
+export async function pruneExpiredSessions() {
+  return prisma.session.deleteMany({ where: { expiresAt: { lt: new Date() } } });
 }

@@ -44,6 +44,8 @@ export type JobRunMinAggregateOutputType = {
   maxAttempts: number | null
   nextRunAt: Date | null
   startedAt: Date | null
+  leaseExpiresAt: Date | null
+  workerId: string | null
   finishedAt: Date | null
   error: string | null
   createdAt: Date | null
@@ -57,6 +59,8 @@ export type JobRunMaxAggregateOutputType = {
   maxAttempts: number | null
   nextRunAt: Date | null
   startedAt: Date | null
+  leaseExpiresAt: Date | null
+  workerId: string | null
   finishedAt: Date | null
   error: string | null
   createdAt: Date | null
@@ -70,6 +74,8 @@ export type JobRunCountAggregateOutputType = {
   maxAttempts: number
   nextRunAt: number
   startedAt: number
+  leaseExpiresAt: number
+  workerId: number
   finishedAt: number
   result: number
   error: number
@@ -96,6 +102,8 @@ export type JobRunMinAggregateInputType = {
   maxAttempts?: true
   nextRunAt?: true
   startedAt?: true
+  leaseExpiresAt?: true
+  workerId?: true
   finishedAt?: true
   error?: true
   createdAt?: true
@@ -109,6 +117,8 @@ export type JobRunMaxAggregateInputType = {
   maxAttempts?: true
   nextRunAt?: true
   startedAt?: true
+  leaseExpiresAt?: true
+  workerId?: true
   finishedAt?: true
   error?: true
   createdAt?: true
@@ -122,6 +132,8 @@ export type JobRunCountAggregateInputType = {
   maxAttempts?: true
   nextRunAt?: true
   startedAt?: true
+  leaseExpiresAt?: true
+  workerId?: true
   finishedAt?: true
   result?: true
   error?: true
@@ -223,6 +235,8 @@ export type JobRunGroupByOutputType = {
   maxAttempts: number
   nextRunAt: Date
   startedAt: Date | null
+  leaseExpiresAt: Date | null
+  workerId: string | null
   finishedAt: Date | null
   result: runtime.JsonValue | null
   error: string | null
@@ -260,6 +274,8 @@ export type JobRunWhereInput = {
   maxAttempts?: Prisma.IntFilter<"JobRun"> | number
   nextRunAt?: Prisma.DateTimeFilter<"JobRun"> | Date | string
   startedAt?: Prisma.DateTimeNullableFilter<"JobRun"> | Date | string | null
+  leaseExpiresAt?: Prisma.DateTimeNullableFilter<"JobRun"> | Date | string | null
+  workerId?: Prisma.StringNullableFilter<"JobRun"> | string | null
   finishedAt?: Prisma.DateTimeNullableFilter<"JobRun"> | Date | string | null
   result?: Prisma.JsonNullableFilter<"JobRun">
   error?: Prisma.StringNullableFilter<"JobRun"> | string | null
@@ -274,6 +290,8 @@ export type JobRunOrderByWithRelationInput = {
   maxAttempts?: Prisma.SortOrder
   nextRunAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  leaseExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  workerId?: Prisma.SortOrderInput | Prisma.SortOrder
   finishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   result?: Prisma.SortOrderInput | Prisma.SortOrder
   error?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -291,6 +309,8 @@ export type JobRunWhereUniqueInput = Prisma.AtLeast<{
   maxAttempts?: Prisma.IntFilter<"JobRun"> | number
   nextRunAt?: Prisma.DateTimeFilter<"JobRun"> | Date | string
   startedAt?: Prisma.DateTimeNullableFilter<"JobRun"> | Date | string | null
+  leaseExpiresAt?: Prisma.DateTimeNullableFilter<"JobRun"> | Date | string | null
+  workerId?: Prisma.StringNullableFilter<"JobRun"> | string | null
   finishedAt?: Prisma.DateTimeNullableFilter<"JobRun"> | Date | string | null
   result?: Prisma.JsonNullableFilter<"JobRun">
   error?: Prisma.StringNullableFilter<"JobRun"> | string | null
@@ -305,6 +325,8 @@ export type JobRunOrderByWithAggregationInput = {
   maxAttempts?: Prisma.SortOrder
   nextRunAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  leaseExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  workerId?: Prisma.SortOrderInput | Prisma.SortOrder
   finishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   result?: Prisma.SortOrderInput | Prisma.SortOrder
   error?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -327,6 +349,8 @@ export type JobRunScalarWhereWithAggregatesInput = {
   maxAttempts?: Prisma.IntWithAggregatesFilter<"JobRun"> | number
   nextRunAt?: Prisma.DateTimeWithAggregatesFilter<"JobRun"> | Date | string
   startedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"JobRun"> | Date | string | null
+  leaseExpiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"JobRun"> | Date | string | null
+  workerId?: Prisma.StringNullableWithAggregatesFilter<"JobRun"> | string | null
   finishedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"JobRun"> | Date | string | null
   result?: Prisma.JsonNullableWithAggregatesFilter<"JobRun">
   error?: Prisma.StringNullableWithAggregatesFilter<"JobRun"> | string | null
@@ -341,6 +365,8 @@ export type JobRunCreateInput = {
   maxAttempts?: number
   nextRunAt?: Date | string
   startedAt?: Date | string | null
+  leaseExpiresAt?: Date | string | null
+  workerId?: string | null
   finishedAt?: Date | string | null
   result?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   error?: string | null
@@ -355,6 +381,8 @@ export type JobRunUncheckedCreateInput = {
   maxAttempts?: number
   nextRunAt?: Date | string
   startedAt?: Date | string | null
+  leaseExpiresAt?: Date | string | null
+  workerId?: string | null
   finishedAt?: Date | string | null
   result?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   error?: string | null
@@ -369,6 +397,8 @@ export type JobRunUpdateInput = {
   maxAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   nextRunAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leaseExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  workerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   result?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -383,6 +413,8 @@ export type JobRunUncheckedUpdateInput = {
   maxAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   nextRunAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leaseExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  workerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   result?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -397,6 +429,8 @@ export type JobRunCreateManyInput = {
   maxAttempts?: number
   nextRunAt?: Date | string
   startedAt?: Date | string | null
+  leaseExpiresAt?: Date | string | null
+  workerId?: string | null
   finishedAt?: Date | string | null
   result?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   error?: string | null
@@ -411,6 +445,8 @@ export type JobRunUpdateManyMutationInput = {
   maxAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   nextRunAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leaseExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  workerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   result?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -425,6 +461,8 @@ export type JobRunUncheckedUpdateManyInput = {
   maxAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   nextRunAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leaseExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  workerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   result?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -439,6 +477,8 @@ export type JobRunCountOrderByAggregateInput = {
   maxAttempts?: Prisma.SortOrder
   nextRunAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
+  leaseExpiresAt?: Prisma.SortOrder
+  workerId?: Prisma.SortOrder
   finishedAt?: Prisma.SortOrder
   result?: Prisma.SortOrder
   error?: Prisma.SortOrder
@@ -458,6 +498,8 @@ export type JobRunMaxOrderByAggregateInput = {
   maxAttempts?: Prisma.SortOrder
   nextRunAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
+  leaseExpiresAt?: Prisma.SortOrder
+  workerId?: Prisma.SortOrder
   finishedAt?: Prisma.SortOrder
   error?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -471,6 +513,8 @@ export type JobRunMinOrderByAggregateInput = {
   maxAttempts?: Prisma.SortOrder
   nextRunAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
+  leaseExpiresAt?: Prisma.SortOrder
+  workerId?: Prisma.SortOrder
   finishedAt?: Prisma.SortOrder
   error?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -495,6 +539,8 @@ export type JobRunSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   maxAttempts?: boolean
   nextRunAt?: boolean
   startedAt?: boolean
+  leaseExpiresAt?: boolean
+  workerId?: boolean
   finishedAt?: boolean
   result?: boolean
   error?: boolean
@@ -509,6 +555,8 @@ export type JobRunSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   maxAttempts?: boolean
   nextRunAt?: boolean
   startedAt?: boolean
+  leaseExpiresAt?: boolean
+  workerId?: boolean
   finishedAt?: boolean
   result?: boolean
   error?: boolean
@@ -523,6 +571,8 @@ export type JobRunSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   maxAttempts?: boolean
   nextRunAt?: boolean
   startedAt?: boolean
+  leaseExpiresAt?: boolean
+  workerId?: boolean
   finishedAt?: boolean
   result?: boolean
   error?: boolean
@@ -537,13 +587,15 @@ export type JobRunSelectScalar = {
   maxAttempts?: boolean
   nextRunAt?: boolean
   startedAt?: boolean
+  leaseExpiresAt?: boolean
+  workerId?: boolean
   finishedAt?: boolean
   result?: boolean
   error?: boolean
   createdAt?: boolean
 }
 
-export type JobRunOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "kind" | "status" | "attempts" | "maxAttempts" | "nextRunAt" | "startedAt" | "finishedAt" | "result" | "error" | "createdAt", ExtArgs["result"]["jobRun"]>
+export type JobRunOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "kind" | "status" | "attempts" | "maxAttempts" | "nextRunAt" | "startedAt" | "leaseExpiresAt" | "workerId" | "finishedAt" | "result" | "error" | "createdAt", ExtArgs["result"]["jobRun"]>
 
 export type $JobRunPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "JobRun"
@@ -556,6 +608,8 @@ export type $JobRunPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     maxAttempts: number
     nextRunAt: Date
     startedAt: Date | null
+    leaseExpiresAt: Date | null
+    workerId: string | null
     finishedAt: Date | null
     result: runtime.JsonValue | null
     error: string | null
@@ -990,6 +1044,8 @@ export interface JobRunFieldRefs {
   readonly maxAttempts: Prisma.FieldRef<"JobRun", 'Int'>
   readonly nextRunAt: Prisma.FieldRef<"JobRun", 'DateTime'>
   readonly startedAt: Prisma.FieldRef<"JobRun", 'DateTime'>
+  readonly leaseExpiresAt: Prisma.FieldRef<"JobRun", 'DateTime'>
+  readonly workerId: Prisma.FieldRef<"JobRun", 'String'>
   readonly finishedAt: Prisma.FieldRef<"JobRun", 'DateTime'>
   readonly result: Prisma.FieldRef<"JobRun", 'Json'>
   readonly error: Prisma.FieldRef<"JobRun", 'String'>
