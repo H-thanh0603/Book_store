@@ -1,13 +1,18 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission } from "@/lib/auth";
-import { apiError, ok, fail } from "@/lib/api";
+import { assertStoreAccess, requirePermission, resolveStoreScope } from "@/lib/auth";
+import { apiError, ok, fail, optStr, reqStr, requireRef } from "@/lib/api";
 
-// GET /api/promotions — list all (builder UI)
+// GET /api/promotions — list promotions visible to the caller.
+// Store-scoped callers see promos linked to their stores plus org-wide ones.
 export async function GET() {
   try {
-    await requirePermission("promotion.manage");
+    const auth = await requirePermission("promotion.manage");
+    const scope = resolveStoreScope(auth, undefined, "promotion.manage");
     const promotions = await prisma.promotion.findMany({
+      where: scope
+        ? { OR: [{ stores: { none: {} } }, { stores: { some: { storeId: { in: scope } } } }] }
+        : undefined,
       include: { category: true, stores: true },
       orderBy: [{ active: "desc" }, { priority: "desc" }],
       take: 100,
@@ -23,20 +28,42 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requirePermission("promotion.manage");
     const b = await req.json();
-    if (!b.name || !b.type) fail(400, "VALIDATION", "name and type required");
-    if (!["percentage", "fixed", "buy_x_get_y"].includes(b.type)) fail(400, "VALIDATION", "Invalid promotion type");
+    const name = reqStr(b.name, "name");
+    if (!b.type || !["percentage", "fixed", "buy_x_get_y"].includes(b.type))
+      fail(400, "VALIDATION", "type must be percentage, fixed or buy_x_get_y");
     if (b.type === "percentage" && (typeof b.value !== "number" || b.value <= 0 || b.value > 100))
       fail(400, "VALIDATION", "percentage value must be 1-100");
     if (b.type !== "percentage" && (typeof b.value !== "number" || b.value <= 0))
       fail(400, "VALIDATION", "value must be positive");
-    if (b.type === "buy_x_get_y" && (!b.buyQty || !b.getQty))
-      fail(400, "VALIDATION", "buyQty and getQty required for buy_x_get_y");
-    if (b.code && await prisma.promotion.findUnique({ where: { code: String(b.code).trim().toUpperCase() } }))
-      fail(409, "DUPLICATE", `Code ${b.code} already exists`);
+    if (b.type === "buy_x_get_y" && (!Number.isInteger(b.buyQty) || b.buyQty < 1 || !Number.isInteger(b.getQty) || b.getQty < 1))
+      fail(400, "VALIDATION", "buyQty and getQty must be positive integers for buy_x_get_y");
+    if (b.minQty !== undefined && (!Number.isInteger(b.minQty) || b.minQty < 0))
+      fail(400, "VALIDATION", "minQty must be a non-negative integer");
+    if (b.usageLimit !== undefined && b.usageLimit !== null && (!Number.isInteger(b.usageLimit) || b.usageLimit < 1))
+      fail(400, "VALIDATION", "usageLimit must be a positive integer");
+
+    const code = optStr(b.code, "code", 64)?.toUpperCase() ?? null;
+    if (code && await prisma.promotion.findUnique({ where: { code } }))
+      fail(409, "DUPLICATE", `Code ${code} already exists`);
+    if (b.categoryId) requireRef(await prisma.category.findUnique({ where: { id: b.categoryId }, select: { id: true } }), "Category");
+
+    // Store links: every referenced store must exist AND be inside the caller's scope.
+    let storeLinks: string[] = [];
+    if (Array.isArray(b.storeIds)) {
+      const uniqueIds = new Set<string>(
+        (b.storeIds as unknown[]).filter((id): id is string => typeof id === "string"),
+      );
+      storeLinks = [...uniqueIds];
+      for (const storeId of storeLinks) {
+        requireRef(await prisma.store.findUnique({ where: { id: storeId }, select: { id: true } }), `Store ${storeId}`);
+        assertStoreAccess(auth, storeId, "promotion.manage");
+      }
+    }
+
     const promo = await prisma.promotion.create({
       data: {
-        name: b.name,
-        code: b.code ? String(b.code).trim().toUpperCase() : null,
+        name,
+        code,
         type: b.type,
         value: BigInt(Math.round(b.value)),
         buyQty: b.buyQty ?? null,
@@ -50,8 +77,8 @@ export async function POST(req: NextRequest) {
         priority: Number.isInteger(b.priority) ? b.priority : 0,
         startAt: b.startAt ? new Date(b.startAt) : new Date(),
         endAt: b.endAt ? new Date(b.endAt) : null,
-        stores: Array.isArray(b.storeIds)
-          ? { create: b.storeIds.filter((id: unknown): id is string => typeof id === "string").map((storeId: string) => ({ storeId })) }
+        stores: storeLinks.length
+          ? { create: storeLinks.map((storeId) => ({ storeId })) }
           : undefined,
       },
     });
@@ -71,11 +98,28 @@ export async function PATCH(req: NextRequest) {
     const auth = await requirePermission("promotion.manage");
     const b = await req.json();
     if (!b.id || typeof b.active !== "boolean") fail(400, "VALIDATION", "id and boolean active required");
-    const promo = await prisma.promotion.update({ where: { id: b.id }, data: { active: b.active } });
+    const promo = requireRef(
+      await prisma.promotion.findUnique({ where: { id: b.id }, include: { stores: true } }),
+      "Promotion",
+    );
+    // Toggling affects every linked store. An org-wide promo (no links) or a
+    // multi-store promo partially outside the caller's scope is an organisation-
+    // level act — store-scoped callers may only touch promos fully inside their scope.
+    const scope = resolveStoreScope(auth, undefined, "promotion.manage");
+    if (scope !== null) {
+      const fullyInScope =
+        promo.stores.length > 0 && promo.stores.every((s) => scope.includes(s.storeId));
+      if (!fullyInScope)
+        fail(403, "FORBIDDEN", "This promotion spans stores outside your scope");
+    }
+    const updated = await prisma.promotion.update({
+      where: { id: promo.id },
+      data: { active: b.active },
+    });
     await prisma.auditLog.create({
       data: { actorId: auth.userId, action: "promotion.set_active", entity: "Promotion", entityId: promo.id, after: { active: b.active } },
     });
-    return ok({ id: promo.id, active: promo.active });
+    return ok({ id: updated.id, active: updated.active });
   } catch (err) {
     return apiError(err);
   }

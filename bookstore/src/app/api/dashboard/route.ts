@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { requirePermission, resolveStoreScope } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
+import { zonedStartOfDay, zonedStartOfMonth } from "@/lib/time";
 
 // GET /api/dashboard — all metrics computed from real transactions (spec §114 Flow 8)
 export async function GET() {
@@ -9,9 +10,9 @@ export async function GET() {
     const auth = await requirePermission("reports.store.view");
     // Store-scoped roles only see their own stores' numbers.
     const storeScope = resolveStoreScope(auth, undefined, "reports.store.view");
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const startOfMonth = new Date(startOfDay.getFullYear(), startOfDay.getMonth(), 1);
+    // Business-day windows follow the store's timezone (APP_TIMEZONE), not host TZ.
+    const startOfDay = zonedStartOfDay();
+    const startOfMonth = zonedStartOfMonth();
 
     const transactionStoreFilter = storeScope
       ? Prisma.sql`AND t."storeId" IN (${Prisma.join(storeScope)})`

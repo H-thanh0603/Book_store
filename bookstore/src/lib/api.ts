@@ -36,6 +36,47 @@ export function fail(status: number, code: string, message: string, details?: un
   throw Object.assign(new Error(message), { status, code, details });
 }
 
+// ── Body validation helpers ─────────────────────────────────────────────────
+// Fail closed with 400 instead of letting junk reach Prisma and surface as 500.
+
+export function reqStr(v: unknown, field: string, max = 255): string {
+  if (typeof v !== "string" || !v.trim()) fail(400, "VALIDATION", `${field} is required`);
+  const s = v.trim();
+  if (s.length > max) fail(400, "VALIDATION", `${field} must be at most ${max} characters`);
+  return s;
+}
+
+export function optStr(v: unknown, field: string, max = 500): string | null {
+  if (v === undefined || v === null || v === "") return null;
+  return reqStr(v, field, max);
+}
+
+export function reqInt(v: unknown, field: string, min: number, max: number): number {
+  if (typeof v !== "number" || !Number.isInteger(v) || v < min || v > max)
+    fail(400, "VALIDATION", `${field} must be an integer between ${min} and ${max}`);
+  return v;
+}
+
+export function optBool(v: unknown, field: string): boolean | undefined {
+  if (v === undefined || v === null) return undefined;
+  if (typeof v !== "boolean") fail(400, "VALIDATION", `${field} must be a boolean`);
+  return v;
+}
+
+/** Parse an optional date-ish value; garbage strings become 400, never Invalid Date. */
+export function optDate(v: unknown, field: string): Date | null {
+  if (v === undefined || v === null || v === "") return null;
+  const d = new Date(String(v));
+  if (Number.isNaN(d.getTime())) fail(400, "VALIDATION", `${field} is not a valid date`);
+  return d;
+}
+
+/** Assert an FK target exists; turns would-be P2003 500s into clean 404s. */
+export function requireRef<T>(row: T | null, label: string): T {
+  if (!row) fail(404, "NOT_FOUND", `${label} not found`);
+  return row;
+}
+
 export function ok(data: unknown, status = 200) {
   return NextResponse.json(JSON.parse(JSON.stringify(data, (_, value) => {
     if (typeof value !== "bigint") return value;

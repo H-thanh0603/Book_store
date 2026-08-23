@@ -3,7 +3,31 @@ import { fail, nextBusinessNumber } from "./api";
 import { prisma } from "./db";
 import { createReservedOrder } from "./orders";
 
+// ponytail: tiny in-process cache for the public catalog (30s TTL, LRU-capped).
+// Absorbs burst traffic and scrapes; a CDN in front makes this redundant.
+const CATALOG_TTL_MS = 30_000;
+const CATALOG_CACHE_MAX = 100;
+const catalogCache = new Map<string, { value: unknown; expiresAt: number }>();
+
 export async function listStorefrontProducts(input: {
+  q?: string | null;
+  categoryId?: string | null;
+  storeId?: string | null;
+}) {
+  const cacheKey = JSON.stringify([input.q ?? "", input.categoryId ?? "", input.storeId ?? ""]);
+  const cached = catalogCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+
+  const result = await listStorefrontProductsUncached(input);
+  if (catalogCache.size >= CATALOG_CACHE_MAX) {
+    const oldest = catalogCache.keys().next().value;
+    if (oldest !== undefined) catalogCache.delete(oldest);
+  }
+  catalogCache.set(cacheKey, { value: result, expiresAt: Date.now() + CATALOG_TTL_MS });
+  return result;
+}
+
+async function listStorefrontProductsUncached(input: {
   q?: string | null;
   categoryId?: string | null;
   storeId?: string | null;

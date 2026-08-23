@@ -360,6 +360,7 @@ model InventoryAdjustmentItem {
   variant       ProductVariant @relation("adjItems", fields: [variantId], references: [id])
   expectedQty   Int
   countedQty    Int
+  @@index([variantId])
 }
 
 // ── Suppliers / Purchasing ────────────────────────────────────
@@ -438,6 +439,7 @@ model PurchaseOrderItem {
   quantity  Int
   unitCost  BigInt
   receivedQty Int @default(0)
+  @@index([variantId])
 }
 
 model GoodsReceipt {
@@ -458,6 +460,7 @@ model GoodsReceiptItem {
   variant     ProductVariant @relation(fields: [variantId], references: [id])
   quantity    Int
   damagedQty  Int @default(0)
+  @@index([variantId])
 }
 
 // ── Stock Transfer ────────────────────────────────────────────
@@ -496,6 +499,7 @@ model StockTransferItem {
   variant   ProductVariant @relation(fields: [variantId], references: [id])
   quantity  Int
   receivedQty Int @default(0)
+  @@index([variantId])
 }
 
 // ── Customers / Loyalty ───────────────────────────────────────
@@ -653,6 +657,7 @@ model OrderItem {
   unitPrice BigInt
   discount  BigInt @default(0)
   returnItems ReturnItem[]
+  @@index([variantId])
 }
 
 model OrderStatusHistory {
@@ -734,6 +739,8 @@ model PosTransactionItem {
   unitPrice BigInt
   discount  BigInt @default(0)
   promoId   String?
+  @@index([variantId])
+  @@index([promoId])
 }
 
 enum PaymentMethod {
@@ -829,6 +836,7 @@ model ReturnItem {
   quantity    Int
   disposition String @default("RESTOCK") // RESTOCK | DAMAGED
   refundAmount BigInt
+  @@index([variantId])
 }
 
 model GiftCard {
@@ -852,6 +860,7 @@ model GiftCardTransaction {
   refType    String?
   refId      String?
   createdAt  DateTime @default(now())
+  @@unique([giftCardId, refType, refId])
 }
 
 enum SupplierReturnStatus {
@@ -881,6 +890,7 @@ model SupplierReturnItem {
   variantId        String
   variant          ProductVariant @relation(fields: [variantId], references: [id])
   quantity         Int
+  @@index([variantId])
 }
 
 enum InventoryCountStatus {
@@ -1055,6 +1065,7 @@ model WarehouseTaskItem {
   processedQty   Int @default(0) // picked / putaway / counted so far
   binCode        String? // source bin for PICK, destination for PUTAWAY
   @@index([taskId])
+  @@index([variantId])
 }
 
 enum JobStatus {

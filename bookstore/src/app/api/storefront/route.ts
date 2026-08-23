@@ -5,6 +5,8 @@ import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
   try {
+    // Public endpoint — throttle per IP so scrapes/abuse can't hammer the search.
+    await enforceRateLimit("storefront-catalog", clientIp(req.headers), 60, 60_000);
     return ok(await listStorefrontProducts({
       q: req.nextUrl.searchParams.get("q"),
       categoryId: req.nextUrl.searchParams.get("categoryId"),

@@ -1,13 +1,14 @@
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
+import { zonedMonthsAgo } from "@/lib/time";
 
 // GET /api/analytics — Phase 2 operational and financial metrics from live records.
 export async function GET() {
   try {
     await requirePermission("reports.financial.view");
-    const start = new Date();
-    start.setMonth(start.getMonth() - 1);
+    // Calendar-safe one-month-ago boundary (no setMonth overflow on the 29th–31st).
+    const start = zonedMonthsAgo(1);
     const [orders, returns, returnTotal, giftCardLiability, countAdjustments, orderChannels] = await Promise.all([
       prisma.order.groupBy({ by: ["status"], _count: true, _sum: { total: true }, where: { createdAt: { gte: start } } }),
       prisma.return.groupBy({ by: ["status"], _count: true, where: { createdAt: { gte: start } } }),

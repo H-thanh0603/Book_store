@@ -51,7 +51,27 @@ Restore: `pg_restore --clean --dbname "$DATABASE_URL" backup-YYYY-MM-DD.dump`.
 
 ## Monitoring
 
-- Health probe: `GET /login` (200 = app up).
+- Liveness probe: `GET /api/health/live` (200 = process up).
+- Readiness probe: `GET /api/health/ready` (live DB round-trip; 503 = not ready).
 - Failed jobs: alert on `GET /api/jobs?status=FAILED` non-empty (admin.config).
 - Loss alerts: `GET /api/loss-prevention` (reports.financial.view).
 - Audit trail: `GET /api/audit-logs`.
+
+## Reverse-proxy contract (`TRUST_PROXY_HEADERS`)
+
+Rate limits and audit identity key off the client IP, taken from `X-Real-IP` /
+the first hop of `X-Forwarded-For` only when trusting proxies.
+
+| Deployment | Setting | Effect |
+|---|---|---|
+| App exposed directly (no proxy) | `TRUST_PROXY_HEADERS=false` (default) | All clients share one limiter bucket per namespace — safe but coarse |
+| Behind nginx/Cloudflare/ALB that overwrites XFF | `TRUST_PROXY_HEADERS=true` | Correct per-client limiting; spoofed headers impossible because the proxy rewrites them |
+
+Never set `true` on a directly-exposed server: attackers could rotate fake
+`X-Forwarded-For` values to bypass login/checkout rate limits entirely.
+
+## Timezone
+
+Reporting windows ("today", "this month") follow the business timezone from
+`APP_TIMEZONE` (default `Asia/Ho_Chi_Minh`). Set it explicitly in production so
+dashboards never depend on the host clock settings.
