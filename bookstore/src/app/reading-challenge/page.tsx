@@ -35,6 +35,12 @@ const literaryQuotes = [
   { text: "Đọc sách là cách tuyệt vời nhất để du hành không gian và thời gian mà không cần rời khỏi căn phòng.", author: "Carl Sagan" },
 ];
 
+function getStatusBadgeClass(status: string) {
+  if (status === "completed") return "bg-emerald-100 text-emerald-950 font-bold";
+  if (status === "reading") return "bg-amber-100 text-amber-950 font-bold";
+  return "bg-stone-200 text-stone-900 font-bold";
+}
+
 export default function ReadingChallengePage() {
   const [goal, setGoal] = useState(20);
   const [completedCount, setCompletedCount] = useState(6);
@@ -51,7 +57,7 @@ export default function ReadingChallengePage() {
       <div className="bg-[#14532d] text-white px-4 py-2 text-xs font-bold shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-amber-300 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-amber-300 text-amber-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
               GOODREADS &amp; MELIO
             </span>
             <span>📚 Thử thách đọc sách 2026 · Nuôi dưỡng thói quen đọc mỗi ngày</span>
@@ -101,7 +107,7 @@ export default function ReadingChallengePage() {
         <section className="rounded-3xl bg-gradient-to-r from-[#14532d] via-[#166534] to-[#0f3d23] text-white p-8 sm:p-12 shadow-2xl relative overflow-hidden">
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-8 items-center relative z-10">
             <div className="sm:col-span-8 space-y-4">
-              <span className="inline-flex items-center gap-1.5 bg-amber-400 text-slate-950 px-3 py-1 rounded-full text-xs font-black uppercase">
+              <span className="inline-flex items-center gap-1.5 bg-amber-400 text-amber-950 px-3 py-1 rounded-full text-xs font-black uppercase">
                 <Target className="w-4 h-4" /> MỤC TIÊU ĐỌC SÁCH 2026
               </span>
               <h1 className="font-serif font-black text-3xl sm:text-5xl leading-tight">
@@ -193,9 +199,7 @@ export default function ReadingChallengePage() {
             {mockUserBooks.map((b) => (
               <div key={b.id} className="p-4 rounded-2xl bg-[#faf8f5] border border-[#ede5d8] flex items-center justify-between gap-3">
                 <div>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                    b.status === "completed" ? "bg-emerald-100 text-emerald-800" : b.status === "reading" ? "bg-amber-100 text-amber-900" : "bg-slate-200 text-slate-700"
-                  }`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${getStatusBadgeClass(b.status)}`}>
                     {b.status === "completed" ? "Đã xong" : b.status === "reading" ? "Đang đọc 65%" : "Muốn đọc"}
                   </span>
                   <h4 className="font-serif font-black text-sm text-slate-900 mt-1">{b.name}</h4>

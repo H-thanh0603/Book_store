@@ -10,11 +10,36 @@
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
   --border: #e2e8f0;
+
+  /* Melio Heritage Design Tokens */
+  --melio-paper-base: #faf7f2;
+  --melio-paper-warm: #fbf8f3;
+  --melio-paper-card: #ffffff;
+  --melio-paper-cream: #faf4ea;
+  --melio-charcoal-deep: #1c1917;
+  --melio-charcoal-muted: #574431;
+  --melio-crimson-heritage: #8c2d19;
+  --melio-crimson-bright: #c83f49;
+  --melio-gold-metallic: #d97706;
+  --melio-gold-bright: #ffd56a;
+  --melio-border-light: #ede5d8;
+  --melio-border-warm: #e8dac5;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-melio-paper-base: var(--melio-paper-base);
+  --color-melio-paper-warm: var(--melio-paper-warm);
+  --color-melio-paper-card: var(--melio-paper-card);
+  --color-melio-paper-cream: var(--melio-paper-cream);
+  --color-melio-charcoal: var(--melio-charcoal-deep);
+  --color-melio-crimson: var(--melio-crimson-heritage);
+  --color-melio-crimson-bright: var(--melio-crimson-bright);
+  --color-melio-gold: var(--melio-gold-metallic);
+  --color-melio-gold-bright: var(--melio-gold-bright);
+  --color-melio-border: var(--melio-border-light);
+  --color-melio-border-warm: var(--melio-border-warm);
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
 }
@@ -127,6 +152,11 @@ button, a, input, select, textarea {
   border: 1px solid #ede7de;
 }
 
+.paper-card-dark {
+  background-color: #1c1917;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
 .ink-border {
   border-color: #e5ddd0;
 }
@@ -143,6 +173,18 @@ button, a, input, select, textarea {
   z-index: 20;
 }
 
+.bookmark-ribbon-gold {
+  position: absolute;
+  top: -4px;
+  right: 18px;
+  width: 14px;
+  height: 38px;
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #fbbf24 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  z-index: 20;
+}
+
 .drop-cap::first-letter {
   float: left;
   font-family: serif;
@@ -153,6 +195,29 @@ button, a, input, select, textarea {
   padding-bottom: 2px;
   color: #7c2d12;
   font-weight: 900;
+}
+
+.gold-gradient-text {
+  background: linear-gradient(135deg, #ffd700 0%, #f59e0b 50%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.crimson-gradient-text {
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 50%, #881337 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer-effect {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
 }
 
 

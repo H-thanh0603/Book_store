@@ -126,7 +126,7 @@ export default function BackToSchoolPage() {
       <div className="bg-[#059669] text-white px-4 py-2 text-xs font-black shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-amber-300 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-amber-300 text-amber-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
               MÙA TỰU TRƯỜNG 2026
             </span>
             <span>🎒 Trọn bộ dụng cụ học tập, vở ô ly, bút Thiên Long &amp; Balo chống gù giảm đến 40%</span>
@@ -180,7 +180,7 @@ export default function BackToSchoolPage() {
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#064e3b] via-[#047857] to-[#0f766e] text-white p-8 sm:p-14 shadow-2xl">
           <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 bg-amber-400 text-slate-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-sm">
+            <div className="inline-flex items-center gap-2 bg-amber-400 text-amber-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-sm">
               <GraduationCap className="w-4 h-4" /> MÙA KHAI TRƯỜNG RỘN RÀNG
             </div>
             <h1 className="font-serif font-black text-3xl sm:text-5xl leading-tight">
@@ -193,7 +193,7 @@ export default function BackToSchoolPage() {
             <div className="pt-2 flex flex-wrap items-center gap-3">
               <a
                 href="#combo-checklist"
-                className="px-6 py-3.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm shadow-xl transition-all hover:scale-105"
+                className="px-6 py-3.5 rounded-full bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs sm:text-sm shadow-xl transition-all hover:scale-105"
               >
                 Xem danh sách trọn bộ dụng cụ
               </a>
@@ -251,7 +251,7 @@ export default function BackToSchoolPage() {
             </div>
             <button
               onClick={addChecklistToCart}
-              className="px-6 py-3.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm shadow-xl transition-all hover:scale-105 flex items-center justify-center gap-2"
+              className="px-6 py-3.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs sm:text-sm shadow-xl transition-all hover:scale-105 flex items-center justify-center gap-2"
             >
               <ShoppingBag className="w-4 h-4" /> Thêm Trọn Bộ Vào Giỏ Hàng
             </button>

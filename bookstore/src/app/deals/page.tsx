@@ -30,8 +30,8 @@ const CART_KEY = "melio.storefront.cart.v1";
 const voucherHub = [
   { code: "MELIODEAL50", title: "Giảm 50.000 ₫", condition: "Cho đơn mua sắm từ 500k", color: "from-rose-600 to-orange-500", badge: "HOT NHẤT" },
   { code: "FREESHIPMAX", title: "Miễn Phí Vận Chuyển", condition: "Toàn quốc không giới hạn số lượng", color: "from-emerald-600 to-teal-500", badge: "FREESHIP" },
-  { code: "BACK2SCHOOL", title: "Giảm 15% Dụng Cụ Học Tập", condition: "Áp dụng cho vở viết, bút Thiên Long", color: "from-blue-600 to-indigo-500", badge: "TỰU TRƯỜNG" },
-  { code: "TOYFEST20", title: "Giảm 20.000 ₫ Đồ Chơi", condition: "Đơn đồ chơi LEGO & Sanrio từ 250k", color: "from-purple-600 to-pink-500", badge: "ĐỒ CHƠI" },
+  { code: "BACK2SCHOOL", title: "Giảm 15% Dụng Cụ Học Tập", condition: "Áp dụng cho vở viết, bút Thiên Long", color: "from-amber-600 to-orange-500", badge: "TỰU TRƯỜNG" },
+  { code: "TOYFEST20", title: "Giảm 20.000 ₫ Đồ Chơi", condition: "Đơn đồ chơi LEGO & Sanrio từ 250k", color: "from-rose-600 to-amber-500", badge: "ĐỒ CHƠI" },
 ];
 
 function money(v: number) {
@@ -168,7 +168,7 @@ export default function DealsPage() {
             </div>
             <h1 className="font-black text-3xl sm:text-6xl leading-[1.08] tracking-tight">
               Giờ Vàng Săn Deal <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400">
+              <span className="text-amber-400 font-black">
                 Ưu Đãi Lên Tới 50%
               </span>
             </h1>
@@ -193,20 +193,21 @@ export default function DealsPage() {
         {/* 4. VOUCHER MATRIX */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-black text-white flex items-center gap-2">
-              <TicketPercent className="w-5 h-5 text-amber-400" /> Kho Mã Giảm Giá Độc Quyền
-            </h2>
-            <span className="text-xs text-slate-400">Bấm sao chép để tự động nhận ưu đãi</span>
+            <h3 className="font-black text-xl text-white flex items-center gap-2">
+              <TicketPercent className="w-5 h-5 text-rose-500" />
+              <span>Kho Mã Giảm Giá Đang Mở</span>
+            </h3>
+            <span className="text-xs text-slate-400">Tự động áp dụng tại giỏ hàng</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {voucherHub.map((v) => (
               <div
                 key={v.code}
-                className="rounded-3xl bg-slate-900 border border-white/10 p-5 flex flex-col justify-between space-y-3 hover:border-amber-400/60 transition-all shadow-lg group"
+                className="rounded-3xl bg-slate-900/80 border border-white/10 p-5 space-y-3 relative overflow-hidden shadow-lg hover:border-amber-400/50 transition-colors"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white px-2 py-0.5 rounded-full">
+                  <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-gradient-to-r ${v.color} text-white shadow-xs`}>
                     {v.badge}
                   </span>
                   <TicketPercent className="w-4 h-4 text-amber-400" />
@@ -221,7 +222,7 @@ export default function DealsPage() {
                   </span>
                   <button
                     onClick={() => copyVoucher(v.code)}
-                    className="px-3 py-1.5 rounded-xl bg-white hover:bg-amber-400 text-slate-950 font-black text-xs shadow transition-all hover:scale-105"
+                    className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs shadow transition-all hover:scale-105"
                   >
                     {copiedCode === v.code ? "Đã chép!" : "Lấy mã"}
                   </button>

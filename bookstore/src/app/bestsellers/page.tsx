@@ -39,8 +39,8 @@ type CartLine = { variantId: string; productId: string; name: string; category: 
 const CART_KEY = "melio.storefront.cart.v1";
 
 const rankBadges = [
-  { rank: 1, bg: "bg-amber-400 text-slate-950 ring-4 ring-amber-200", icon: Crown, label: "QUÁN QUÂN" },
-  { rank: 2, bg: "bg-slate-300 text-slate-950 ring-4 ring-slate-100", icon: Medal, label: "Á QUÂN" },
+  { rank: 1, bg: "bg-amber-400 text-amber-950 font-black ring-4 ring-amber-200", icon: Crown, label: "QUÁN QUÂN" },
+  { rank: 2, bg: "bg-slate-200 text-slate-900 font-black ring-4 ring-slate-100", icon: Medal, label: "Á QUÂN" },
   { rank: 3, bg: "bg-amber-700 text-white ring-4 ring-amber-900/20", icon: Award, label: "HẠNG 3" },
 ];
 
@@ -102,7 +102,7 @@ export default function BestsellersPage() {
       <div className="bg-[#1c1917] text-white px-4 py-2 text-xs font-bold shadow-xs border-b border-white/10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-amber-400 text-amber-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
               MELIO CHARTS 2026
             </span>
             <span>🏆 Bảng xếp hạng 100 tác phẩm &amp; ấn phẩm bán chạy nhất được cập nhật mỗi thứ Hai</span>
@@ -125,7 +125,7 @@ export default function BestsellersPage() {
                 <span className="font-serif font-black text-2xl text-slate-900 tracking-tight leading-none">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-amber-950 px-1.5 py-0.5 rounded">
                   Bestsellers
                 </span>
               </div>
@@ -159,7 +159,7 @@ export default function BestsellersPage() {
         <section className="rounded-3xl bg-gradient-to-r from-[#1c1917] via-[#2a221b] to-[#171412] text-white p-8 sm:p-14 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 bg-amber-400 text-slate-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 bg-amber-400 text-amber-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
               <Flame className="w-4 h-4" /> BẢNG XẾP HẠNG THỊNH HÀNH
             </div>
             <h1 className="font-serif font-black text-3xl sm:text-5xl leading-tight">
@@ -182,7 +182,7 @@ export default function BestsellersPage() {
                   onClick={() => setTimeframe(t.id as any)}
                   className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all ${
                     timeframe === t.id
-                      ? "bg-amber-400 text-slate-950 shadow-md font-black"
+                      ? "bg-amber-400 text-amber-950 shadow-md font-black"
                       : "bg-white/10 text-white hover:bg-white/20"
                   }`}
                 >

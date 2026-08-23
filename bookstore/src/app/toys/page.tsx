@@ -217,7 +217,7 @@ export default function ToysPage() {
                 <span className="font-black text-2xl text-slate-900 tracking-tight leading-none">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-full">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-amber-950 px-1.5 py-0.5 rounded-full">
                   Toys &amp; Play
                 </span>
               </div>
@@ -232,7 +232,7 @@ export default function ToysPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Tìm kiếm LEGO, Hello Kitty, Board Game..."
-              className="w-full bg-amber-50/60 border border-amber-200 rounded-2xl pl-10 pr-9 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full bg-white border border-amber-200 rounded-2xl pl-10 pr-9 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
 
@@ -272,7 +272,7 @@ export default function ToysPage() {
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#4c1d95] via-[#831843] to-[#9a3412] p-8 sm:p-12 text-white shadow-2xl">
           <div className="absolute -top-10 -right-10 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 bg-amber-400 text-slate-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-sm">
+            <div className="inline-flex items-center gap-2 bg-amber-400 text-amber-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-sm">
               <PartyPopper className="w-4 h-4" /> Lễ Hội Đồ Chơi Sáng Tạo 2026
             </div>
             <h1 className="font-serif font-black text-3xl sm:text-5xl leading-tight">
@@ -285,7 +285,7 @@ export default function ToysPage() {
             <div className="pt-2 flex flex-wrap items-center gap-3">
               <a
                 href="#toy-grid"
-                className="px-6 py-3.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm shadow-xl transition-all hover:scale-105"
+                className="px-6 py-3.5 rounded-full bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs sm:text-sm shadow-xl transition-all hover:scale-105"
               >
                 Khám phá ngay bộ sưu tập
               </a>
@@ -308,7 +308,7 @@ export default function ToysPage() {
                 className={`p-4 rounded-3xl border flex flex-col items-center text-center transition-all ${
                   isSelected
                     ? "bg-amber-500 text-white border-amber-600 shadow-md scale-105"
-                    : "bg-white hover:bg-amber-50 border-amber-100 text-slate-800 shadow-2xs"
+                    : "bg-white hover:bg-amber-50 border-amber-100 text-amber-950 shadow-2xs"
                 }`}
               >
                 <div className={`size-12 rounded-2xl flex items-center justify-center mb-2 ${isSelected ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700"}`}>
@@ -334,7 +334,7 @@ export default function ToysPage() {
                 className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
                   selectedAge === a.value
                     ? "bg-rose-500 text-white shadow-xs"
-                    : "bg-amber-50 hover:bg-amber-100 text-slate-700 border border-amber-200/60"
+                    : "bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-200/60"
                 }`}
               >
                 {a.label}
@@ -373,7 +373,7 @@ export default function ToysPage() {
                   <button
                     onClick={() => toggleWishlist(product.id)}
                     className={`absolute top-4 right-4 z-10 size-8 rounded-full flex items-center justify-center backdrop-blur-md shadow-xs ${
-                      isFav ? "bg-rose-500 text-white" : "bg-white text-slate-400 hover:text-rose-500"
+                      isFav ? "bg-rose-600 text-white" : "bg-white text-rose-950/60 hover:text-rose-600"
                     }`}
                   >
                     <Heart className={`w-4 h-4 ${isFav ? "fill-white" : ""}`} />

@@ -59,7 +59,7 @@ export default function TrackPage() {
       <div className="bg-[#0369a1] text-white px-4 py-2 text-xs font-bold shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-amber-300 text-slate-950 px-2 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-amber-300 text-amber-950 px-2 py-0.5 rounded-full text-[10px] uppercase font-black">
               MELIO EXPRESS
             </span>
             <span>📦 Hệ thống tra cứu vận đơn &amp; hành trình giao hàng thời gian thực</span>

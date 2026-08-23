@@ -35,6 +35,7 @@ import {
   Layers,
   LayoutGrid,
   Library,
+  List,
   Mail,
   MapPin,
   Medal,
@@ -117,7 +118,7 @@ const WISHLIST_KEY = "melio.storefront.wishlist.v1";
 const featuredCampaigns = [
   {
     tag: "ĐẠI TIỆC MÙA THU 2026",
-    tagColor: "bg-amber-400 text-slate-950",
+    tagColor: "bg-amber-400 text-amber-950",
     badge: "Kỳ Tuyển Tập Số 08",
     title: "Nơi Mỗi Trang Sách & Món Quà",
     highlight: "Là Một Cuộc Du Hành Kỳ Diệu",
@@ -131,7 +132,7 @@ const featuredCampaigns = [
   },
   {
     tag: "MÙA TỰU TRƯỜNG 2026",
-    tagColor: "bg-emerald-400 text-slate-950",
+    tagColor: "bg-emerald-400 text-emerald-950",
     badge: "Back To School",
     title: "Trọn Bộ Hành Trang Đến Trường",
     highlight: "Ưu Đãi Lên Đến 40%",
@@ -145,7 +146,7 @@ const featuredCampaigns = [
   },
   {
     tag: "THẾ GIỚI ĐỒ CHƠI & LIFESTYLE",
-    tagColor: "bg-rose-400 text-slate-950",
+    tagColor: "bg-rose-400 text-rose-950",
     badge: "LEGO & Sanrio 100%",
     title: "Vương Quốc Đồ Chơi Sáng Tạo",
     highlight: "Kích Hoạt Trí Tuệ Cho Trẻ Thơ",
@@ -167,6 +168,15 @@ const departments = [
   { id: "Mỹ thuật", name: "Họa Cụ Mỹ Thuật", icon: Palette, count: "450+ món" },
   { id: "Lifestyle", name: "Balo & Phụ Kiện", icon: Backpack, count: "320+ mẫu" },
   { id: "Quà tặng", name: "Quà Lưu Niệm", icon: Gift, count: "600+ bộ" },
+];
+
+const hotSearchKeywords = [
+  "Tôi Thấy Hoa Vàng Trên Cỏ Xanh",
+  "Dế Mèn Phiêu Lưu Ký",
+  "Harry Potter",
+  "Bút bi Thiên Long",
+  "LEGO Classic",
+  "Giấy Double A",
 ];
 
 const readingAtmospheres = [
@@ -299,6 +309,7 @@ export default function ShopPage() {
   const [storeId, setStoreId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [query, setQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
   const [activeDepartment, setActiveDepartment] = useState("all");
   const [activeMood, setActiveMood] = useState("rain");
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -325,7 +336,25 @@ export default function ShopPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [countdown, setCountdown] = useState({ hours: 4, minutes: 35, seconds: 12 });
 
+  // Advanced Sorting & View Modes
+  const [sortBy, setSortBy] = useState<"popular" | "price_asc" | "price_desc" | "name_asc" | "newest">("popular");
+  const [viewMode, setViewMode] = useState<"grid5" | "grid3" | "list">("grid5");
+  const [priceRange, setPriceRange] = useState<"all" | "under100" | "100to250" | "250to500" | "above500">("all");
+  const [onlyInStock, setOnlyInStock] = useState(false);
+
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const checkoutAttempt = useRef<{ signature: string; key: string } | null>(null);
+
+  // Close search dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setSearchFocused(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Load cart & wishlist from localStorage
   useEffect(() => {
@@ -414,22 +443,77 @@ export default function ShopPage() {
   const activeStore = catalog?.stores.find((store) => store.id === storeId);
   const allProducts = catalog?.products ?? [];
 
-  // Filter products by top department tabs
+  // Live autocomplete search matching products
+  const searchMatches = useMemo(() => {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase();
+    return allProducts.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.category.name.toLowerCase().includes(q) ||
+        p.brand?.name?.toLowerCase().includes(q) ||
+        p.author?.name?.toLowerCase().includes(q)
+    ).slice(0, 5);
+  }, [allProducts, query]);
+
+  // Filter and sort products for main catalog
   const filteredProducts = useMemo(() => {
-    if (activeDepartment === "all") return allProducts;
-    return allProducts.filter((p) =>
-      p.category.name.toLowerCase().includes(activeDepartment.toLowerCase())
-    );
-  }, [allProducts, activeDepartment]);
+    let list = [...allProducts];
+
+    // Department filter
+    if (activeDepartment !== "all") {
+      list = list.filter((p) =>
+        p.category.name.toLowerCase().includes(activeDepartment.toLowerCase())
+      );
+    }
+
+    // Price range filter
+    if (priceRange === "under100") {
+      list = list.filter((p) => (p.variants[0]?.price ?? 0) < 100000);
+    } else if (priceRange === "100to250") {
+      list = list.filter((p) => {
+        const price = p.variants[0]?.price ?? 0;
+        return price >= 100000 && price <= 250000;
+      });
+    } else if (priceRange === "250to500") {
+      list = list.filter((p) => {
+        const price = p.variants[0]?.price ?? 0;
+        return price >= 250000 && price <= 500000;
+      });
+    } else if (priceRange === "above500") {
+      list = list.filter((p) => (p.variants[0]?.price ?? 0) > 500000);
+    }
+
+    // Availability filter
+    if (onlyInStock) {
+      list = list.filter((p) => (p.variants[0]?.available ?? 0) > 0);
+    }
+
+    // Sorting
+    if (sortBy === "price_asc") {
+      list.sort((a, b) => (a.variants[0]?.price ?? 0) - (b.variants[0]?.price ?? 0));
+    } else if (sortBy === "price_desc") {
+      list.sort((a, b) => (b.variants[0]?.price ?? 0) - (a.variants[0]?.price ?? 0));
+    } else if (sortBy === "name_asc") {
+      list.sort((a, b) => a.name.localeCompare(b.name, "vi"));
+    } else if (sortBy === "newest") {
+      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    return list;
+  }, [allProducts, activeDepartment, priceRange, onlyInStock, sortBy]);
 
   // Filter products by mood lounge
   const moodFilteredProducts = useMemo(() => {
     const selectedObj = readingAtmospheres.find((m) => m.id === activeMood);
     if (!selectedObj) return allProducts.slice(0, 4);
-    return allProducts.filter((p) =>
-      p.category.name.toLowerCase().includes(selectedObj.filter) ||
-      p.name.toLowerCase().includes(selectedObj.filter)
-    ).slice(0, 4);
+    return allProducts
+      .filter(
+        (p) =>
+          p.category.name.toLowerCase().includes(selectedObj.filter) ||
+          p.name.toLowerCase().includes(selectedObj.filter)
+      )
+      .slice(0, 4);
   }, [allProducts, activeMood]);
 
   const spotlightProduct = allProducts[0] ?? null;
@@ -483,6 +567,33 @@ export default function ShopPage() {
       addToCart(firstProduct);
       showToast(`🎁 Đã thêm trọn gói "${bundle.title}" vào giỏ hàng!`);
     }
+  }
+
+  function addAllWishlistToCart() {
+    let addedCount = 0;
+    wishlist.forEach((id) => {
+      const prod = allProducts.find((p) => p.id === id);
+      if (prod && prod.variants[0]?.available > 0) {
+        addToCart(prod);
+        addedCount++;
+      }
+    });
+    if (addedCount > 0) {
+      showToast(`📚 Đã chuyển ${addedCount} sản phẩm từ tủ sách vào giỏ hàng!`);
+      setWishlistOpen(false);
+      setCartOpen(true);
+    } else {
+      showToast("Không có sản phẩm nào có sẵn để thêm vào giỏ");
+    }
+  }
+
+  function resetAllFilters() {
+    setCategoryId("");
+    setActiveDepartment("all");
+    setPriceRange("all");
+    setOnlyInStock(false);
+    setSortBy("popular");
+    setQuery("");
   }
 
   function changeQuantity(variantId: string, delta: number) {
@@ -551,6 +662,13 @@ export default function ShopPage() {
   const freeShippingThreshold = 250000;
   const progressToFreeShipping = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
   const activeHero = featuredCampaigns[currentSlide];
+  const hasActiveFilters =
+    Boolean(categoryId) ||
+    activeDepartment !== "all" ||
+    priceRange !== "all" ||
+    onlyInStock ||
+    sortBy !== "popular" ||
+    Boolean(query);
 
   return (
     <main className="min-h-screen bg-[#faf7f2] text-[#1c1917] pb-24 font-sans selection:bg-[#c83f49] selection:text-white">
@@ -606,22 +724,100 @@ export default function ShopPage() {
             </div>
           </Link>
 
-          {/* Mega Search Bar */}
-          <div className="relative flex-1 max-w-xl">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Tìm kiếm tác phẩm, bút Thiên Long, đồ chơi LEGO, ISBN..."
-              className="w-full bg-white border border-[#ede5d8] rounded-2xl pl-10 pr-9 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20 focus:border-[#8c2d19] transition-all shadow-2xs"
-            />
-            {query && (
-              <button
-                onClick={() => setQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 size-5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-xs"
-              >
-                <X className="w-3 h-3" />
-              </button>
+          {/* Mega Search Bar with Smart Autocomplete Dropdown */}
+          <div ref={searchContainerRef} className="relative flex-1 max-w-xl">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                value={query}
+                onFocus={() => setSearchFocused(true)}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Tìm kiếm tác phẩm, bút Thiên Long, đồ chơi LEGO, ISBN..."
+                className="w-full bg-white border border-[#ede5d8] rounded-2xl pl-10 pr-9 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20 focus:border-[#8c2d19] transition-all shadow-2xs"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 size-5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-xs"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Smart Autocomplete Dropdown */}
+            {searchFocused && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-[#ede5d8] p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
+                {query.trim() ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-[11px] font-serif font-bold text-slate-500 border-b border-[#ede5d8] pb-2">
+                      <span>Sản phẩm gợi ý cho &quot;{query}&quot;</span>
+                      <span>{searchMatches.length} kết quả</span>
+                    </div>
+
+                    {searchMatches.length > 0 ? (
+                      <div className="space-y-2">
+                        {searchMatches.map((p) => (
+                          <div
+                            key={p.id}
+                            onClick={() => {
+                              setQuickViewProduct(p);
+                              setSearchFocused(false);
+                            }}
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-[#faf6ef] transition-colors cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="size-10 rounded-lg bg-[#1c1917] text-white flex items-center justify-center text-[8px] font-serif p-1 text-center font-bold">
+                                {p.category.name.slice(0, 4)}
+                              </div>
+                              <div>
+                                <h5 className="font-serif font-bold text-xs text-slate-900 group-hover:text-[#8c2d19] line-clamp-1">
+                                  {p.name}
+                                </h5>
+                                <span className="text-[10px] text-slate-400 font-serif">
+                                  {p.author?.name ?? p.brand?.name ?? p.category.name}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <b className="font-serif text-xs font-black text-[#1c1917] block">
+                                {p.variants[0] ? money(p.variants[0].price) : "Liên hệ"}
+                              </b>
+                              <span className="text-[9px] text-[#14532d] font-bold">
+                                Còn {p.variants[0]?.available ?? 0}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-xs font-serif text-slate-400">
+                        Không tìm thấy sản phẩm khớp với từ khóa
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <span className="text-[11px] font-serif font-bold text-slate-400 uppercase tracking-wider block">
+                      🔥 Từ khóa tìm kiếm thịnh hành:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {hotSearchKeywords.map((kw, i) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setQuery(kw);
+                            setSearchFocused(false);
+                          }}
+                          className="px-3 py-1.5 rounded-full bg-[#faf7f2] hover:bg-[#ede5d8] text-xs font-serif text-slate-700 transition-colors border border-[#ede5d8]"
+                        >
+                          {kw}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -745,7 +941,7 @@ export default function ShopPage() {
 
               <h1 className="font-serif font-black text-3xl sm:text-6xl leading-[1.08] tracking-tight">
                 {activeHero.title} <br />
-                <span className={`text-transparent bg-clip-text bg-gradient-to-r ${activeHero.accent}`}>
+                <span className="text-amber-200 font-serif">
                   {activeHero.highlight}
                 </span>
               </h1>
@@ -857,7 +1053,7 @@ export default function ShopPage() {
                   <h2 className="font-serif font-black text-2xl text-white tracking-tight">
                     Giờ Vàng Săn Sách &amp; Đồ Chơi
                   </h2>
-                  <span className="bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
+                  <span className="bg-amber-400 text-amber-950 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
                     Flash Deals
                   </span>
                 </div>
@@ -1166,8 +1362,12 @@ export default function ShopPage() {
           </section>
         )}
 
-        {/* 10. FULL CATALOG & FACETED FILTERS */}
-        <section id="catalog" className="scroll-mt-24 rounded-3xl bg-white p-6 sm:p-10 paper-card shadow-xs space-y-6">
+        {/* 10. FULL CATALOG WITH FACETED FILTERS, SORTING & VIEW MODES */}
+        <section
+          id="catalog"
+          className="scroll-mt-24 rounded-3xl bg-white p-6 sm:p-10 paper-card shadow-xs space-y-6"
+        >
+          {/* Header & Title */}
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pb-5 border-b border-[#ede5d8]">
             <div>
               <p className="text-[11px] font-serif uppercase tracking-[0.2em] text-[#8c2d19] font-bold">
@@ -1183,19 +1383,75 @@ export default function ShopPage() {
                   : "Toàn Bộ Sản Phẩm Đang Mở Bán"}
               </h2>
               <p className="text-xs text-slate-500 font-serif mt-1">
-                Hiển thị {filteredProducts.length} sản phẩm sẵn sàng phục vụ tại <b>{activeStore?.name}</b>
+                Hiển thị {filteredProducts.length} sản phẩm sẵn sàng phục vụ tại{" "}
+                <b>{activeStore?.name}</b>
               </p>
             </div>
 
-            {/* Category Filter Chips */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-xl">
+            {/* View Mode & Sort Controls */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Sort selector */}
+              <div className="flex items-center gap-1.5 bg-[#faf7f2] px-3 py-1.5 rounded-2xl border border-[#ede5d8] text-xs font-serif">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[#8c2d19]" />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="bg-transparent text-slate-800 font-semibold outline-none cursor-pointer text-xs"
+                >
+                  <option value="popular">Phổ biến &amp; Nổi bật</option>
+                  <option value="price_asc">Giá: Thấp đến Cao</option>
+                  <option value="price_desc">Giá: Cao đến Thấp</option>
+                  <option value="name_asc">Tên: A - Z</option>
+                  <option value="newest">Mới nhất 2026</option>
+                </select>
+              </div>
+
+              {/* View mode toggle */}
+              <div className="flex items-center bg-[#faf7f2] p-1 rounded-2xl border border-[#ede5d8]">
+                <button
+                  onClick={() => setViewMode("grid5")}
+                  className={`p-1.5 rounded-xl transition-all ${
+                    viewMode === "grid5" ? "bg-white text-[#8c2d19] shadow-xs" : "text-slate-500"
+                  }`}
+                  title="Lưới tiêu chuẩn 5 cột"
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode("grid3")}
+                  className={`p-1.5 rounded-xl transition-all ${
+                    viewMode === "grid3" ? "bg-white text-[#8c2d19] shadow-xs" : "text-slate-500"
+                  }`}
+                  title="Lưới lớn 3 cột"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-1.5 rounded-xl transition-all ${
+                    viewMode === "list" ? "bg-white text-[#8c2d19] shadow-xs" : "text-slate-500"
+                  }`}
+                  title="Danh sách chi tiết"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Secondary Filter Chips: Categories, Price Range, In-stock Toggle */}
+          <div className="space-y-3">
+            {/* Categories */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
               <button
                 onClick={() => {
                   setCategoryId("");
                   setActiveDepartment("all");
                 }}
                 className={`px-4 py-1.5 rounded-full text-xs font-serif font-bold transition-all shrink-0 ${
-                  !categoryId && activeDepartment === "all" ? "bg-[#1c1917] text-white shadow-xs" : "bg-[#faf7f2] hover:bg-[#ede5d8] text-slate-700 border border-[#ede5d8]"
+                  !categoryId && activeDepartment === "all"
+                    ? "bg-[#1c1917] text-white shadow-xs"
+                    : "bg-[#faf7f2] hover:bg-[#ede5d8] text-slate-700 border border-[#ede5d8]"
                 }`}
               >
                 Tất cả ({allProducts.length})
@@ -1214,6 +1470,53 @@ export default function ShopPage() {
                 </button>
               ))}
             </div>
+
+            {/* Price & Stock quick filter bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#ede5d8] text-xs font-serif">
+              <div className="flex items-center gap-1.5 overflow-x-auto">
+                <span className="text-slate-500 font-bold">Mức giá:</span>
+                {[
+                  { id: "all", label: "Tất cả" },
+                  { id: "under100", label: "< 100k" },
+                  { id: "100to250", label: "100k - 250k" },
+                  { id: "250to500", label: "250k - 500k" },
+                  { id: "above500", label: "> 500k" },
+                ].map((pr) => (
+                  <button
+                    key={pr.id}
+                    onClick={() => setPriceRange(pr.id as any)}
+                    className={`px-3 py-1 rounded-xl transition-all ${
+                      priceRange === pr.id
+                        ? "bg-[#8c2d19] text-white font-bold"
+                        : "bg-[#faf7f2] text-slate-700 hover:bg-[#ede5d8]"
+                    }`}
+                  >
+                    {pr.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer text-slate-700 select-none">
+                  <input
+                    type="checkbox"
+                    checked={onlyInStock}
+                    onChange={(e) => setOnlyInStock(e.target.checked)}
+                    className="size-4 rounded accent-[#8c2d19]"
+                  />
+                  <span>Chỉ hiện sản phẩm sẵn hàng</span>
+                </label>
+
+                {hasActiveFilters && (
+                  <button
+                    onClick={resetAllFilters}
+                    className="text-[#8c2d19] hover:underline flex items-center gap-1 font-bold"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Xóa bộ lọc
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           {error && (
@@ -1226,11 +1529,142 @@ export default function ShopPage() {
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 py-6">
               {Array.from({ length: 10 }).map((_, index) => (
-                <div key={index} className="h-80 rounded-3xl bg-[#faf7f2] animate-pulse border border-[#ede5d8]" />
+                <div
+                  key={index}
+                  className="h-80 rounded-3xl bg-[#faf7f2] animate-pulse border border-[#ede5d8]"
+                />
               ))}
             </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="py-16 text-center space-y-3 font-serif">
+              <BookOpen className="w-12 h-12 mx-auto text-slate-300" />
+              <h3 className="text-base font-bold text-slate-800">
+                Không tìm thấy sản phẩm phù hợp với bộ lọc
+              </h3>
+              <p className="text-xs text-slate-500">
+                Hãy thử chọn lại mức giá hoặc danh mục khác để tìm kiếm nhé.
+              </p>
+              <button
+                onClick={resetAllFilters}
+                className="px-4 py-2 rounded-xl bg-[#1c1917] text-white text-xs font-bold"
+              >
+                Đặt lại bộ lọc
+              </button>
+            </div>
+          ) : viewMode === "list" ? (
+            /* LIST VIEW MODE */
+            <div className="space-y-4">
+              {filteredProducts.map((product) => {
+                const variant = product.variants[0];
+                const isAvailable = variant && variant.available > 0;
+                const isFav = wishlist.includes(product.id);
+
+                return (
+                  <article
+                    key={product.id}
+                    className="p-5 rounded-3xl bg-white border border-[#ede5d8] shadow-2xs hover:shadow-lg transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-6 group"
+                  >
+                    <div className="flex items-start sm:items-center gap-4">
+                      {/* Cover preview */}
+                      <div
+                        onClick={() => setQuickViewProduct(product)}
+                        className="size-24 rounded-2xl bg-gradient-to-tr from-[#1c1917] via-[#2d2521] to-[#171412] text-white p-3 flex flex-col justify-between shrink-0 cursor-pointer shadow-md relative overflow-hidden"
+                      >
+                        <div className="bookmark-ribbon" />
+                        <span className="text-[8px] font-mono text-amber-300 uppercase">
+                          {product.category.name}
+                        </span>
+                        <h4 className="font-serif font-bold text-xs line-clamp-2 text-white">
+                          {product.name}
+                        </h4>
+                      </div>
+
+                      {/* Details */}
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-serif uppercase tracking-widest text-[#8c2d19] font-bold">
+                            {product.brand?.name ?? product.category.name}
+                          </span>
+                          <span className="text-slate-400 font-mono text-[9px]">
+                            {isAvailable ? `Còn ${variant.available} sp` : "Tạm hết"}
+                          </span>
+                        </div>
+
+                        <h3
+                          onClick={() => setQuickViewProduct(product)}
+                          className="font-serif font-black text-base sm:text-lg text-slate-900 line-clamp-1 cursor-pointer group-hover:text-[#8c2d19] transition-colors"
+                        >
+                          {product.name}
+                        </h3>
+
+                        <p className="text-xs text-slate-500 font-serif italic line-clamp-1">
+                          ✍️{" "}
+                          {product.author?.name ??
+                            product.brand?.name ??
+                            product.publisher?.name ??
+                            "Melio"}
+                        </p>
+
+                        <div className="flex items-center gap-3 pt-1 text-xs">
+                          <button
+                            onClick={() => setShelfProduct(product)}
+                            className="text-slate-500 hover:text-slate-900 flex items-center gap-1 font-serif"
+                          >
+                            📍 Kệ sách
+                          </button>
+                          <button
+                            onClick={() => setFlipbookProduct(product)}
+                            className="text-[#8c2d19] hover:underline flex items-center gap-1 font-serif"
+                          >
+                            📖 Đọc thử
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between sm:justify-end gap-6 pt-3 sm:pt-0 border-t sm:border-t-0 border-[#ede5d8]">
+                      <div className="text-left sm:text-right">
+                        <b className="text-lg font-serif font-black text-[#1c1917] block">
+                          {variant ? money(variant.price) : "Liên hệ"}
+                        </b>
+                        <span className="text-[10px] text-slate-400">Giá niêm yết</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleFavorite(product.id)}
+                          className={`size-10 rounded-2xl flex items-center justify-center transition-all ${
+                            isFav
+                              ? "bg-[#8c2d19] text-white"
+                              : "bg-[#faf7f2] hover:bg-[#ede5d8] text-slate-600"
+                          }`}
+                          title="Lưu vào tủ sách"
+                        >
+                          <Heart className={`w-4 h-4 ${isFav ? "fill-white" : ""}`} />
+                        </button>
+
+                        <button
+                          onClick={() => addToCart(product)}
+                          disabled={!isAvailable}
+                          className="px-5 py-3 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] disabled:bg-slate-200 text-white font-serif font-bold text-xs shadow-md transition-all flex items-center gap-2"
+                        >
+                          <ShoppingBag className="w-4 h-4" /> Thêm vào giỏ
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            /* GRID VIEW MODE (5 or 3 cols) */
+            <div
+              className={`grid gap-4 ${
+                viewMode === "grid3"
+                  ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+                  : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
+              }`}
+            >
               {filteredProducts.map((product) => {
                 const variant = product.variants[0];
                 const isAvailable = variant && variant.available > 0;
@@ -1263,6 +1697,7 @@ export default function ShopPage() {
                       onClick={() => setQuickViewProduct(product)}
                       className="relative aspect-[4/5] rounded-2xl overflow-hidden cursor-pointer bg-gradient-to-tr from-[#1c1917] via-[#2d2521] to-[#171412] p-4 text-white flex flex-col justify-between shadow-md border border-white/10"
                     >
+                      <div className="bookmark-ribbon" />
                       <div className="relative z-10 flex items-center justify-between border-b border-white/15 pb-1.5">
                         <span className="font-serif uppercase tracking-[0.2em] text-[9px] font-bold text-amber-300">
                           {product.category.name}
@@ -1277,7 +1712,11 @@ export default function ShopPage() {
                       </div>
 
                       <div className="relative z-10 pt-2 border-t border-white/15 text-[10px] font-serif italic text-white/70 line-clamp-1">
-                        ✍️ {product.author?.name ?? product.brand?.name ?? product.publisher?.name ?? "Melio Books"}
+                        ✍️{" "}
+                        {product.author?.name ??
+                          product.brand?.name ??
+                          product.publisher?.name ??
+                          "Melio Books"}
                       </div>
                     </div>
 
@@ -1405,7 +1844,7 @@ export default function ShopPage() {
                 </div>
                 <button
                   onClick={() => applyVoucherCode(v.code)}
-                  className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs shadow-md transition-all hover:scale-105 shrink-0"
+                  className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs shadow-md transition-all hover:scale-105 shrink-0"
                 >
                   Sao chép
                 </button>
@@ -1568,11 +2007,15 @@ export default function ShopPage() {
           onMouseDown={() => setQuickViewProduct(null)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="quickview-title"
             className="w-full max-w-3xl bg-[#fbf9f5] rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#ede5d8] relative max-h-[90vh] overflow-y-auto space-y-6 animate-in zoom-in-95 duration-200"
             onMouseDown={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setQuickViewProduct(null)}
+              aria-label="Đóng xem nhanh tác phẩm"
               className="absolute top-5 right-5 size-9 rounded-full bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center transition-colors shadow-xs"
             >
               <X className="w-4 h-4" />
@@ -1601,7 +2044,7 @@ export default function ShopPage() {
                   <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase tracking-widest bg-[#faf4ea] text-[#8c2d19] border border-[#e8dac5] font-bold">
                     {quickViewProduct.category.name}
                   </span>
-                  <h3 className="font-black text-2xl text-slate-900 leading-tight mt-2">
+                  <h3 id="quickview-title" className="font-black text-2xl text-slate-900 leading-tight mt-2">
                     {quickViewProduct.name}
                   </h3>
                   <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 italic">
@@ -1748,10 +2191,18 @@ export default function ShopPage() {
               )}
             </div>
 
-            <div className="p-5 border-t border-[#ede5d8] bg-white">
+            <div className="p-5 border-t border-[#ede5d8] bg-white space-y-2">
+              {wishlist.length > 0 && (
+                <button
+                  onClick={addAllWishlistToCart}
+                  className="w-full py-3 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.01]"
+                >
+                  <ShoppingBag className="w-4 h-4" /> Chuyển Tất Cả Vào Giỏ Hàng
+                </button>
+              )}
               <button
                 onClick={() => setWishlistOpen(false)}
-                className="w-full py-3 rounded-2xl bg-[#faf7f2] hover:bg-[#ede5d8] text-slate-800 font-bold text-xs"
+                className="w-full py-2.5 rounded-2xl bg-[#faf7f2] hover:bg-[#ede5d8] text-slate-800 font-bold text-xs"
               >
                 Đóng danh sách
               </button>
@@ -1902,6 +2353,9 @@ export default function ShopPage() {
       {checkoutOpen && (
         <div className="fixed inset-0 z-50 bg-[#1c1917]/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="checkout-modal-title"
             className="w-full max-w-xl bg-[#fbf9f5] rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#ede5d8] my-8 space-y-5 animate-in zoom-in-95 duration-200 font-serif"
             onMouseDown={(e) => e.stopPropagation()}
           >
@@ -1910,12 +2364,13 @@ export default function ShopPage() {
                 <span className="text-[10px] uppercase tracking-widest text-[#8c2d19] bg-[#faf4ea] px-2.5 py-0.5 rounded font-bold border border-[#e8dac5]">
                   Thanh Toán Khi Nhận Hàng (COD)
                 </span>
-                <h3 className="font-black text-2xl sm:text-3xl text-slate-900 mt-1">
+                <h3 id="checkout-modal-title" className="font-black text-2xl sm:text-3xl text-slate-900 mt-1">
                   Thông Tin Giao Nhận
                 </h3>
               </div>
               <button
                 onClick={() => setCheckoutOpen(false)}
+                aria-label="Đóng cửa sổ thanh toán"
                 className="size-9 rounded-full bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center border border-[#ede5d8]"
               >
                 <X className="w-4 h-4" />
@@ -1967,10 +2422,12 @@ export default function ShopPage() {
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label htmlFor="customer-name" className="block text-xs font-bold text-slate-700 mb-1">
                     Họ và tên người nhận *
                   </label>
                   <input
+                    id="customer-name"
+                    required
                     value={customer.name}
                     onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
                     placeholder="VD: Nguyễn Văn A"
@@ -1978,11 +2435,14 @@ export default function ShopPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label htmlFor="customer-phone" className="block text-xs font-bold text-slate-700 mb-1">
                     Số điện thoại nhận hàng *
                   </label>
                   <input
+                    id="customer-phone"
                     type="tel"
+                    required
+                    pattern="[0-9+ ]{9,15}"
                     value={customer.phone}
                     onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
                     placeholder="VD: 0901234567"
@@ -1992,10 +2452,11 @@ export default function ShopPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label htmlFor="customer-email" className="block text-xs font-bold text-slate-700 mb-1">
                   Email nhận hoá đơn điện tử
                 </label>
                 <input
+                  id="customer-email"
                   type="email"
                   value={customer.email}
                   onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
@@ -2006,11 +2467,13 @@ export default function ShopPage() {
 
               {fulfillment === "delivery" && (
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label htmlFor="customer-address" className="block text-xs font-bold text-slate-700 mb-1">
                     Địa chỉ giao hàng chi tiết *
                   </label>
                   <textarea
+                    id="customer-address"
                     rows={2}
+                    required
                     value={customer.address}
                     onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
                     placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
@@ -2048,22 +2511,29 @@ export default function ShopPage() {
                 </div>
 
                 {giftWrapping !== "none" && (
-                  <input
-                    value={giftMessage}
-                    onChange={(e) => setGiftMessage(e.target.value)}
-                    placeholder="Lời nhắn viết thiệp gửi tặng người nhận..."
-                    className="w-full bg-white border border-[#ede5d8] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 mt-2"
-                  />
+                  <div>
+                    <label htmlFor="customer-gift-msg" className="sr-only">
+                      Lời nhắn viết thiệp
+                    </label>
+                    <input
+                      id="customer-gift-msg"
+                      value={giftMessage}
+                      onChange={(e) => setGiftMessage(e.target.value)}
+                      placeholder="Lời nhắn viết thiệp gửi tặng người nhận..."
+                      className="w-full bg-white border border-[#ede5d8] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 mt-2"
+                    />
+                  </div>
                 )}
               </div>
 
               {/* Coupon Code Input */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label htmlFor="checkout-coupon-code" className="block text-xs font-bold text-slate-700 mb-1">
                   Mã giảm giá / Voucher ưu đãi (nếu có)
                 </label>
                 <div className="flex gap-2">
                   <input
+                    id="checkout-coupon-code"
                     value={couponInput}
                     onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                     placeholder="Nhập mã: MELIOVIP, FREESHIP..."
@@ -2150,12 +2620,20 @@ export default function ShopPage() {
               </p>
             </div>
 
-            <button
-              onClick={() => setSuccess(null)}
-              className="w-full py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.01]"
-            >
-              Tiếp Tục Thưởng Thức Sách
-            </button>
+            <div className="flex flex-col gap-2 pt-2">
+              <Link
+                href={`/track?q=${encodeURIComponent(success.number)}`}
+                className="w-full py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2"
+              >
+                <Truck className="w-4 h-4 text-amber-300" /> Theo Dõi Hành Trình Đơn Hàng
+              </Link>
+              <button
+                onClick={() => setSuccess(null)}
+                className="w-full py-2.5 rounded-2xl bg-[#faf7f2] hover:bg-[#ede5d8] text-slate-800 font-bold text-xs"
+              >
+                Tiếp Tục Mua Sắm
+              </button>
+            </div>
           </div>
         </div>
       )}

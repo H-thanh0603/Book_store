@@ -83,7 +83,7 @@ export default function StoresPage() {
       <div className="bg-[#18253f] text-white px-4 py-2 text-xs font-bold shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-amber-400 text-amber-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
               HỆ THỐNG SIÊU THỊ
             </span>
             <span>🏛️ Chuỗi không gian văn hóa đọc &amp; Workshop giao lưu tác giả cuối tuần</span>
@@ -132,7 +132,7 @@ export default function StoresPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-10">
         <section className="rounded-3xl bg-gradient-to-r from-[#18253f] via-[#1f3052] to-[#121b2d] text-white p-8 sm:p-14 shadow-2xl relative overflow-hidden">
           <div className="relative z-10 max-w-2xl space-y-4">
-            <span className="inline-flex items-center gap-1.5 bg-amber-400 text-slate-950 px-3 py-1 rounded-full text-xs font-black uppercase">
+            <span className="inline-flex items-center gap-1.5 bg-amber-400 text-amber-950 px-3 py-1 rounded-full text-xs font-black uppercase">
               <MapPin className="w-4 h-4" /> ĐIỂM HẸN VĂN HÓA ĐỌC
             </span>
             <h1 className="font-serif font-black text-3xl sm:text-5xl leading-tight">
