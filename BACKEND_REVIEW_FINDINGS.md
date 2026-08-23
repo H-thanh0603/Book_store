@@ -73,6 +73,9 @@
 
 ## 5. Lộ trình đề xuất
 
+> **TRẠNG THÁI: HOÀN THÀNH TOÀN BỘ** — P0 (`ce34f66`), P1 (`ab6f322`), P2 (`9802738`).
+> Mỗi nhóm đều có xác minh tích hợp trên database riêng + quality gates (tsc / eslint --max-warnings=0 / build / 3 bộ test).
+
 **P0 — chặn trước khi mở production (1–2 ngày)**
 1. Sửa H1 track endpoint (khớp chính xác number+phone, chỉ trả trạng thái, rate-limit).
 2. Sửa H2 orders scope + H5 promo claim + H4 pay claim + H3 replenishment claim (cùng một pattern, nhanh).
