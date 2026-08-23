@@ -60,9 +60,13 @@ export async function GET(req: NextRequest) {
         where: { onHand: { gt: 0 }, location: locationWhere, variantId },
         include: { variant: { select: { sku: true, product: { select: { name: true } } } }, location: { select: { name: true } } },
       });
+      // Bound the groupBy to a lookback window — anything older reports as
+      // "no movement in window" instead of forcing a full-ledger scan.
+      const lookbackDays = Math.min(Math.max(Number(sp.get("days")) || 180, 30), 365);
+      const windowStart = new Date(Date.now() - lookbackDays * 86_400_000);
       const lastMoves = await prisma.inventoryMovement.groupBy({
         by: ["variantId", "locationId"],
-        where: { quantity: { lt: 0 } },
+        where: { quantity: { lt: 0 }, createdAt: { gte: windowStart } },
         _max: { createdAt: true },
       });
       const lastMap = new Map(lastMoves.map((m) => [`${m.variantId}:${m.locationId}`, m._max.createdAt]));

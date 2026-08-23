@@ -1,12 +1,13 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { createSession, destroySession, verifyPassword } from "@/lib/auth";
+import { createSession, destroySession, getAuth, hashPassword, revokeOtherSessions, verifyPassword } from "@/lib/auth";
 import { apiError, ok, fail } from "@/lib/api";
 import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
-    const { action, email, password } = await req.json();
+    const body = await req.json();
+    const { action, email, password } = body;
 
     if (action === "login") {
       if (typeof email !== "string" || typeof password !== "string" || !email || !password)
@@ -24,6 +25,30 @@ export async function POST(req: NextRequest) {
     }
     if (action === "logout") {
       await destroySession();
+      return ok({ ok: true });
+    }
+    if (action === "change_password") {
+      const auth = await getAuth();
+      if (!auth) fail(401, "BAD_REQUEST", "Authentication required");
+      const currentPassword = typeof body.currentPassword === "string" ? body.currentPassword : "";
+      const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
+      // Brute-force guard: same tight limit as login.
+      await enforceRateLimit("login-ip", clientIp(req.headers), 20, 60_000);
+      if (!currentPassword || !newPassword)
+        fail(400, "VALIDATION", "currentPassword and newPassword required");
+      if (newPassword.length < 10) fail(400, "VALIDATION", "newPassword must be at least 10 characters");
+      const user = await prisma.user.findUniqueOrThrow({ where: { id: auth.userId } });
+      if (!verifyPassword(currentPassword, user.passwordHash))
+        fail(401, "BAD_REQUEST", "Current password is incorrect");
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: hashPassword(newPassword) },
+      });
+      // Session rotation: every other device/session dies immediately.
+      await revokeOtherSessions(user.id);
+      await prisma.auditLog.create({
+        data: { actorId: user.id, action: "user.change_password", entity: "User", entityId: user.id },
+      });
       return ok({ ok: true });
     }
     fail(400, "VALIDATION", "Unknown action");

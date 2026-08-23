@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { getSystemConfig } from "./api";
+import { Prisma } from "../generated/prisma/client";
 
 type AlertInput = {
   rule: string;
@@ -26,13 +27,27 @@ export async function scanLossPrevention() {
     getSystemConfig("loss.maxStockLoss", 10),
   ]);
   const since = new Date(Date.now() - 30 * 86_400_000);
-  const [returns, transactions, shifts, losses, cancelledPaid] = await Promise.all([
+
+  // Discount offenders are filtered inside PostgreSQL (discount/subtotal ratio)
+  // instead of streaming every transaction through Node memory.
+  const discountOffenders = await prisma.$queryRaw<
+    { id: string; number: string; percent: number }[]
+  >(Prisma.sql`
+    SELECT id, number,
+           ROUND("discountTotal" * 100.0 / subtotal)::int AS percent
+    FROM "PosTransaction"
+    WHERE "subtotal" > 0
+      AND "discountTotal" * 100 >= subtotal * ${maxDiscountPercent}
+      AND "createdAt" >= ${since}
+    LIMIT 200
+  `);
+
+  const [returns, shifts, losses, cancelledPaid] = await Promise.all([
     prisma.return.findMany({ where: { refundTotal: { gte: BigInt(maxRefund) }, createdAt: { gte: since } } }),
-    prisma.posTransaction.findMany({ where: { subtotal: { gt: 0n }, createdAt: { gte: since } } }),
     prisma.posShift.findMany({ where: { status: "CLOSED", closedAt: { gte: since }, variance: { not: null } } }),
     prisma.inventoryMovement.findMany({
       where: { type: { in: ["LOST", "STOCK_ADJUSTMENT"] }, quantity: { lt: 0 }, createdAt: { gte: since } },
-      include: { variant: true, location: true },
+      include: { variant: { select: { sku: true } }, location: { select: { name: true } } },
     }),
     prisma.posTransaction.findMany({ where: { status: "CANCELLED", createdAt: { gte: since }, payments: { some: {} } }, include: { payments: true } }),
   ]);
@@ -42,13 +57,10 @@ export async function scanLossPrevention() {
     rule: "LARGE_REFUND", severity: "HIGH", entityType: "Return", entityId: ret.id,
     message: `Refund ${ret.number} exceeds review threshold`, evidence: { amount: Number(ret.refundTotal), threshold: maxRefund },
   }));
-  for (const transaction of transactions) {
-    const percent = Number(transaction.discountTotal * 100n / transaction.subtotal);
-    if (percent >= maxDiscountPercent) alerts.push(recordAlert({
-      rule: "EXCESSIVE_DISCOUNT", severity: "HIGH", entityType: "PosTransaction", entityId: transaction.id,
-      message: `Transaction ${transaction.number} has ${percent}% discount`, evidence: { percent, threshold: maxDiscountPercent },
-    }));
-  }
+  for (const row of discountOffenders) alerts.push(recordAlert({
+    rule: "EXCESSIVE_DISCOUNT", severity: "HIGH", entityType: "PosTransaction", entityId: row.id,
+    message: `Transaction ${row.number} has ${row.percent}% discount`, evidence: { percent: row.percent, threshold: maxDiscountPercent },
+  }));
   for (const shift of shifts) {
     const variance = Number(shift.variance ?? 0n);
     if (Math.abs(variance) >= maxCashVariance) alerts.push(recordAlert({

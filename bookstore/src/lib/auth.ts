@@ -42,6 +42,17 @@ export async function destroySession() {
   jar.delete(SESSION_COOKIE);
 }
 
+/** Kill every OTHER session of a user (password change / compromise response);
+ *  the caller's own session stays valid. */
+export async function revokeOtherSessions(userId: string) {
+  const jar = await cookies();
+  const token = jar.get(SESSION_COOKIE)?.value;
+  const currentHash = token ? hashSessionToken(token) : null;
+  await prisma.session.deleteMany({
+    where: { userId, ...(currentHash ? { token: { not: currentHash } } : {}) },
+  });
+}
+
 export type AuthContext = {
   userId: string;
   email: string;

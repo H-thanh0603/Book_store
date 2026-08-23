@@ -203,29 +203,8 @@ const blogArticles = [
   },
 ];
 
-const customerReviews = [
-  {
-    name: "Thùy Linh",
-    role: "Giáo viên Tiểu học (TP.HCM)",
-    avatar: "👩‍🏫",
-    text: "Bộ dụng cụ học tập Thiên Long và vở ô ly giao siêu nhanh, bọc quà vintage rất đẹp và chỉn chu. Mình rất ưng ý!",
-    book: "Combo Vở Ô Ly & Bút Bi Thiên Long",
-  },
-  {
-    name: "Quốc Bảo",
-    role: "Kỹ sư phần mềm (Hà Nội)",
-    avatar: "👨‍💻",
-    text: "Ấn bản bìa cứng có bookmark dập kim rất sang. Tìm kiếm vị trí kệ sách tại chi nhánh Đinh Lễ cực kỳ tiện lợi.",
-    book: "Harry Potter và Hòn Đá Phù Thủy",
-  },
-  {
-    name: "Hải Yến",
-    role: "Phụ huynh (Đà Nẵng)",
-    avatar: "👩‍👧",
-    text: "Bé nhà mình mê tít bộ xếp hình LEGO và gấu bông Hello Kitty. Hàng chính hãng chuẩn an toàn nên mình rất yên tâm.",
-    book: "LEGO Classic Creative Bricks",
-  },
-];
+// (removed) customerReviews — hardcoded fabricated testimonials deleted (P2:
+// no fake social proof). Reintroduce only with a real reviews table behind it.
 
 function money(value: number) {
   return `${value.toLocaleString("vi-VN")} ₫`;
@@ -250,8 +229,6 @@ export default function ShopPage() {
   const [flipbookProduct, setFlipbookProduct] = useState<Product | null>(null);
   const [giftWrapping, setGiftWrapping] = useState<"none" | "vintage" | "heritage">("none");
   const [giftMessage, setGiftMessage] = useState("");
-  const [newsletterEmail, setNewsletterEmail] = useState("");
-  const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -261,7 +238,8 @@ export default function ShopPage() {
   const [customer, setCustomer] = useState({ name: "", phone: "", email: "", address: "" });
   const [copiedOrder, setCopiedOrder] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState({ hours: 4, minutes: 35, seconds: 12 });
+  // Countdown to the real end of today (store timezone) — no fabricated loop.
+  const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
 
   // Advanced Sorting & View Modes
   const [sortBy, setSortBy] = useState<"popular" | "price_asc" | "price_desc" | "name_asc" | "newest">("popular");
@@ -308,16 +286,27 @@ export default function ShopPage() {
     localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
   }, [wishlist]);
 
-  // Flash sale countdown timer
+  // Countdown to midnight in the store's timezone — a real deadline, not a loop.
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
-        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        return { hours: 6, minutes: 0, seconds: 0 };
+    function secondsUntilMidnight(): number {
+      const now = new Date();
+      const fmt = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Ho_Chi_Minh", hour12: false,
+        hour: "2-digit", minute: "2-digit", second: "2-digit",
       });
-    }, 1000);
+      const get = (type: string) => Number(fmt.formatToParts(now).find((p) => p.type === type)?.value ?? 0);
+      return 86_400 - ((get("hour") % 24) * 3600 + get("minute") * 60 + get("second"));
+    }
+    function tick() {
+      const total = secondsUntilMidnight();
+      setCountdown({
+        hours: Math.floor(total / 3600),
+        minutes: Math.floor((total % 3600) / 60),
+        seconds: total % 60,
+      });
+    }
+    tick();
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -1015,11 +1004,8 @@ export default function ShopPage() {
 
           {/* Flash Deals Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {allProducts.slice(0, 5).map((product, idx) => {
+            {allProducts.slice(0, 5).map((product) => {
               const variant = product.variants[0];
-              const discountPcts = [35, 25, 40, 30, 20];
-              const discount = discountPcts[idx % discountPcts.length];
-              const fakeSold = (idx * 4 + 11) % 25 + 2;
 
               return (
                 <div
@@ -1028,7 +1014,7 @@ export default function ShopPage() {
                 >
                   <div className="relative aspect-square rounded-2xl bg-black/40 p-4 flex flex-col items-center justify-center text-center">
                     <span className="absolute top-2 left-2 bg-[#c83f49] text-white font-black text-[10px] px-2 py-0.5 rounded-full shadow-md">
-                      -{discount}%
+                      Deal hôm nay
                     </span>
                     <Sparkles className="w-8 h-8 text-amber-300 group-hover:scale-110 transition-transform" />
                     <span className="mt-2 text-[10px] font-serif font-bold text-slate-300 uppercase tracking-wider">
@@ -1045,24 +1031,12 @@ export default function ShopPage() {
                         <b className="font-serif text-base font-black text-amber-400">
                           {variant ? money(variant.price) : "Liên hệ"}
                         </b>
-                        <small className="text-[10px] text-slate-500 line-through">
-                          {variant ? money(Math.round(variant.price * 1.35)) : ""}
-                        </small>
                       </div>
                     </div>
 
-                    {/* Sold progress */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-[10px] text-slate-400 font-serif font-semibold">
-                        <span>Đã bán {fakeSold}/30 cuốn</span>
-                        <span className="text-amber-300 font-bold">Cháy hàng</span>
-                      </div>
-                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div
-                          className="bg-gradient-to-r from-amber-400 to-rose-500 h-full rounded-full"
-                          style={{ width: `${(fakeSold / 30) * 100}%` }}
-                        />
-                      </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 font-serif font-semibold">
+                      <span>{variant?.available ? "Còn hàng" : "Tạm hết"}</span>
+                      <span className="text-amber-300 font-bold">Kết thúc 24:00 hôm nay</span>
                     </div>
 
                     <button
@@ -1797,87 +1771,17 @@ export default function ShopPage() {
               BẢN TIN VĂN HÓA ĐỌC
             </span>
             <h2 className="font-serif font-black text-2xl sm:text-3xl text-slate-900">
-              Nhận Tuyển Tập Sách Mới &amp; Voucher 20.000 ₫
+              Tuyển Tập Sách Mới Mỗi Tuần
             </h2>
             <p className="text-xs text-slate-600 font-serif italic">
-              Đăng ký email để nhận danh sách ấn phẩm tuyển chọn mỗi tuần và vé mời tham dự Workshop tác giả độc quyền.
+              Danh sách ấn phẩm tuyển chọn được cập nhật trực tiếp trên trang này mỗi tuần.
+              Ưu đãi theo chiến dịch được công bố tại quầy và trên các kênh chính thức của cửa hàng.
             </p>
           </div>
-
-          {newsletterSubscribed ? (
-            <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-800 text-xs font-bold font-serif max-w-md mx-auto border border-emerald-200">
-              🎉 Cảm ơn bạn! Mã ưu đãi <b>MELIONEW20</b> đã được gửi tới email của bạn.
-            </div>
-          ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (newsletterEmail.trim()) setNewsletterSubscribed(true);
-              }}
-              className="max-w-md mx-auto flex gap-2"
-            >
-              <input
-                type="email"
-                required
-                value={newsletterEmail}
-                onChange={(e) => setNewsletterEmail(e.target.value)}
-                placeholder="Nhập địa chỉ email của bạn..."
-                className="flex-1 bg-white border border-[#ede5d8] rounded-2xl px-4 py-3 text-xs font-serif text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20"
-              />
-              <button
-                type="submit"
-                className="px-6 py-3 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white font-serif font-bold text-xs shadow-md transition-all shrink-0"
-              >
-                Đăng Ký
-              </button>
-            </form>
-          )}
         </section>
 
-        {/* 14. TESTIMONIALS & SOCIAL PROOF */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between border-b border-[#ede5d8] pb-3">
-            <div>
-              <span className="text-[10px] font-serif uppercase tracking-widest text-[#8c2d19] font-bold">
-                GÓC ĐỘC GIẢ MELIO
-              </span>
-              <h2 className="font-serif font-black text-2xl text-slate-900 mt-0.5">
-                Cảm Nhận Từ Bạn Đọc Thân Thiết
-              </h2>
-            </div>
-            <span className="text-xs text-slate-500 font-serif italic">Hơn 28.000+ độc giả đồng hành</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {customerReviews.map((rev, i) => (
-              <div
-                key={i}
-                className="p-6 rounded-3xl bg-white paper-card shadow-xs space-y-3 font-serif flex flex-col justify-between"
-              >
-                <div className="space-y-2">
-                  <div className="flex text-amber-500">
-                    {Array.from({ length: 5 }).map((_, idx) => (
-                      <Star key={idx} className="w-4 h-4 fill-amber-400" />
-                    ))}
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-700 italic leading-relaxed">
-                    &ldquo;{rev.text}&rdquo;
-                  </p>
-                </div>
-
-                <div className="pt-3 border-t border-[#ede5d8] flex items-center justify-between text-xs">
-                  <div>
-                    <b className="block text-slate-900">{rev.avatar} {rev.name}</b>
-                    <span className="text-[10px] text-slate-400">{rev.role}</span>
-                  </div>
-                  <span className="text-[10px] font-bold text-[#8c2d19] bg-[#faf4ea] px-2 py-0.5 rounded">
-                    Đã mua hàng
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* 14. (removed) TESTIMONIALS — fabricated quotes/claims deleted; wire to
+            a real reviews table before showing customer quotes again. */}
       </div>
 
       {/* 15. EDITORIAL FOOTER */}
