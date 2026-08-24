@@ -2,6 +2,7 @@ import "dotenv/config";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
+import { observePoolAcquire } from "./metrics";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -37,6 +38,25 @@ function createPool(connectionString: string, max: number) {
   return pool;
 }
 
+/**
+ * Time every checkout of a pool client so saturation is observable before it
+ * becomes a 500 storm. pg has no acquire event, so we wrap `pool.connect()`
+ * (the single entry point PrismaPg's adapter uses) and record how long the
+ * caller waited plus how deep the queue was on arrival. Feeds /api/metrics.
+ */
+function instrumentPoolWait(pool: pg.Pool) {
+  const original = pool.connect.bind(pool);
+  const wrapped = async (...args: Parameters<typeof original>) => {
+    const waitingAtArrival = pool.waitingCount;
+    const started = Date.now();
+    const client = await original(...args);
+    observePoolAcquire(Date.now() - started, waitingAtArrival);
+    return client;
+  };
+  // Keep the property shape pg users expect (sync overload still available).
+  (pool as unknown as { connect: typeof wrapped }).connect = wrapped;
+}
+
 function createClient(pool: pg.Pool) {
   return new PrismaClient({ adapter: new PrismaPg(pool), log: ["error", "warn"] });
 }
@@ -47,6 +67,7 @@ if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
 const pool =
   globalForPrisma.pool ?? createPool(process.env.DATABASE_URL, parseMax(process.env.DB_POOL_MAX, "DB_POOL_MAX"));
 globalForPrisma.pool = pool;
+instrumentPoolWait(pool);
 
 export const prisma =
   globalForPrisma.prisma ??
@@ -74,15 +95,15 @@ const WRITE_OPS = /^(create|createMany|createManyAndReturn|update|updateMany|upd
 
 export const prismaRead = (() => {
   const replicaUrl = process.env.READ_REPLICA_URL;
-  const base = replicaUrl
-    ? createClient(
-        globalForPrisma.readPool ??
-          (globalForPrisma.readPool = createPool(
-            replicaUrl,
-            parseMax(process.env.DB_POOL_MAX_READ, "DB_POOL_MAX_READ"),
-          )),
-      )
-    : prisma; // no replica configured → share the primary pool; guard still applies
+  const readPool = replicaUrl
+    ? (globalForPrisma.readPool ??
+      (globalForPrisma.readPool = (() => {
+        const p = createPool(replicaUrl, parseMax(process.env.DB_POOL_MAX_READ, "DB_POOL_MAX_READ"));
+        instrumentPoolWait(p);
+        return p;
+      })()))
+    : null;
+  const base = readPool ? createClient(readPool) : prisma; // no replica → share the primary pool; guard still applies
   return base.$extends({
     query: {
       $allModels: {
