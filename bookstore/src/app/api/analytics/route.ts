@@ -1,21 +1,22 @@
-import { prisma } from "@/lib/db";
+import { prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { zonedMonthsAgo } from "@/lib/time";
 
 // GET /api/analytics — Phase 2 operational and financial metrics from live records.
+// Aggregate-only reads, seconds-stale-tolerant → read replica when configured.
 export async function GET() {
   try {
     await requirePermission("reports.financial.view");
     // Calendar-safe one-month-ago boundary (no setMonth overflow on the 29th–31st).
     const start = zonedMonthsAgo(1);
     const [orders, returns, returnTotal, giftCardLiability, countAdjustments, orderChannels] = await Promise.all([
-      prisma.order.groupBy({ by: ["status"], _count: true, _sum: { total: true }, where: { createdAt: { gte: start } } }),
-      prisma.return.groupBy({ by: ["status"], _count: true, where: { createdAt: { gte: start } } }),
-      prisma.return.aggregate({ _sum: { refundTotal: true }, where: { status: "REFUNDED", createdAt: { gte: start } } }),
-      prisma.giftCard.aggregate({ _sum: { balance: true }, where: { active: true } }),
-      prisma.inventoryMovement.aggregate({ _sum: { quantity: true }, _count: true, where: { type: "STOCK_ADJUSTMENT", createdAt: { gte: start } } }),
-      prisma.order.groupBy({ by: ["channel"], _count: true, _sum: { total: true }, where: { createdAt: { gte: start } } }),
+      prismaRead.order.groupBy({ by: ["status"], _count: true, _sum: { total: true }, where: { createdAt: { gte: start } } }),
+      prismaRead.return.groupBy({ by: ["status"], _count: true, where: { createdAt: { gte: start } } }),
+      prismaRead.return.aggregate({ _sum: { refundTotal: true }, where: { status: "REFUNDED", createdAt: { gte: start } } }),
+      prismaRead.giftCard.aggregate({ _sum: { balance: true }, where: { active: true } }),
+      prismaRead.inventoryMovement.aggregate({ _sum: { quantity: true }, _count: true, where: { type: "STOCK_ADJUSTMENT", createdAt: { gte: start } } }),
+      prismaRead.order.groupBy({ by: ["channel"], _count: true, _sum: { total: true }, where: { createdAt: { gte: start } } }),
     ]);
     return ok({
       periodStart: start,

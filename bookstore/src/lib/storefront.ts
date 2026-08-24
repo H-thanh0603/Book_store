@@ -1,6 +1,6 @@
 import { Prisma } from "../generated/prisma/client";
 import { fail, nextBusinessNumber } from "./api";
-import { prisma } from "./db";
+import { prisma, prismaRead } from "./db";
 import { createReservedOrder } from "./orders";
 
 // ponytail: tiny in-process cache for the public catalog (30s TTL, LRU-capped).
@@ -27,6 +27,7 @@ export async function listStorefrontProducts(input: {
   return result;
 }
 
+// Public catalog: pure reads, seconds-scale staleness acceptable → replica client.
 async function listStorefrontProductsUncached(input: {
   q?: string | null;
   categoryId?: string | null;
@@ -34,12 +35,12 @@ async function listStorefrontProductsUncached(input: {
 }) {
   const q = input.q?.trim().slice(0, 80) || undefined;
   const store = input.storeId
-    ? await prisma.store.findFirst({ where: { id: input.storeId, active: true }, select: { id: true } })
-    : await prisma.store.findFirst({ where: { active: true }, orderBy: { code: "asc" }, select: { id: true } });
+    ? await prismaRead.store.findFirst({ where: { id: input.storeId, active: true }, select: { id: true } })
+    : await prismaRead.store.findFirst({ where: { active: true }, orderBy: { code: "asc" }, select: { id: true } });
   if (!store) fail(404, "NOT_FOUND", "No active store available");
   const now = new Date();
   const [rows, categories, stores] = await Promise.all([
-    prisma.product.findMany({
+    prismaRead.product.findMany({
       where: {
         status: "active",
         categoryId: input.categoryId || undefined,
@@ -76,11 +77,11 @@ async function listStorefrontProductsUncached(input: {
       },
       orderBy: { name: "asc" }, take: 100,
     }),
-    prisma.category.findMany({
+    prismaRead.category.findMany({
       where: { products: { some: { status: "active" } } },
       select: { id: true, name: true }, orderBy: { name: "asc" },
     }),
-    prisma.store.findMany({
+    prismaRead.store.findMany({
       where: { active: true }, select: { id: true, name: true, code: true }, orderBy: { code: "asc" },
     }),
   ]);

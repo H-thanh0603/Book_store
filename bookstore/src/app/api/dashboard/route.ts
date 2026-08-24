@@ -1,10 +1,11 @@
-import { prisma } from "@/lib/db";
+import { prismaRead } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { requirePermission, resolveStoreScope } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { zonedStartOfDay, zonedStartOfMonth } from "@/lib/time";
 
-// GET /api/dashboard — all metrics computed from real transactions (spec §114 Flow 8)
+// GET /api/dashboard — all metrics computed from real transactions (spec §114 Flow 8).
+// Report reads are seconds-stale-tolerant → served from the read replica when configured.
 export async function GET() {
   try {
     const auth = await requirePermission("reports.store.view");
@@ -23,18 +24,18 @@ export async function GET() {
 
     const [todayAgg, monthAgg, orderCount, customerCount, lowStock, topProducts, recentTxns] =
       await Promise.all([
-        prisma.$queryRaw<{ total: string; count: bigint }[]>`
+        prismaRead.$queryRaw<{ total: string; count: bigint }[]>`
           SELECT COALESCE(SUM(total),0)::text AS total, COUNT(*) AS count FROM "PosTransaction" t
           WHERE t.status = 'COMPLETED' AND t."createdAt" >= ${startOfDay} ${transactionStoreFilter}`,
-        prisma.$queryRaw<{ total: string; count: bigint }[]>`
+        prismaRead.$queryRaw<{ total: string; count: bigint }[]>`
           SELECT COALESCE(SUM(total),0)::text AS total, COUNT(*) AS count FROM "PosTransaction" t
           WHERE t.status = 'COMPLETED' AND t."createdAt" >= ${startOfMonth} ${transactionStoreFilter}`,
-        prisma.order.count({
+        prismaRead.order.count({
           where: { createdAt: { gte: startOfMonth }, ...(storeScope ? { storeId: { in: storeScope } } : {}) },
         }),
-        prisma.customer.count(),
+        prismaRead.customer.count(),
         // low stock: available <= 5 at any store location
-        prisma.$queryRaw<{ sku: string; name: string; loc: string; available: number }[]>`
+        prismaRead.$queryRaw<{ sku: string; name: string; loc: string; available: number }[]>`
           SELECT v.sku, p.name, l.name AS loc, (b."onHand" - b.reserved) AS available
           FROM "InventoryBalance" b
           JOIN "ProductVariant" v ON v.id = b."variantId"
@@ -43,7 +44,7 @@ export async function GET() {
           WHERE l."storeId" IS NOT NULL AND (b."onHand" - b.reserved) <= 5 ${locationStoreFilter}
           ORDER BY (b."onHand" - b.reserved) ASC LIMIT 20`,
         // top products MTD by revenue
-        prisma.$queryRaw<{ name: string; units: number; revenue: string }[]>`
+        prismaRead.$queryRaw<{ name: string; units: number; revenue: string }[]>`
           SELECT p.name, SUM(i.quantity) AS units, SUM(i.quantity * i."unitPrice")::text AS revenue
           FROM "PosTransactionItem" i
           JOIN "PosTransaction" t ON t.id = i."txId"
@@ -51,7 +52,7 @@ export async function GET() {
           JOIN "Product" p ON p.id = v."productId"
           WHERE t.status = 'COMPLETED' AND t."createdAt" >= ${startOfMonth} ${transactionStoreFilter}
           GROUP BY p.name ORDER BY SUM(i.quantity * i."unitPrice") DESC LIMIT 10`,
-        prisma.posTransaction.findMany({
+        prismaRead.posTransaction.findMany({
           where: storeScope ? { shift: { terminal: { storeId: { in: storeScope } } } } : undefined,
           take: 10, orderBy: { createdAt: "desc" },
           include: { shift: { include: { terminal: { include: { store: true } } } } },

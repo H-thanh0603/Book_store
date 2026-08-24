@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prismaRead } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { requirePermission } from "@/lib/auth";
 import { apiError, fail, ok } from "@/lib/api";
@@ -9,6 +9,7 @@ const PAGE_SIZE = 50;
 // GET /api/audit-logs?action=&entity=&cursor=<createdAt.ms>|<id>
 // Keyset (cursor) pagination — stable under inserts and O(log n) deep pages,
 // unlike OFFSET which re-scans. Legacy ?page= still works for old clients.
+// Audit browsing tolerates seconds of replica lag → replica when configured.
 export async function GET(req: NextRequest) {
   try {
     await requirePermission("admin.users");
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
             { createdAt: cursorDate, id: { lt: id } },
           ];
         })();
-      const logs = await prisma.auditLog.findMany({
+      const logs = await prismaRead.auditLog.findMany({
         where: { ...where, ...(cursorFilter.length ? { OR: cursorFilter } : {}) },
         include: { actor: { select: { email: true } } },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -53,8 +54,8 @@ export async function GET(req: NextRequest) {
     // Legacy offset mode.
     const page = Math.max(1, Number(sp.get("page") ?? 1));
     const [total, logs] = await Promise.all([
-      prisma.auditLog.count({ where }),
-      prisma.auditLog.findMany({
+      prismaRead.auditLog.count({ where }),
+      prismaRead.auditLog.findMany({
         where,
         include: { actor: { select: { email: true } } },
         orderBy: { createdAt: "desc" },

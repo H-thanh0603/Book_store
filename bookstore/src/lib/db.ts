@@ -3,35 +3,101 @@ import { PrismaClient } from "../generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient; pool?: pg.Pool };
+const globalForPrisma = globalThis as unknown as {
+  prisma?: PrismaClient;
+  pool?: pg.Pool;
+  readPool?: pg.Pool;
+};
 
 // ponytail: pass an external pg.Pool — PrismaPg's internal pool config mangles SASL password in 7.9.1
-function create() {
-  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
-  const max = Number(process.env.DB_POOL_MAX ?? "10");
-  if (!Number.isInteger(max) || max < 1 || max > 100) throw new Error("DB_POOL_MAX must be an integer from 1 to 100");
+function parseMax(raw: string | undefined, label: string): number {
+  const max = Number(raw ?? "10");
+  if (!Number.isInteger(max) || max < 1 || max > 100)
+    throw new Error(`${label} must be an integer from 1 to 100`);
+  return max;
+}
+
+function createPool(connectionString: string, max: number) {
   const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString,
     max,
     connectionTimeoutMillis: 5_000,
     idleTimeoutMillis: 30_000,
+    // All datetime columns are `timestamp without time zone` written as UTC by
+    // Prisma. Forcing the session timezone to UTC keeps SQL-side defaults
+    // (now()), interval math and raw queries on the SAME timebase — otherwise
+    // rows written by Prisma and rows touched by SQL defaults differ by the
+    // server's TZ offset and every cross comparison silently skews.
+    options: "-c timezone=UTC",
   });
   // Without this handler, an idle-client network error crashes the Node process.
   pool.on("error", (err) => {
     console.error(JSON.stringify({ level: "error", event: "pg_pool_idle_client_error", message: err.message }));
   });
-  const client = new PrismaClient({ adapter: new PrismaPg(pool), log: ["error", "warn"] });
-  return { pool, client };
+  return pool;
 }
+
+function createClient(pool: pg.Pool) {
+  return new PrismaClient({ adapter: new PrismaPg(pool), log: ["error", "warn"] });
+}
+
+if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
+
+// ── Primary (reads + ALL writes) ────────────────────────────────────────────
+const pool =
+  globalForPrisma.pool ?? createPool(process.env.DATABASE_URL, parseMax(process.env.DB_POOL_MAX, "DB_POOL_MAX"));
+globalForPrisma.pool = pool;
 
 export const prisma =
   globalForPrisma.prisma ??
   (() => {
-    const { pool, client } = create();
-    globalForPrisma.pool = pool;
+    const client = createClient(pool);
     globalForPrisma.prisma = client;
     return client;
   })();
+
+// ── Read replica client (hot read paths only) ──────────────────────────────
+// Route catalog/dashboard/analytics/browse queries here when a replica exists:
+//   READ_REPLICA_URL=postgresql://...   (falls back to the primary pool if unset,
+//                                        so every call site stays safe either way)
+//
+// WHY opt-in instead of a global $extends router on `prisma`: this codebase runs
+// many interactive `$transaction(async tx => …)` blocks whose inner reads must see
+// the SAME connection's uncommitted writes. A router hooking every read would hop
+// those to the replica, breaking read-your-writes mid-transaction and silently
+// widening race windows. Explicit routing keeps transactional flows on the primary.
+//
+// The $extends guard below FAILS LOUD if a write sneaks onto the read client —
+// replicas are lagging and (often) physically read-only; silent split-brain is worse
+// than an error. Replica staleness is seconds-scale: only route tolerance-tolerant reads.
+const WRITE_OPS = /^(create|createMany|createManyAndReturn|update|updateMany|updateManyAndReturn|upsert|delete|deleteMany)$/;
+
+export const prismaRead = (() => {
+  const replicaUrl = process.env.READ_REPLICA_URL;
+  const base = replicaUrl
+    ? createClient(
+        globalForPrisma.readPool ??
+          (globalForPrisma.readPool = createPool(
+            replicaUrl,
+            parseMax(process.env.DB_POOL_MAX_READ, "DB_POOL_MAX_READ"),
+          )),
+      )
+    : prisma; // no replica configured → share the primary pool; guard still applies
+  return base.$extends({
+    query: {
+      $allModels: {
+        async $allOperations({ operation, args, query }) {
+          if (WRITE_OPS.test(operation))
+            throw Object.assign(
+              new Error("prismaRead is read-only — send writes through `prisma` (primary)"),
+              { status: 500, code: "INTERNAL" },
+            );
+          return query(args);
+        },
+      },
+    },
+  });
+})();
 
 if (process.env.NODE_ENV !== "production" && !globalForPrisma.prisma) {
   // already created above; noop guard for HMR clarity

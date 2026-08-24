@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok, fail, getSystemConfig } from "@/lib/api";
 
@@ -19,12 +19,12 @@ async function syncTier(customerId: string) {
   return next === acct.tier ? acct : prisma.loyaltyAccount.update({ where: { id: acct.id }, data: { tier: next } });
 }
 
-// GET /api/customers?q=  — list + loyalty balance
+// GET /api/customers?q=  — list + loyalty balance (display-only → replica OK)
 export async function GET(req: NextRequest) {
   try {
     await requirePermission("customer.view");
     const q = req.nextUrl.searchParams.get("q");
-    const customers = await prisma.customer.findMany({
+    const customers = await prismaRead.customer.findMany({
       where: q
         ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { phone: { contains: q } }, { code: { contains: q, mode: "insensitive" } }] }
         : {},

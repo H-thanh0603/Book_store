@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { prisma } from "./db";
 
 export async function apiError(err: unknown) {
-  const e = err as { status?: number; code?: string; message: string; retryAfter?: number; stack?: string };
+  const e = err as { status?: number; code?: string; message: string; retryAfter?: number; details?: { retryAfter?: number }; stack?: string };
   const malformedJson = err instanceof SyntaxError;
   const status = e.status ?? (malformedJson ? 400 : 500);
   const requestId = (await headers()).get("x-request-id") ?? undefined;
@@ -18,7 +18,7 @@ export async function apiError(err: unknown) {
   const code = known.includes(e.code ?? "") ? e.code! : status === 500 ? "INTERNAL" : "BAD_REQUEST";
   const message = status === 500 ? "Internal server error" : malformedJson ? "Malformed JSON request" : e.message;
   const response = NextResponse.json({ code, message, requestId }, { status });
-  if (e.retryAfter) response.headers.set("Retry-After", String(e.retryAfter));
+  if (e.retryAfter ?? e.details?.retryAfter) response.headers.set("Retry-After", String(e.retryAfter ?? e.details?.retryAfter));
   return response;
 }
 
@@ -77,23 +77,42 @@ export function requireRef<T>(row: T | null, label: string): T {
   return row;
 }
 
-export function ok(data: unknown, status = 200) {
+export function ok(data: unknown, status = 200, extraHeaders?: Record<string, string>) {
   return NextResponse.json(JSON.parse(JSON.stringify(data, (_, value) => {
     if (typeof value !== "bigint") return value;
     return value <= BigInt(Number.MAX_SAFE_INTEGER) && value >= BigInt(Number.MIN_SAFE_INTEGER)
       ? Number(value) : value.toString();
-  })), { status });
+  })), { status, headers: extraHeaders });
 }
+
+// Business-number allocation: hand out numbers from an in-memory range and
+// reserve new ranges atomically in the DB. A single-row counter incremented per
+// call serialises every order/PO/GRN insert behind one row lock — fatal at
+// flash-sale volume. Range allocation keeps numbers unique across instances
+// while touching the counter once per RANGE instead of once per document.
+// Gaps after restart are expected: business numbers need uniqueness, not density.
+const SEQ_RANGE = 100;
+const seqAllocated = new Map<string, number>();
+const seqCursor = new Map<string, number>();
 
 export async function nextBusinessNumber(prefix: string): Promise<string> {
   const year = new Date().getFullYear();
   const key = `${prefix}-${year}`;
-  const counter = await prisma.sequenceCounter.upsert({
-    where: { key },
-    create: { key, value: 1 },
-    update: { value: { increment: 1 } },
-  });
-  return `${prefix}-${year}-${String(counter.value).padStart(6, "0")}`;
+  // Exhausted (or cold) window → atomically reserve a fresh range in the DB.
+  // Two racing callers may both reserve (one window goes unused — gaps are fine,
+  // DB increments are monotonic so numbers can never collide).
+  if ((seqCursor.get(key) ?? -1) >= (seqAllocated.get(key) ?? -1)) {
+    const counter = await prisma.sequenceCounter.upsert({
+      where: { key },
+      create: { key, value: SEQ_RANGE },
+      update: { value: { increment: SEQ_RANGE } },
+    });
+    seqAllocated.set(key, counter.value);
+    seqCursor.set(key, counter.value - SEQ_RANGE);
+  }
+  const next = seqCursor.get(key)! + 1;
+  seqCursor.set(key, next);
+  return `${prefix}-${year}-${String(next).padStart(6, "0")}`;
 }
 
 // ponytail: in-memory cache, refresh only on miss. No TTL — config changes are rare;

@@ -2,11 +2,12 @@
 // full-text fallback: `search=` uses websearch_to_tsquery over name+description
 // (`products.search` tsvector index); falls back to trigram-free ILIKE ORs.
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok, fail, toMoney } from "@/lib/api";
 
 // GET /api/products?q=&barcode=&sku=&page=&search=
+// Admin browse is read-only and seconds-stale-tolerant → replica when configured.
 export async function GET(req: NextRequest) {
   try {
     await requirePermission("product.view");
@@ -37,8 +38,8 @@ export async function GET(req: NextRequest) {
     };
 
     const [total, products] = await Promise.all([
-      prisma.product.count({ where }),
-      prisma.product.findMany({
+      prismaRead.product.count({ where }),
+      prismaRead.product.findMany({
         where,
         include: {
           category: true, brand: true, author: true, publisher: true,
