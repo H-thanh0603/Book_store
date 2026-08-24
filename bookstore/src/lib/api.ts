@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { prisma } from "./db";
+import { recordHttpError } from "./metrics";
 
 export async function apiError(err: unknown) {
   const e = err as { status?: number; code?: string; message: string; retryAfter?: number; details?: { retryAfter?: number }; stack?: string };
@@ -16,8 +17,16 @@ export async function apiError(err: unknown) {
     "NOT_FOUND", "VALIDATION", "RATE_LIMITED",
   ];
   const code = known.includes(e.code ?? "") ? e.code! : status === 500 ? "INTERNAL" : "BAD_REQUEST";
+  recordHttpError(status, code);
   const message = status === 500 ? "Internal server error" : malformedJson ? "Malformed JSON request" : e.message;
-  const response = NextResponse.json({ code, message, requestId }, { status });
+  // Surface structured `details` ONLY for the stock-conflict contract: the
+  // storefront client needs per-variant availability to recover from a lost
+  // race without a full page reload. Everything else stays hidden.
+  const body: Record<string, unknown> = { code, message, requestId };
+  if (e.code === "INSUFFICIENT_STOCK" && e.details && typeof e.details === "object" && !("retryAfter" in (e.details as object))) {
+    body.details = e.details;
+  }
+  const response = NextResponse.json(body, { status });
   if (e.retryAfter ?? e.details?.retryAfter) response.headers.set("Retry-After", String(e.retryAfter ?? e.details?.retryAfter));
   return response;
 }
