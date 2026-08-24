@@ -14,6 +14,8 @@
     "test:hardening": "tsx scripts/test-hardening.ts",
     "test:pos": "tsx scripts/test-pos-expiry.ts",
     "security:encrypt-integrations": "tsx scripts/encrypt-integration-secrets.ts",
+    "security:rotate-integration-key": "tsx scripts/rotate-integration-key.ts",
+    "ops:check-alerts": "tsx scripts/check-alerts.ts",
     "test:restore-drill": "./scripts/restore-drill.sh",
     "verify:indexes": "tsx scripts/verify-scale-indexes.ts"
   },

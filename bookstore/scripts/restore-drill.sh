@@ -29,7 +29,7 @@ pg_restore --clean --if-exists --no-owner -d "$SCRATCH_URL" "$DUMP_PATH" >/dev/n
 
 echo "▶ verifying migration parity (migrate deploy must be a no-op)"
 ( cd "$(dirname "$0")/.." && DATABASE_URL="$SCRATCH_URL" npx prisma migrate deploy 2>&1 ) \
-  | grep -qE "applied|No migrations" || { echo "✗ migrate deploy failed on restored DB" >&2; exit 1; }
+  | grep -qE "applied|No pending migrations|No migrations" || { echo "✗ migrate deploy failed on restored DB" >&2; exit 1; }
 
 echo "▶ checking core row counts"
 declare -A MIN_ROWS=( [User]=1 [Product]=1 [Store]=1 [Order]=0 )

@@ -46,3 +46,24 @@ After restore, point a temporary app instance at the restored database and requi
 - API 5xx rate above 2% for 5 minutes.
 - PostgreSQL pool saturation or connection failures.
 - `JobRun` failures/exhausted retries and jobs running beyond their lease.
+
+Wire the built-in checker to any scheduler that can page (crontab + mail,
+Healthchecks.io, GitHub Actions schedule):
+
+```bash
+SEED_USER_PASSWORD=<ops-account-password> BASE_URL=https://bookstore.example.com \
+  npm run ops:check-alerts   # exits non-zero on: FAILED JobRun, catalog p95, DB pool wait, 429 share
+```
+
+## Rotating the integration encryption key
+
+When `INTEGRATION_ENCRYPTION_KEY` must be replaced (suspected leak, staff
+offboarding, periodic policy):
+
+1. Generate a new base64 32-byte key (`openssl rand -base64 32`). Do NOT restart the app yet.
+2. Re-seal every provider secret under the new key:
+   `OLD_INTEGRATION_ENCRYPTION_KEY=<current> INTEGRATION_ENCRYPTION_KEY=<new> npm run security:rotate-integration-key`
+3. Update `INTEGRATION_ENCRYPTION_KEY` to the NEW value in the process manager / secret store, then `pm2 reload bookstore`.
+4. Verify an inbound webhook still verifies (or re-trigger a signed test event).
+
+The old key is safe to discard only after step 4 passes.
