@@ -7,7 +7,13 @@ import { createReservedOrder } from "./orders";
 // Absorbs burst traffic and scrapes; a CDN in front makes this redundant.
 const CATALOG_TTL_MS = 30_000;
 const CATALOG_CACHE_MAX = 100;
-const catalogCache = new Map<string, { value: unknown; expiresAt: number }>();
+type CatalogResult = {
+  products: { id: string; name: string; description: string | null; createdAt: Date; variants: unknown[] }[];
+  categories: { id: string; name: string }[];
+  stores: { id: string; name: string; code: string }[];
+  storeId: string;
+};
+const catalogCache = new Map<string, { value: CatalogResult; expiresAt: number }>();
 
 export async function listStorefrontProducts(input: {
   q?: string | null;
@@ -34,47 +40,58 @@ async function listStorefrontProductsUncached(input: {
   storeId?: string | null;
 }) {
   const q = input.q?.trim().slice(0, 80) || undefined;
+  // Per-word AND search: every word must appear in one of the searched fields,
+  // so word order no longer matters ("potter hary" works).
+  const words = q ? q.split(/\s+/).slice(0, 6) : [];
   const store = input.storeId
     ? await prismaRead.store.findFirst({ where: { id: input.storeId, active: true }, select: { id: true } })
     : await prismaRead.store.findFirst({ where: { active: true }, orderBy: { code: "asc" }, select: { id: true } });
   if (!store) fail(404, "NOT_FOUND", "No active store available");
   const now = new Date();
-  const [rows, categories, stores] = await Promise.all([
+  const catalogSelect = {
+    select: {
+      id: true, name: true, description: true, createdAt: true,
+      category: { select: { id: true, name: true } },
+      brand: { select: { name: true } },
+      author: { select: { name: true } }, publisher: { select: { name: true } },
+      variants: {
+        where: { active: true },
+        select: {
+          id: true, name: true, sku: true,
+          prices: {
+            where: {
+              priceList: { kind: { in: ["online", "retail"] } }, validFrom: { lte: now },
+              OR: [{ validTo: null }, { validTo: { gt: now } }],
+            },
+            select: { amount: true, priceList: { select: { kind: true } } },
+            orderBy: { validFrom: "desc" as const },
+          },
+          balances: {
+            where: { location: { storeId: store.id, active: true } },
+            select: { onHand: true, reserved: true },
+          },
+        },
+      },
+    },
+  };
+  const [exactRows, categories, stores] = await Promise.all([
     prismaRead.product.findMany({
       where: {
         status: "active",
         categoryId: input.categoryId || undefined,
-        ...(q ? { OR: [
-          { name: { contains: q, mode: "insensitive" } },
-          { brand: { name: { contains: q, mode: "insensitive" } } },
-          { author: { name: { contains: q, mode: "insensitive" } } },
-          { publisher: { name: { contains: q, mode: "insensitive" } } },
-        ] } : {}),
+        ...(words.length ? {
+          AND: words.map((w) => ({
+            OR: [
+              { name: { contains: w, mode: "insensitive" } },
+              { description: { contains: w, mode: "insensitive" } },
+              { brand: { name: { contains: w, mode: "insensitive" } } },
+              { author: { name: { contains: w, mode: "insensitive" } } },
+              { publisher: { name: { contains: w, mode: "insensitive" } } },
+            ],
+          })),
+        } : {}),
       },
-      select: {
-        id: true, name: true, description: true, createdAt: true,
-        category: { select: { id: true, name: true } },
-        brand: { select: { name: true } },
-        author: { select: { name: true } }, publisher: { select: { name: true } },
-        variants: {
-          where: { active: true },
-          select: {
-            id: true, name: true, sku: true,
-            prices: {
-              where: {
-                priceList: { kind: { in: ["online", "retail"] } }, validFrom: { lte: now },
-                OR: [{ validTo: null }, { validTo: { gt: now } }],
-              },
-              select: { amount: true, priceList: { select: { kind: true } } },
-              orderBy: { validFrom: "desc" },
-            },
-            balances: {
-              where: { location: { storeId: store.id, active: true } },
-              select: { onHand: true, reserved: true },
-            },
-          },
-        },
-      },
+      ...catalogSelect,
       orderBy: { name: "asc" }, take: 100,
     }),
     prismaRead.category.findMany({
@@ -85,6 +102,35 @@ async function listStorefrontProductsUncached(input: {
       where: { active: true }, select: { id: true, name: true, code: true }, orderBy: { code: "asc" },
     }),
   ]);
+
+  let rows = exactRows;
+  // Fuzzy fallback: no exact hit → best word-vs-word trigram similarity on
+  // name ("ballo" still finds "Balo học sinh 20L"). Full-scan SIMILARITY is
+  // not index-served but only runs when the indexed pass returned nothing;
+  // every query word must clear 0.3 against SOME word of the product name.
+  // ponytail: O(catalog) scan per miss — add a GiST gist_trgm_ops index or
+  // pgvector when catalog size makes this hot.
+  if (words.length && rows.length === 0) {
+    const hits = await prismaRead.$queryRaw<{ id: string }[]>`
+      SELECT p.id FROM "Product" p
+      WHERE p.status = 'active' ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
+        AND NOT EXISTS (
+          SELECT 1
+          FROM unnest(${words}::text[]) q(w)
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM unnest(string_to_array(unaccent(lower(p.name)), ' ')) nw(w)
+            WHERE length(nw.w) >= 3 AND SIMILARITY(nw.w, unaccent(lower(q.w))) > 0.3
+          )
+        )
+      ORDER BY p.name ASC LIMIT 100`;
+    if (hits.length)
+      rows = await prismaRead.product.findMany({
+        where: { id: { in: hits.map((h) => h.id) } },
+        ...catalogSelect,
+        orderBy: { name: "asc" },
+      });
+  }
 
   const products = rows.flatMap((product) => {
     const variants = product.variants.flatMap((variant) => {
