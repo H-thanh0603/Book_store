@@ -3,7 +3,7 @@ import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
-import { scryptSync, randomBytes } from "crypto";
+import { scryptSync, randomBytes, randomUUID } from "crypto";
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg(new pg.Pool({ connectionString: process.env.DATABASE_URL })),
@@ -104,6 +104,13 @@ async function main() {
     ["warehouse@melio.vn", "warehouse", null],
     ["purchasing@melio.vn", "purchasing", null],
   ] as const;
+  // Service account for automated actors (reservation expiry etc.): inactive so
+  // it can never log in, but a real User row so audit FKs are satisfied.
+  await prisma.user.upsert({
+    where: { email: "system@bookstore.internal" },
+    create: { email: "system@bookstore.internal", passwordHash: hash(randomUUID()), active: false },
+    update: {},
+  });
   for (const [email, role, storeId] of users) {
     const passwordHash = hash(seedUserPassword);
     // Create-only: re-seeding must NEVER reset an existing account's password
