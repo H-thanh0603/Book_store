@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint --max-warnings=0",
     "test:phase3": "tsx scripts/test-phase3.ts",
+    "test:promotions": "tsx scripts/test-promotions.ts",
     "test:p0": "tsx scripts/test-p0.ts",
     "test:storefront": "tsx scripts/test-storefront.ts",
     "test:hardening": "tsx scripts/test-hardening.ts",

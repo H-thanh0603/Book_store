@@ -37,6 +37,7 @@ jobs:
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm run test:phase3
+      - run: npm run test:promotions
       - run: npm run build
       - name: Start application
         run: npm run start > /tmp/bookstore.log 2>&1 &

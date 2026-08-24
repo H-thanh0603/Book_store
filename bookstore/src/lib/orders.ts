@@ -61,7 +61,11 @@ export async function createReservedOrder(
     };
   });
   const applied = await evaluatePromotions({
-    lines, storeId: input.storeId, channel: "WEB", customerId: input.customerId, couponCode: input.couponCode,
+    lines, storeId: input.storeId,
+    // PromoChannel has no APP/MARKETPLACE/CALL_CENTER members — those channels
+    // only match ALL-scoped promos; WEB promos must not leak into them.
+    channel: input.channel === "WEB" ? "WEB" : "ALL",
+    customerId: input.customerId, couponCode: input.couponCode,
   }, db);
   const discounts = mergeLineDiscounts(applied, lines);
   const subtotal = lines.reduce((sum, line) => sum + line.unitPrice * BigInt(line.quantity), 0n);
