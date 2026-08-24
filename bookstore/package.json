@@ -12,6 +12,7 @@
     "test:p0": "tsx scripts/test-p0.ts",
     "test:storefront": "tsx scripts/test-storefront.ts",
     "test:hardening": "tsx scripts/test-hardening.ts",
+    "test:pos": "tsx scripts/test-pos-expiry.ts",
     "security:encrypt-integrations": "tsx scripts/encrypt-integration-secrets.ts",
     "test:restore-drill": "./scripts/restore-drill.sh",
     "verify:indexes": "tsx scripts/verify-scale-indexes.ts"

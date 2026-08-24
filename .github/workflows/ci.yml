@@ -46,3 +46,4 @@ jobs:
       - run: npm run test:p0
       - run: npm run test:storefront
       - run: npm run test:hardening
+      - run: npm run test:pos

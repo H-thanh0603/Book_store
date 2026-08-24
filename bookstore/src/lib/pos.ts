@@ -387,7 +387,15 @@ export async function closeShift(shiftId: string, closingCash: bigint, userId?: 
   return prisma.$transaction(async (tx) => {
     const shift = await tx.posShift.findUnique({
       where: { id: shiftId },
-      include: { transactions: { where: { status: "COMPLETED" }, include: { payments: true } } },
+      // A RETURNED (refunded) original still took real cash into the drawer at
+      // sale time; its mirrored negative lives on a COMPLETED refund tx. Count
+      // both or every refund silently understates the drawer by the sale amount.
+      include: {
+        transactions: {
+          where: { status: { in: ["COMPLETED", "RETURNED"] } },
+          include: { payments: true },
+        },
+      },
     });
     if (!shift || shift.status !== "OPEN") fail(400, "VALIDATION", "Shift not open");
     let cashTotal = 0n;
