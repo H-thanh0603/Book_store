@@ -1,4 +1,4 @@
-import { prisma } from "./db";
+import { prisma, withTxRetry, TX_OPTIONS } from "./db";
 import { fail, nextBusinessNumber } from "./api";
 import { applyMovement } from "./inventory";
 import { evaluatePromotions, mergeLineDiscounts, type CartLine } from "./promotions";
@@ -127,5 +127,5 @@ export async function createReservedOrder(
     }
     return order;
   };
-  return client ? create(client) : prisma.$transaction(create);
+  return client ? create(client) : withTxRetry(() => prisma.$transaction(create, TX_OPTIONS));
 }

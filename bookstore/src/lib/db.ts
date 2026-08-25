@@ -123,3 +123,36 @@ export const prismaRead = (() => {
 if (process.env.NODE_ENV !== "production" && !globalForPrisma.prisma) {
   // already created above; noop guard for HMR clarity
 }
+
+// ── Interactive transaction policy ──────────────────────────────────────────
+// Default Prisma limits (5s timeout / 2s maxWait) are too tight for the hot
+// write paths (completeSale/refundSale/closeShift/storefront checkout): each
+// holds row locks across per-line movements + promotion claims, and contention
+// on a hot InventoryBalance row peaks exactly during flash sales. 15s/5s gives
+// queuing room without letting a stuck transaction pin a pool slot forever
+// (PgBouncer's idle_transaction_timeout=30s is the hard backstop).
+export const TX_OPTIONS = { timeout: 15_000, maxWait: 5_000 } as const;
+
+/**
+ * Run an interactive transaction with TX_OPTIONS, retrying transient
+ * contention errors a bounded number of times. P2024 (connection/transaction
+ * acquisition timeout) and P2028 (transaction deadline exceeded) mean the
+ * transaction rolled back or never started — never partially committed — so
+ * re-running the whole claim-based flow is safe; at worst an idempotency key
+ * or sequence range is consumed, both of which tolerate gaps by design.
+ */
+export async function withTxRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const code = (err as { code?: string }).code;
+      if ((code !== "P2024" && code !== "P2028") || attempt === attempts) throw err;
+      console.warn(JSON.stringify({ level: "warn", event: "tx_retry", code, attempt }));
+      await new Promise((resolve) => setTimeout(resolve, 50 * attempt));
+    }
+  }
+  throw lastErr;
+}

@@ -1,5 +1,5 @@
 // POS domain — completeSale is atomic: tx + payments + inventory + movements + loyalty.
-import { prisma } from "./db";
+import { prisma, withTxRetry, TX_OPTIONS } from "./db";
 import { fail } from "./api";
 import { applyMovement } from "./inventory";
 import { evaluatePromotions, mergeLineDiscounts, CartLine } from "./promotions";
@@ -32,7 +32,8 @@ export async function completeSale(input: CompleteSaleInput) {
   }
 
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await withTxRetry(() =>
+      prisma.$transaction(async (tx) => {
     const shift = await tx.posShift.findUnique({
       where: { id: input.shiftId }, include: { terminal: true },
     });
@@ -216,7 +217,7 @@ export async function completeSale(input: CompleteSaleInput) {
     }
 
     return txn;
-    });
+    }, TX_OPTIONS));
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const duplicate = await prisma.payment.findUnique({
@@ -297,7 +298,8 @@ export async function quoteSale(input: Pick<CompleteSaleInput, "items" | "storeI
  * refunds need a per-item refund ledger column, skipped to avoid a schema migration.
  */
 export async function refundSale(txNumber: string, shiftId: string, userId: string, opts: { storeId?: string; reason?: string } = {}) {
-  return prisma.$transaction(async (tx) => {
+  return withTxRetry(() =>
+    prisma.$transaction(async (tx) => {
     const orig = await tx.posTransaction.findUnique({
       where: { number: txNumber },
       include: { items: true, payments: true },
@@ -366,7 +368,7 @@ export async function refundSale(txNumber: string, shiftId: string, userId: stri
     });
     void opts.reason; // recorded in the audit log by the route
     return refund;
-  });
+  }, TX_OPTIONS));
 }
 
 export async function openShift(terminalId: string, cashierId: string, openingCash: bigint) {
@@ -384,7 +386,8 @@ export async function openShift(terminalId: string, cashierId: string, openingCa
 }
 
 export async function closeShift(shiftId: string, closingCash: bigint, userId?: string) {
-  return prisma.$transaction(async (tx) => {
+  return withTxRetry(() =>
+    prisma.$transaction(async (tx) => {
     const shift = await tx.posShift.findUnique({
       where: { id: shiftId },
       // A RETURNED (refunded) original still took real cash into the drawer at
@@ -421,5 +424,5 @@ export async function closeShift(shiftId: string, closingCash: bigint, userId?: 
       },
     });
     return closed;
-  });
+  }, TX_OPTIONS));
 }
