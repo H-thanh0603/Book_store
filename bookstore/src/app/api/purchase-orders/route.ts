@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requirePermission, audit } from "@/lib/auth";
-import { apiError, ok, fail, nextBusinessNumber, toMoney } from "@/lib/api";
+import { apiError, ok, fail, nextBusinessNumber, toMoney, optDate } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { MovementType } from "@/generated/prisma/client";
 
@@ -28,6 +28,11 @@ export async function POST(req: NextRequest) {
 
     if (body.action === "create") {
       const auth = await requirePermission("purchase.create");
+      // FK targets validated up front: junk ids surface as 404, not P2003 → 500.
+      const supplier = await prisma.supplier.findUnique({ where: { id: body.supplierId } });
+      if (!supplier) fail(404, "NOT_FOUND", "Supplier not found");
+      const warehouse = await prisma.warehouse.findUnique({ where: { id: body.warehouseId } });
+      if (!warehouse) fail(404, "NOT_FOUND", "Warehouse not found");
       const items = parseItems(body.items).map((item: PoItemInput) => ({
         ...item,
         unitCost: toMoney(item.unitCost, "unitCost"),
@@ -43,7 +48,8 @@ export async function POST(req: NextRequest) {
             // submitted for approval before it can be approved.
             status: body.asRequest ? "draft" : "pending_approval",
             orderedBy: auth.userId,
-            expectedDate: body.expectedDate ? new Date(body.expectedDate) : null,
+            // Garbage date strings become a 400 here instead of Invalid Date → Prisma 500.
+            expectedDate: optDate(body.expectedDate, "expectedDate"),
             items: {
               create: items.map((item: { variantId: string; quantity: number; unitCost: bigint }) => ({
                 variantId: item.variantId,
@@ -123,8 +129,12 @@ export async function POST(req: NextRequest) {
             items: {
               create: body.items.map((i: Record<string, unknown>) => {
                 const item = i as { variantId?: unknown; quantity?: unknown; damagedQty?: unknown };
-                if (typeof item.variantId !== "string" || !Number.isInteger(item.quantity) || (item.quantity as number) <= 0)
-                  fail(400, "VALIDATION", "Each receipt item needs a variantId and positive integer quantity");
+                if (typeof item.variantId !== "string" || !item.variantId)
+                  fail(400, "VALIDATION", "Each receipt item needs a variantId");
+                if (!Number.isInteger(item.quantity) || (item.quantity as number) <= 0)
+                  fail(400, "VALIDATION", "quantity must be a positive integer");
+                if (typeof item.damagedQty === "number" && (!Number.isInteger(item.damagedQty) || item.damagedQty < 0 || item.damagedQty > (item.quantity as number)))
+                  fail(400, "VALIDATION", "damagedQty must be an integer between 0 and quantity");
                 return {
                   variantId: item.variantId as string, quantity: item.quantity as number,
                   damagedQty: typeof item.damagedQty === "number" ? item.damagedQty : 0,
