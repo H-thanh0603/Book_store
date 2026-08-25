@@ -14,7 +14,7 @@ export async function apiError(err: unknown) {
   // Never leak raw DB errors.
   const known = [
     "INSUFFICIENT_STOCK", "INVALID_STATUS_TRANSITION", "DUPLICATE",
-    "NOT_FOUND", "VALIDATION", "RATE_LIMITED",
+    "NOT_FOUND", "VALIDATION", "RATE_LIMITED", "FORBIDDEN",
   ];
   const code = known.includes(e.code ?? "") ? e.code! : status === 500 ? "INTERNAL" : "BAD_REQUEST";
   recordHttpError(status, code);

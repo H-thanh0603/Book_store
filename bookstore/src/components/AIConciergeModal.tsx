@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useEscapeClose } from "./useEscapeClose";
 import {
   Bot,
   Send,
@@ -40,6 +41,7 @@ const mockRecommendations: Record<string, ProductSuggestion[]> = {
 
 export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item: ProductSuggestion) => void }) {
   const [open, setOpen] = useState(false);
+  useEscapeClose(open, () => setOpen(false));
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<
     { sender: "user" | "ai"; text: string; items?: ProductSuggestion[] }[]
@@ -96,7 +98,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
       {/* Modal Dialog */}
       {open && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-[#fbf9f5] rounded-3xl shadow-2xl border border-[#ede5d8] overflow-hidden flex flex-col h-[580px] animate-in zoom-in-95 duration-200">
+          <div role="dialog" aria-modal="true" aria-label="Trợ lý AI" className="w-full max-w-lg bg-[#fbf9f5] rounded-3xl shadow-2xl border border-[#ede5d8] overflow-hidden flex flex-col h-[580px] animate-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="p-4 bg-[#1c1917] text-white flex items-center justify-between">
               <div className="flex items-center gap-2.5">

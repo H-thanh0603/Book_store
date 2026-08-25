@@ -77,13 +77,23 @@ export async function POST(req: NextRequest) {
       const end = body.endAt ? new Date(body.endAt) : new Date();
       if (Number.isNaN(start.valueOf()) || Number.isNaN(end.valueOf()) || start >= end)
         fail(400, "VALIDATION", "Invalid reconcile period");
-      const externalIds = Array.isArray(body.externalOrderIds) ? body.externalOrderIds.filter((v: unknown): v is string => typeof v === "string") : [];
+      const externalIds: string[] = Array.isArray(body.externalOrderIds)
+        ? [...new Set<string>(body.externalOrderIds.filter((v: unknown): v is string => typeof v === "string" && v.trim() !== "").map((v: string) => v.trim()))]
+        : [];
+      if (externalIds.length === 0)
+        fail(400, "VALIDATION", "externalOrderIds (non-empty string array) required for reconcile");
       const localOrders = await prisma.order.findMany({
         where: { channel: "MARKETPLACE", createdAt: { gte: start, lt: end } },
         select: { id: true, number: true, externalId: true },
       });
-      void externalIds;
-      return ok({ period: { startAt: start.toISOString(), endAt: end.toISOString() }, localCount: localOrders.length, orders: localOrders });
+      const localExternal = new Set<string>(localOrders.map((o) => o.externalId).filter((v): v is string => !!v));
+      return ok({
+        period: { startAt: start.toISOString(), endAt: end.toISOString() },
+        // Known externally but never imported.
+        missingLocally: externalIds.filter((id) => !localExternal.has(id)),
+        // Imported locally but the provider's window no longer lists them.
+        missingExternally: [...localExternal].filter((id) => !externalIds.includes(id)),
+      });
     }
 
     if (body.action === "import_marketplace_order") {

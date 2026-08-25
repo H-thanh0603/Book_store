@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useEscapeClose } from "./useEscapeClose";
 import {
   ChevronLeft,
   ChevronRight,
@@ -23,6 +24,7 @@ export default function FlipbookReaderModal({
   onClose: () => void;
   onAddToCart?: () => void;
 }) {
+  useEscapeClose(true, onClose);
   const [currentPage, setCurrentPage] = useState(1);
   const [readingMode, setReadingMode] = useState<"sepia" | "light" | "dark">("sepia");
   const fontSize = "base" as const;

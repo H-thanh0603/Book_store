@@ -17,13 +17,15 @@ export async function POST(req: NextRequest) {
     const providerName = req.nextUrl.searchParams.get("provider") ?? "";
     const raw = await req.text();
     const provider = await prisma.integrationProvider.findUnique({ where: { name: providerName } });
-    if (!provider || !provider.active || !provider.webhookSecret) fail(401, "VALIDATION", "Unknown or inactive provider");
+    // One generic message before the signature verifies — distinct errors would
+    // let unauthenticated callers enumerate configured provider slugs.
+    if (!provider || !provider.active || !provider.webhookSecret) fail(401, "VALIDATION", "Authentication failed");
 
     const expected = createHmac("sha256", openSecret(provider.webhookSecret)).update(raw).digest("hex");
     const got = req.headers.get("x-signature") ?? "";
     const a = Buffer.from(expected), b = Buffer.from(got);
     if (a.length !== b.length || !timingSafeEqual(a, b))
-      fail(401, "VALIDATION", "Invalid signature");
+      fail(401, "VALIDATION", "Authentication failed");
 
     const body = JSON.parse(raw) as { eventId?: string; event?: string; data?: unknown };
     if (typeof body.eventId !== "string" || typeof body.event !== "string" || !body.data)

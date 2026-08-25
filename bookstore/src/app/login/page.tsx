@@ -186,7 +186,8 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              {/* Demo Account Quick Selectors */}
+              {/* Demo Account Quick Selectors — never rendered in production builds */}
+              {process.env.NODE_ENV !== "production" && (
               <div className="mt-6 pt-5 border-t border-slate-100">
                 <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-indigo-600" />
@@ -216,6 +217,7 @@ export default function LoginPage() {
                   ))}
                 </div>
               </div>
+              )}
             </div>
           </div>
         </div>

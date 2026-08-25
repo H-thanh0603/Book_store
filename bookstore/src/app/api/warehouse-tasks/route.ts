@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       });
       if (!item) fail(404, "NOT_FOUND", "Task item not found");
       if (item.task.status !== "IN_PROGRESS") fail(409, "INVALID_STATUS_TRANSITION", "Task must be IN_PROGRESS to scan");
-      await requirePermission("inventory.adjust", item.task.location.storeId);
+      const auth = await requirePermission("inventory.adjust", item.task.location.storeId);
       const processedQty = Math.min(item.processedQty + body.quantity, item.quantity);
       await prisma.$transaction(async (tx) => {
         const claimed = await tx.warehouseTaskItem.updateMany({
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
               variantId: item.variantId, locationId: item.task.locationId,
               type: item.task.type === "PICK" ? "TRANSFER_OUT" : "PURCHASE_RECEIPT",
               quantityDelta: item.task.type === "PICK" ? -delta : delta,
-              refType: "warehouse_task", refId: item.task.id, userId: "wms-scan",
+              refType: "warehouse_task", refId: item.task.id, userId: auth.userId,
             });
         }
         const siblings = await tx.warehouseTaskItem.findMany({ where: { taskId: item.taskId } });
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
       fail(400, "VALIDATION", "Unknown action");
     const current = await prisma.warehouseTask.findUnique({ where: { id: body.taskId }, include: { location: true, items: true } });
     if (!current) fail(404, "NOT_FOUND", "Warehouse task not found");
-    await requirePermission("inventory.adjust", current.location.storeId);
+    const auth = await requirePermission("inventory.adjust", current.location.storeId);
     if (!(TRANSITIONS[current.status] ?? []).includes(body.status))
       fail(409, "INVALID_STATUS_TRANSITION", `Cannot transition ${current.status} -> ${body.status}`);
     const task = await prisma.$transaction(async (tx) => {
@@ -160,9 +160,9 @@ export async function POST(req: NextRequest) {
           const remaining = item.quantity - item.processedQty;
           if (remaining <= 0) continue;
           if (current.type === "PICK")
-            await applyMovement(tx, { variantId: item.variantId, locationId: current.locationId, type: "TRANSFER_OUT", quantityDelta: -remaining, refType: "warehouse_task", refId: current.id, userId: "wms-complete" });
+            await applyMovement(tx, { variantId: item.variantId, locationId: current.locationId, type: "TRANSFER_OUT", quantityDelta: -remaining, refType: "warehouse_task", refId: current.id, userId: auth.userId });
           else
-            await applyMovement(tx, { variantId: item.variantId, locationId: current.locationId, type: "PURCHASE_RECEIPT", quantityDelta: remaining, refType: "warehouse_task", refId: current.id, userId: "wms-complete" });
+            await applyMovement(tx, { variantId: item.variantId, locationId: current.locationId, type: "PURCHASE_RECEIPT", quantityDelta: remaining, refType: "warehouse_task", refId: current.id, userId: auth.userId });
           await tx.warehouseTaskItem.update({ where: { id: item.id }, data: { processedQty: item.quantity } });
         }
       }

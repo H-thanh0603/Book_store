@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Trophy,
   PartyPopper,
@@ -16,6 +16,7 @@ const prizes = [
   { label: "Giảm 15% Manga", color: "#7c3aed" },
   { label: "Quà Bí Mật Thủ Thư", color: "#db2777" },
 ];
+const SEGMENT_DEG = 360 / prizes.length;
 
 export default function LuckyWheelModal({ onRewardWon }: { onRewardWon?: (reward: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -24,18 +25,31 @@ export default function LuckyWheelModal({ onRewardWon }: { onRewardWon?: (reward
   const [wonPrize, setWonPrize] = useState<string | null>(null);
   const checkedDays = [true, true, true, false, false, false, false];
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   function spinWheel() {
     if (spinning) return;
     setSpinning(true);
     setWonPrize(null);
 
-    const randomDeg = 1440 + Math.floor(Math.random() * 360);
-    const newRot = rotation + randomDeg;
+    // Draw the prize FIRST, then land the pointer mid-segment so what the wheel
+    // shows always matches the announced result.
+    const prizeIdx = Math.floor(Math.random() * prizes.length);
+    const currentMod = ((rotation % 360) + 360) % 360;
+    const targetMid = prizeIdx * SEGMENT_DEG + SEGMENT_DEG / 2;
+    const delta = (((360 - targetMid) % 360) - currentMod + 720) % 360;
+    const newRot = rotation + 1440 + delta;
     setRotation(newRot);
 
     setTimeout(() => {
       setSpinning(false);
-      const prizeIdx = Math.floor(Math.random() * prizes.length);
       const prize = prizes[prizeIdx].label;
       setWonPrize(prize);
       if (onRewardWon) onRewardWon(prize);
@@ -56,7 +70,7 @@ export default function LuckyWheelModal({ onRewardWon }: { onRewardWon?: (reward
       {/* Modal Dialog */}
       {open && (
         <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 text-center relative space-y-5 animate-in zoom-in-95 duration-200">
+          <div role="dialog" aria-modal="true" aria-label="Vòng quay may mắn" className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 text-center relative space-y-5 animate-in zoom-in-95 duration-200">
             <button
               onClick={() => setOpen(false)}
               className="absolute top-5 right-5 size-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center"
@@ -115,7 +129,7 @@ export default function LuckyWheelModal({ onRewardWon }: { onRewardWon?: (reward
             {/* Won Prize Celebration */}
             {wonPrize && (
               <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-900 animate-in zoom-in-90 duration-150">
-                🎉 Chúc mừng bạn đã trúng: <b className="text-rose-600">{wonPrize}</b>! Mã đã được lưu vào ví ưu đãi của bạn.
+                🎉 Chúc mừng bạn đã trúng: <b className="text-rose-600">{wonPrize}</b>!
               </div>
             )}
 

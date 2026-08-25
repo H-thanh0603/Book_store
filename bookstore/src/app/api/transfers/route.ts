@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     if (body.action === "transition") {
       const to: string = body.to;
       const needsApprove = ["APPROVED"].includes(to);
-      const auth = await requirePermission(needsApprove ? "inventory.transfer" : "inventory.transfer");
+      const auth = await requirePermission("inventory.transfer");
 
       const result = await prisma.$transaction(async (tx) => {
         const trf = await tx.stockTransfer.findUnique({
@@ -80,6 +80,10 @@ export async function POST(req: NextRequest) {
           assertStoreAccess(auth, loc?.storeId, "inventory.transfer");
         }
         assertTransition(trf.status, to);
+        // Approval integrity, mirroring purchase orders: the requester may not
+        // approve their own transfer.
+        if (needsApprove && trf.requestedBy === auth.userId)
+          fail(403, "FORBIDDEN", "Cannot approve your own transfer");
         const claimed = await tx.stockTransfer.updateMany({
           where: { id: trf.id, status: trf.status },
           data: { status: to as TransferStatus, approvedBy: to === "APPROVED" ? auth.userId : trf.approvedBy },

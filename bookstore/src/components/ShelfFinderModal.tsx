@@ -6,6 +6,7 @@ import {
   Store,
   X,
 } from "lucide-react";
+import { useEscapeClose } from "./useEscapeClose";
 
 export default function ShelfFinderModal({
   productName,
@@ -19,12 +20,13 @@ export default function ShelfFinderModal({
   onClose: () => void;
 }) {
   const isBook = categoryName.toLowerCase().includes("sách") || categoryName.toLowerCase().includes("văn học");
+  useEscapeClose(true, onClose);
   const shelfCode = isBook ? "KỆ B3 · HÀNG 2 · TẦNG 1" : "KỆ D1 · HÀNG 1 · KHU VPP & ĐỒ CHƠI";
   const floorName = isBook ? "Tầng 1 (Khu Vực Văn Học & Sách Quốc Tế)" : "Tầng Trệt (Khu Vực VPP & Đồ Chơi Sáng Tạo)";
 
   return (
     <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-200">
+      <div role="dialog" aria-modal="true" aria-label="Tìm vị trí kệ hàng" className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
             <div className="size-9 rounded-xl bg-rose-50 text-[#c83f49] flex items-center justify-center">
