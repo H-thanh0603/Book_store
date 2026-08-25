@@ -248,6 +248,7 @@ model ProductBarcode {
   variantId String
   variant   ProductVariant @relation(fields: [variantId], references: [id])
   type      String // EAN13 | ISBN | INTERNAL | SUPPLIER
+  @@index([variantId])
 }
 
 model AttributeValue {
@@ -327,6 +328,7 @@ model InventoryMovement {
   createdAt   DateTime @default(now())
   @@index([variantId, locationId])
   @@index([createdAt])
+  @@index([refType, refId])
 }
 
 // Agent 2: inventory adjustment approval workflow. DRAFT → PENDING → APPROVED (applies movement) | REJECTED.
@@ -361,6 +363,7 @@ model InventoryAdjustmentItem {
   expectedQty   Int
   countedQty    Int
   @@index([variantId])
+  @@index([adjustmentId])
 }
 
 // ── Suppliers / Purchasing ────────────────────────────────────
@@ -440,6 +443,7 @@ model PurchaseOrderItem {
   unitCost  BigInt
   receivedQty Int @default(0)
   @@index([variantId])
+  @@index([poId])
 }
 
 model GoodsReceipt {
@@ -461,6 +465,7 @@ model GoodsReceiptItem {
   quantity    Int
   damagedQty  Int @default(0)
   @@index([variantId])
+  @@index([receiptId])
 }
 
 // ── Stock Transfer ────────────────────────────────────────────
@@ -500,6 +505,7 @@ model StockTransferItem {
   quantity  Int
   receivedQty Int @default(0)
   @@index([variantId])
+  @@index([transferId])
 }
 
 // ── Customers / Loyalty ───────────────────────────────────────
@@ -537,6 +543,7 @@ model LoyaltyTransaction {
   refType   String?
   refId     String?
   createdAt DateTime @default(now())
+  @@index([accountId])
 }
 
 // ── Promotions ────────────────────────────────────────────────
@@ -582,6 +589,7 @@ model PromotionStore {
   promotion Promotion @relation(fields: [promotionId], references: [id])
   store     Store @relation(fields: [storeId], references: [id])
   @@id([promotionId, storeId])
+  @@index([storeId]) // PK prefix is promotion-first; store lookups need their own
 }
 model Bundle {
   id     String @id @default(uuid())
@@ -626,11 +634,11 @@ enum OrderType {
 model Order {
   id          String @id @default(uuid())
   number      String @unique // ORD-2026-000001
-  externalId  String? // Agent 4: marketplace order id for reconciliation
+  externalId  String? // Agent 4: marketplace order id; MARKETPLACE uniqueness enforced by SQL partial index (migration 20260825120000)
   channel     String // POS | WEB | APP | MARKETPLACE | CALL_CENTER
   type        OrderType
   storeId     String?
-  store       Store? @relation(fields: [storeId], references: [id])
+  store       Store? @relation(fields: [storeId], references: [id], onDelete: Restrict)
   customerId  String
   customer    Customer @relation(fields: [customerId], references: [id])
   status      OrderStatus @default(NEW)
@@ -659,6 +667,7 @@ model OrderItem {
   discount  BigInt @default(0)
   returnItems ReturnItem[]
   @@index([variantId])
+  @@index([orderId])
 }
 
 model OrderStatusHistory {
@@ -669,6 +678,7 @@ model OrderStatusHistory {
   toStatus  OrderStatus
   userId    String?
   createdAt DateTime @default(now())
+  @@index([orderId])
 }
 
 // ── POS ───────────────────────────────────────────────────────
@@ -716,7 +726,7 @@ model PosTransaction {
   shift       PosShift @relation(fields: [shiftId], references: [id])
   storeId     String
   customerId  String?
-  customer    Customer? @relation(fields: [customerId], references: [id])
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict) // sales history must not be orphaned
   status      PosTxStatus @default(COMPLETED)
   subtotal    BigInt
   discountTotal BigInt @default(0)
@@ -742,6 +752,7 @@ model PosTransactionItem {
   promoId   String?
   @@index([variantId])
   @@index([promoId])
+  @@index([txId])
 }
 
 enum PaymentMethod {
@@ -763,6 +774,7 @@ model Payment {
   giftCardId String?
   giftCard GiftCard? @relation(fields: [giftCardId], references: [id])
   createdAt DateTime @default(now())
+  @@index([txId])
 }
 
 // Online (non-POS) payment intents, e.g. VNPay storefront checkout. One per
@@ -831,9 +843,9 @@ model Return {
   id          String @id @default(uuid())
   number      String @unique
   orderId     String?
-  order       Order? @relation(fields: [orderId], references: [id])
+  order       Order? @relation(fields: [orderId], references: [id], onDelete: Restrict) // refund lineage must never be orphaned
   customerId  String?
-  customer    Customer? @relation(fields: [customerId], references: [id])
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict)
   payments    ReturnPayment[]
   locationId  String
   location    StockLocation @relation(fields: [locationId], references: [id])
@@ -857,6 +869,8 @@ model ReturnItem {
   disposition String @default("RESTOCK") // RESTOCK | DAMAGED
   refundAmount BigInt
   @@index([variantId])
+  @@index([returnId])
+  @@index([orderItemId])
 }
 
 model GiftCard {
@@ -911,6 +925,7 @@ model SupplierReturnItem {
   variant          ProductVariant @relation(fields: [variantId], references: [id])
   quantity         Int
   @@index([variantId])
+  @@index([supplierReturnId])
 }
 
 enum InventoryCountStatus {

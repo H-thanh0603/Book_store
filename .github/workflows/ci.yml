@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://bookstore:bookstore@localhost:5432/bookstore
+      SHADOW_DATABASE_URL: postgresql://bookstore:bookstore@localhost:5432/bookstore_shadow
       SEED_USER_PASSWORD: ci-only-password-123
     services:
       postgres:
@@ -32,6 +33,29 @@ jobs:
           cache: npm
           cache-dependency-path: bookstore/package-lock.json
       - run: npm ci
+      # Scratch DB for `migrate diff` to replay migrations into.
+      - name: Create shadow database
+        run: |
+          PGPASSWORD=bookstore psql -h localhost -U bookstore -d bookstore -c "CREATE DATABASE bookstore_shadow;"
+      - name: Drift guard — migration history must not imply destructive DDL
+        run: |
+          npx prisma migrate diff \
+            --from-migrations prisma/migrations \
+            --to-schema prisma/schema.prisma \
+            --script > /tmp/drift.sql || true
+          # SQL-managed objects (CHECKs, partial/trgm indexes, extensions) are
+          # invisible to the datamodel, so index-level drops here are EXPECTED
+          # noise — a bare `prisma migrate dev` would emit them. What must NEVER
+          # appear is anything destroying structure or data.
+          if grep -qE 'DROP TABLE|DROP COLUMN|DELETE FROM|TRUNCATE' /tmp/drift.sql; then
+            echo "::error::Migration history vs schema.prisma implies destructive DDL (table/column drop or data deletion). Do not run 'prisma migrate dev' against this history until resolved."
+            cat /tmp/drift.sql
+            exit 1
+          fi
+          if grep -qE 'DROP CONSTRAINT' /tmp/drift.sql; then
+            echo "::warning::Drift implies constraint drops (SQL-managed CHECKs/FKs). Review before running 'prisma migrate dev'."
+            grep 'DROP CONSTRAINT' /tmp/drift.sql | head -20
+          fi
       - run: npx prisma migrate deploy
       - run: npx prisma db seed
       - run: npm run lint
