@@ -9,16 +9,45 @@ function hashSessionToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
+const SCRYPT_KEYLEN = 64;
+// OWASP 2024 password-storage guidance (N=2^17). maxmem must cover 128·N·r bytes.
+const SCRYPT_PARAMS = { N: 2 ** 17, r: 8, p: 1, maxmem: 256 * 1024 * 1024 };
+const LEGACY_SCRYPT = { N: 16384, r: 8, p: 1, maxmem: 128 * 1024 * 1024 };
+
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
-  return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
+  const hash = scryptSync(password, salt, SCRYPT_KEYLEN, SCRYPT_PARAMS).toString("hex");
+  // Versioned envelope so parameters can rise again without invalidating rows.
+  return `scrypt$${SCRYPT_PARAMS.N}$${SCRYPT_PARAMS.r}$${SCRYPT_PARAMS.p}$${salt}:${hash}`;
 }
 
 export function verifyPassword(password: string, stored: string): boolean {
-  const [salt, hash] = stored.split(":");
-  if (!hash) return false;
-  const candidate = scryptSync(password, salt, 64);
-  return timingSafeEqual(candidate, Buffer.from(hash, "hex"));
+  try {
+    let params: { N: number; r: number; p: number } | null = null;
+    let rest = stored;
+    if (stored.startsWith("scrypt$")) {
+      const [, nStr, rStr, pStr, tail] = stored.split("$");
+      const N = Number(nStr), r = Number(rStr), p = Number(pStr);
+      if (!(N > 0 && r > 0 && p > 0 && Number.isInteger(N * r * p))) return false;
+      params = { N, r, p };
+      rest = tail ?? "";
+    }
+    const [salt, hash] = rest.split(":");
+    if (!salt || !hash) return false;
+    // Fail closed on malformed/corrupt rows: a length mismatch would make
+    // timingSafeEqual throw RangeError (500 on every login for that account).
+    const expected = Buffer.from(hash, "hex");
+    if (expected.length !== SCRYPT_KEYLEN) return false;
+    const derived = scryptSync(password, salt, SCRYPT_KEYLEN, params ? { ...params, maxmem: 256 * 1024 * 1024 } : LEGACY_SCRYPT);
+    return timingSafeEqual(derived, expected);
+  } catch {
+    return false;
+  }
+}
+
+/** Legacy-parameter row (or anything unparsable) → rehash after a good login. */
+export function passwordNeedsRehash(stored: string): boolean {
+  return !stored.startsWith(`scrypt$${SCRYPT_PARAMS.N}$${SCRYPT_PARAMS.r}$${SCRYPT_PARAMS.p}$`);
 }
 
 export async function createSession(userId: string) {

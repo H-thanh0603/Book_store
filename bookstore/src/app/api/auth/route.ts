@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { createSession, destroySession, getAuth, hashPassword, revokeOtherSessions, verifyPassword } from "@/lib/auth";
+import { createSession, destroySession, getAuth, hashPassword, passwordNeedsRehash, revokeOtherSessions, verifyPassword } from "@/lib/auth";
 import { apiError, ok, fail } from "@/lib/api";
 import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 
@@ -20,6 +20,9 @@ export async function POST(req: NextRequest) {
       const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (!user || !user.active || !verifyPassword(password, user.passwordHash))
         fail(401, "BAD_REQUEST", "Invalid credentials");
+      // Transparent upgrade: legacy-parameter rows re-hash at current policy.
+      if (passwordNeedsRehash(user.passwordHash))
+        await prisma.user.update({ where: { id: user.id }, data: { passwordHash: hashPassword(password) } });
       await createSession(user.id);
       return ok({ email: user.email });
     }

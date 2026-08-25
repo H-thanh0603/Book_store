@@ -6,8 +6,21 @@ function digest(value: string) {
 }
 
 export function clientIp(headers: Headers) {
-  if (process.env.TRUST_PROXY_HEADERS !== "true") return "untrusted-proxy";
-  return headers.get("x-real-ip") ?? headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  // Behind a proxy that overwrites X-Forwarded-For (see docs/OPERATIONS.md
+  // "Reverse-proxy contract" / deploy/nginx.conf): full client precision.
+  if (process.env.TRUST_PROXY_HEADERS === "true")
+    return headers.get("x-real-ip") ?? headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  // No trusted reverse proxy: fall back to edge-injected headers (only present
+  // when a real CDN/edge set them) instead of collapsing EVERY client into a
+  // single "untrusted-proxy" bucket, which let any busy NAT lock out all
+  // logins/checkouts platform-wide. Direct connections share the "local" bucket;
+  // per-account keys keep credential stuffing bounded regardless.
+  return (
+    headers.get("cf-connecting-ip") ??
+    headers.get("true-client-ip") ??
+    headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ??
+    "local"
+  );
 }
 
 /** Atomic, database-backed fixed-window limiter shared by every app instance. */

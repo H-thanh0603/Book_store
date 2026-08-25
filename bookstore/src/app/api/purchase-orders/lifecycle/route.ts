@@ -14,15 +14,28 @@ import { assertPoTransition } from "@/lib/purchasing";
 const PAYABLE_TOTAL = (items: { quantity: number; unitCost: bigint }[]) =>
   items.reduce((s, i) => s + i.quantity * Number(i.unitCost), 0);
 
+// Auth BEFORE any record load: an unauthenticated caller must not be able to
+// probe valid poIds via 404-vs-403/409 differentiation (or force a DB hit per guess).
+const PERMISSION_BY_ACTION: Record<string, string> = {
+  confirm_supplier: "purchase.approve",
+  send: "purchase.create",
+  record_invoice: "purchase.create",
+  pay: "purchase.approve",
+  close: "purchase.approve",
+  cancel: "purchase.approve",
+};
+
 export async function POST(req: NextRequest) {
   try {
     const b = await req.json();
-    if (!b.poId || !b.action) fail(400, "VALIDATION", "poId and action required");
+    const needed = typeof b.action === "string" ? PERMISSION_BY_ACTION[b.action] : undefined;
+    if (!needed) fail(400, "VALIDATION", "Unknown action");
+    const auth = await requirePermission(needed);
+    if (!b.poId) fail(400, "VALIDATION", "poId required");
     const po = await prisma.purchaseOrder.findUnique({ where: { id: b.poId }, include: { items: true } });
     if (!po) fail(404, "NOT_FOUND", "PO not found");
 
     if (b.action === "confirm_supplier") {
-      const auth = await requirePermission("purchase.approve");
       // Supplier confirms the order — allowed once, from approved/sent
       if (!["approved", "sent"].includes(po.status)) fail(409, "INVALID_STATUS_TRANSITION", `Cannot confirm PO in status ${po.status}`);
       const updated = await prisma.$transaction(async (tx) => {
@@ -40,7 +53,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (b.action === "send") {
-      const auth = await requirePermission("purchase.create");
       assertPoTransition(po.status, "sent");
       const updated = await prisma.$transaction(async (tx) => {
         const claimed = await tx.purchaseOrder.updateMany({
@@ -55,7 +67,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (b.action === "record_invoice") {
-      const auth = await requirePermission("purchase.create");
       if (!b.invoiceNumber) fail(400, "VALIDATION", "invoiceNumber required");
       const amount = toMoney(b.invoiceAmount ?? PAYABLE_TOTAL(po.items), "invoiceAmount");
       if (!["sent", "partially_received", "received"].includes(po.status)) fail(409, "INVALID_STATUS_TRANSITION", `Cannot record invoice for PO in status ${po.status}`);
@@ -86,7 +97,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (b.action === "pay") {
-      const auth = await requirePermission("purchase.approve");
       const updated = await prisma.$transaction(async (tx) => {
         const current = await tx.purchaseOrder.findUnique({
           where: { id: po.id }, select: { invoiceNumber: true, payableStatus: true },
@@ -107,7 +117,6 @@ export async function POST(req: NextRequest) {
 
     if (b.action === "close" || b.action === "cancel") {
       const to = b.action === "close" ? "closed" : "cancelled";
-      const auth = await requirePermission("purchase.approve");
       assertPoTransition(po.status, to);
       await prisma.$transaction(async (tx) => {
         // Re-validate against live items inside the transaction — a receipt
