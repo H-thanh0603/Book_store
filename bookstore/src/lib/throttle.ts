@@ -9,8 +9,6 @@
 // by replacing the semaphore with a shared Redis atomic-counter or an
 // admission-control header set by the edge/reverse proxy — at which point this
 // becomes a no-op fast path per instance.
-import { fail } from "./api";
-
 export const MAX_CONCURRENT_CHECKOUTS = Number(process.env.MAX_CONCURRENT_CHECKOUTS ?? 20);
 // How long a request is willing to wait in line before we tell the browser to
 // retry. Keeps perceived "queue" off the server entirely.
@@ -47,9 +45,12 @@ function acquire(): Promise<void> {
     const timer = setTimeout(() => {
       const idx = queue.indexOf(done);
       if (idx >= 0) queue.splice(idx, 1);
-      settled = true;
-      fail(409, "RATE_LIMITED", "Hệ thống thanh toán đang quá tải, vui lòng thử lại", { retryAfter: RETRY_AFTER_SEC });
-      reject(new Error("queue timeout"));
+      // Reject (never throw) — a throw inside a timer callback is an uncaught
+      // exception that crashes the worker; apiError() maps the attached
+      // status/code/retryAfter to a graceful 409 with Retry-After.
+      reject(Object.assign(new Error("Hệ thống thanh toán đang quá tải, vui lòng thử lại"), {
+        status: 409, code: "RATE_LIMITED", retryAfter: RETRY_AFTER_SEC,
+      }));
     }, QUEUE_WAIT_MS);
     queue.push(done);
   });
