@@ -35,8 +35,15 @@ export async function POST(req: NextRequest) {
     await enforceRateLimit("storefront-checkout", clientIp(req.headers), 10, 60_000);
     // System-wide concurrency cap so a flash sale doesn't saturate the DB pool
     // or double-fire the payment gateway.
-    const order = await withCheckoutSlot(async () => checkoutStorefrontOrder(await req.json()));
-    const response = ok({ number: order.number, status: order.status, total: Number(order.total) }, 201);
+    const body = await req.json();
+    const order = await withCheckoutSlot(async () => checkoutStorefrontOrder(body, {
+      ip: clientIp(req.headers),
+      baseUrl: req.nextUrl.origin,
+    }));
+    const response = ok(
+      { number: order.number, status: order.status, total: Number(order.total), paymentUrl: (order as { paymentUrl?: string }).paymentUrl },
+      201,
+    );
     observeRequest("/api/storefront", "POST", 201, Date.now() - started);
     return response;
   } catch (error) {

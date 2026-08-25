@@ -252,6 +252,7 @@ export type GiftCardTransactionOrderByWithRelationInput = {
 
 export type GiftCardTransactionWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  giftCardId_refType_refId?: Prisma.GiftCardTransactionGiftCardIdRefTypeRefIdCompoundUniqueInput
   AND?: Prisma.GiftCardTransactionWhereInput | Prisma.GiftCardTransactionWhereInput[]
   OR?: Prisma.GiftCardTransactionWhereInput[]
   NOT?: Prisma.GiftCardTransactionWhereInput | Prisma.GiftCardTransactionWhereInput[]
@@ -262,7 +263,7 @@ export type GiftCardTransactionWhereUniqueInput = Prisma.AtLeast<{
   refId?: Prisma.StringNullableFilter<"GiftCardTransaction"> | string | null
   createdAt?: Prisma.DateTimeFilter<"GiftCardTransaction"> | Date | string
   giftCard?: Prisma.XOR<Prisma.GiftCardScalarRelationFilter, Prisma.GiftCardWhereInput>
-}, "id">
+}, "id" | "giftCardId_refType_refId">
 
 export type GiftCardTransactionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -369,6 +370,12 @@ export type GiftCardTransactionListRelationFilter = {
 
 export type GiftCardTransactionOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type GiftCardTransactionGiftCardIdRefTypeRefIdCompoundUniqueInput = {
+  giftCardId: string
+  refType: string
+  refId: string
 }
 
 export type GiftCardTransactionCountOrderByAggregateInput = {

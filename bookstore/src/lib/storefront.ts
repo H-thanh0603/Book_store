@@ -2,6 +2,8 @@ import { Prisma } from "../generated/prisma/client";
 import { fail, nextBusinessNumber } from "./api";
 import { prisma, prismaRead } from "./db";
 import { createReservedOrder } from "./orders";
+import { embedText } from "./embeddings";
+import { buildVnpayUrl, vnpayConfigured } from "./vnpay";
 
 // ponytail: tiny in-process cache for the public catalog (30s TTL, LRU-capped).
 // Absorbs burst traffic and scrapes; a CDN in front makes this redundant.
@@ -108,8 +110,6 @@ async function listStorefrontProductsUncached(input: {
   // name ("ballo" still finds "Balo học sinh 20L"). Full-scan SIMILARITY is
   // not index-served but only runs when the indexed pass returned nothing;
   // every query word must clear 0.3 against SOME word of the product name.
-  // ponytail: O(catalog) scan per miss — add a GiST gist_trgm_ops index or
-  // pgvector when catalog size makes this hot.
   if (words.length && rows.length === 0) {
     const hits = await prismaRead.$queryRaw<{ id: string }[]>`
       SELECT p.id FROM "Product" p
@@ -132,6 +132,34 @@ async function listStorefrontProductsUncached(input: {
       });
   }
 
+  // Semantic tier (pgvector + Gemini embeddings): only on double-miss, so a
+  // Gemini outage costs nothing on queries exact/trigram already answered.
+  // Matches by meaning, not spelling ("sách về xây thói quen" → Atomic Habits).
+  // Silent no-op without GEMINI_API_KEY; any error logs and keeps old behavior.
+  if (!rows.length && words.length && process.env.GEMINI_API_KEY) {
+    try {
+      const vec = await embedText(words.join(" "));
+      if (vec) {
+        const hits = await prismaRead.$queryRaw<{ id: string }[]>`
+          SELECT e."productId" AS id
+          FROM "ProductEmbedding" e
+          JOIN "Product" p ON p.id = e."productId"
+          WHERE p.status = 'active'
+            ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
+          ORDER BY e.embedding <=> ${`[${vec.join(",")}]`}::vector
+          LIMIT 100`;
+        if (hits.length)
+          rows = await prismaRead.product.findMany({
+            where: { id: { in: hits.map((h) => h.id) } },
+            ...catalogSelect,
+            orderBy: { name: "asc" },
+          });
+      }
+    } catch (error) {
+      console.warn(JSON.stringify({ level: "warn", event: "semantic_search_degraded", message: String(error) }));
+    }
+  }
+
   const products = rows.flatMap((product) => {
     const variants = product.variants.flatMap((variant) => {
       const price = variant.prices.find((entry) => entry.priceList.kind === "online")
@@ -150,12 +178,23 @@ export type StorefrontCheckoutInput = {
   idempotencyKey: string;
   storeId: string;
   fulfillment: "delivery" | "pickup";
+  paymentMethod?: "COD" | "VNPAY";
   customer: { name: string; phone: string; email?: string; address?: string };
   couponCode?: string;
   items: { variantId: string; quantity: number }[];
 };
 
-export async function checkoutStorefrontOrder(input: StorefrontCheckoutInput) {
+/** Returns the created order plus a VNPay redirect URL when paying online. */
+export async function checkoutStorefrontOrder(
+  input: StorefrontCheckoutInput,
+  opts: { ip?: string; baseUrl?: string } = {},
+) {
+  const method = input.paymentMethod ?? "COD";
+  if (!["COD", "VNPAY"].includes(method)) fail(400, "VALIDATION", "Invalid payment method");
+  if (method === "VNPAY") {
+    // Fail before reserving stock rather than after.
+    if (!vnpayConfigured()) fail(400, "VALIDATION", "VNPay is not configured");
+  }
   if (!/^[a-zA-Z0-9_-]{16,128}$/.test(input.idempotencyKey ?? ""))
     fail(400, "VALIDATION", "Invalid idempotency key");
   if (!input.storeId || !["delivery", "pickup"].includes(input.fulfillment))
@@ -179,7 +218,7 @@ export async function checkoutStorefrontOrder(input: StorefrontCheckoutInput) {
   });
   if (existing) {
     if (existing.customer.phone !== phone) fail(409, "DUPLICATE", "Checkout key belongs to another order");
-    return existing;
+    return withPayment(existing, method, opts);
   }
   const store = await prisma.store.findFirst({ where: { id: input.storeId, active: true } });
   if (!store) fail(404, "NOT_FOUND", "Store not found or inactive");
@@ -192,7 +231,7 @@ export async function checkoutStorefrontOrder(input: StorefrontCheckoutInput) {
     update: {},
   });
   try {
-    return await createReservedOrder({
+    const order = await createReservedOrder({
       channel: "WEB",
       type: input.fulfillment === "pickup" ? "pickup" : "ship_from_store",
       storeId: store.id,
@@ -202,11 +241,30 @@ export async function checkoutStorefrontOrder(input: StorefrontCheckoutInput) {
       shipping: input.fulfillment === "delivery" ? { recipientName: name, recipientPhone: phone!, address: address! } : null,
       items: input.items,
     }, "storefront");
+    return withPayment(order, method, opts);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const duplicate = await prisma.order.findFirst({ where: { externalId } });
-      if (duplicate) return duplicate;
+      if (duplicate) return withPayment(duplicate, method, opts);
     }
     throw error;
   }
+}
+
+/**
+ * Attach the VNPay redirect URL when paying online. COD returns the bare
+ * order. The payment intent row is created here so the callback has an
+ * amount/ref to verify against even before VNPay redirects.
+ */
+async function withPayment(
+  order: { id: string; number: string; total: bigint; status?: unknown },
+  method: "COD" | "VNPAY",
+  opts: { ip?: string; baseUrl?: string },
+): Promise<{ id: string; number: string; total: bigint; status?: unknown; paymentUrl?: string }> {
+  if (method !== "VNPAY") return order;
+  const paymentUrl = await buildVnpayUrl(
+    { id: order.id, number: order.number, total: order.total },
+    opts.ip ?? "", opts.baseUrl ?? "",
+  );
+  return { ...order, paymentUrl };
 }

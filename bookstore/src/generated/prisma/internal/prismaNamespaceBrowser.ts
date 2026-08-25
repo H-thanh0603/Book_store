@@ -101,6 +101,7 @@ export const ModelName = {
   PosTransaction: 'PosTransaction',
   PosTransactionItem: 'PosTransactionItem',
   Payment: 'Payment',
+  WebPayment: 'WebPayment',
   Shipment: 'Shipment',
   ReturnPayment: 'ReturnPayment',
   Return: 'Return',
@@ -737,6 +738,23 @@ export const PaymentScalarFieldEnum = {
 } as const
 
 export type PaymentScalarFieldEnum = (typeof PaymentScalarFieldEnum)[keyof typeof PaymentScalarFieldEnum]
+
+
+export const WebPaymentScalarFieldEnum = {
+  id: 'id',
+  orderId: 'orderId',
+  provider: 'provider',
+  txnRef: 'txnRef',
+  amount: 'amount',
+  status: 'status',
+  responseCode: 'responseCode',
+  bankCode: 'bankCode',
+  rawParams: 'rawParams',
+  createdAt: 'createdAt',
+  paidAt: 'paidAt'
+} as const
+
+export type WebPaymentScalarFieldEnum = (typeof WebPaymentScalarFieldEnum)[keyof typeof WebPaymentScalarFieldEnum]
 
 
 export const ShipmentScalarFieldEnum = {

@@ -641,6 +641,7 @@ model Order {
   statusHistory OrderStatusHistory[]
   shipment    Shipment?
   returns     Return[]
+  webPayments WebPayment[]
   createdAt   DateTime @default(now())
   @@index([status])
   @@index([customerId])
@@ -762,6 +763,25 @@ model Payment {
   giftCardId String?
   giftCard GiftCard? @relation(fields: [giftCardId], references: [id])
   createdAt DateTime @default(now())
+}
+
+// Online (non-POS) payment intents, e.g. VNPay storefront checkout. One per
+// order — txnRef is the provider-facing reference. status is a plain string:
+// PENDING | PAID | FAILED, transitioned only by the settle handler.
+model WebPayment {
+  id           String    @id @default(uuid())
+  orderId      String    @unique
+  order        Order     @relation(fields: [orderId], references: [id])
+  provider     String    @default("VNPAY")
+  txnRef       String    @unique
+  amount       BigInt
+  status       String    @default("PENDING")
+  responseCode String?
+  bankCode     String?
+  rawParams    Json?
+  createdAt    DateTime  @default(now())
+  paidAt       DateTime?
+  @@index([status])
 }
 
 // ── Phase 2: fulfillment, returns, gift cards, supplier returns, counts ──

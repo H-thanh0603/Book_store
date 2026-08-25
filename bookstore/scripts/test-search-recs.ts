@@ -44,6 +44,30 @@ async function main() {
   check("recommendations ≤5 and valid shape", recs.length <= 5 && recs.every((r) => r.id && r.sku && r.reason));
   check("no self-recommendation", recs.every((r) => r.id !== variant.id));
 
+  // ── Semantic tier (only meaningful when embeddings exist) ──
+  let embeddedCount = 0;
+  try {
+    const embedded = await prisma.$queryRaw<{ count: bigint }[]>`SELECT COUNT(*)::bigint AS count FROM "ProductEmbedding"`;
+    embeddedCount = Number(embedded[0].count);
+  } catch {
+    // pgvector migration not applied yet — semantic tier can't run.
+  }
+  if (embeddedCount > 0 && process.env.GEMINI_API_KEY) {
+    // Paraphrase that shares no word with any product name — only the
+    // embedding tier can answer it. Uses the seeded Dế Mèn book's theme.
+    const semantic = await listStorefrontProducts({ q: "truyện phiêu lưu của con nhện" });
+    check(
+      "semantic paraphrase finds a product",
+      semantic.products.length > 0,
+      `embeddings=${embeddedCount}`,
+    );
+    const recsVec = await getProductRecommendations(variant.id);
+    check("vector recs carry similar_content or co-purchase reason", recsVec.every((r) =>
+      ["similar_content", "frequently_bought_together"].includes(r.reason)), JSON.stringify(recsVec.map((r) => r.reason)));
+  } else {
+    console.log("⏭️ semantic checks skipped — no embeddings / GEMINI_API_KEY unset");
+  }
+
   process.exitCode = failures ? 1 : 0;
   if (failures) throw new Error(`${failures} check(s) failed`);
   console.log("All checks passed.");

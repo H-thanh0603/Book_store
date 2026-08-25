@@ -21,27 +21,29 @@ export async function getProductRecommendations(variantId: string, take = 5) {
 
   const source = await prisma.productVariant.findUnique({ where: { id: variantId }, include: { product: true } });
   if (!source) return [];
-  // Content-similar fallback: word-vs-word trigram similarity between product
-  // names beats same-category recency ("Atomic Habits Tập 1" → "Tập 2", not
-  // just any book in the category). ponytail: full-scan SIMILARITY — swap for
-  // pgvector + embeddings when the DB has the `vector` extension available.
-  const similar = await prisma.$queryRaw<{ id: string; sku: string; name: string; score: number }[]>`
-    SELECT v.id, v.sku, p.name, AVG(sw.score)::float AS score
-    FROM "ProductVariant" v
-    JOIN "Product" p ON p.id = v."productId"
-    CROSS JOIN LATERAL (
-      SELECT w FROM unnest(string_to_array(lower(${source.product.name}), ' ')) s(w) WHERE length(s.w) >= 3
-    ) sq
-    CROSS JOIN LATERAL (
-      SELECT MAX(SIMILARITY(nw.w, sq.w)) AS score
-      FROM unnest(string_to_array(lower(p.name), ' ')) nw(w) WHERE length(nw.w) >= 3
-    ) sw
-    WHERE v.id <> ${variantId} AND v.active = true AND p.status = 'active'
-      AND p."categoryId" = ${source.product.categoryId}
-    GROUP BY v.id, v.sku, p.name
-    HAVING MIN(sw.score) >= 0.6 OR AVG(sw.score) >= 0.8
-    ORDER BY score DESC, p.name ASC
-    LIMIT ${take}`;
+  // Content-similar fallback (pgvector): nearest neighbors of the source
+  // product's Gemini embedding. Stored-vs-stored — no API call at query time;
+  // products without an embedding row simply don't match here and the
+  // same-category tier answers instead ("Atomic Habits Tập 1" → "Tập 2").
+  // Missing table/extension (pgvector not installed yet) degrades silently.
+  let similar: { id: string; sku: string; name: string; score: number }[] = [];
+  try {
+    similar = await prisma.$queryRaw<{ id: string; sku: string; name: string; score: number }[]>`
+      SELECT v.id, v.sku, p.name,
+             (1 - (se.embedding <=> ce.embedding))::float AS score
+      FROM "ProductEmbedding" ce
+      JOIN "Product" sp ON sp.id = ce."productId"
+      JOIN "ProductVariant" sv ON sv."productId" = sp.id AND sv.id = ${variantId}
+      JOIN "ProductEmbedding" se ON se."productId" <> ce."productId"
+      JOIN "Product" p ON p.id = se."productId" AND p.status = 'active'
+      JOIN "ProductVariant" v ON v."productId" = p.id AND v.active = true AND v.id <> ${variantId}
+      WHERE se.model = ce.model
+      ORDER BY se.embedding <=> ce.embedding
+      LIMIT ${take}`;
+  } catch {
+    // ponytail: blanket catch hides DB outages too; acceptable — the
+    // same-category tier below still answers the request.
+  }
   if (similar.length)
     return similar.map((item) => ({ ...item, reason: "similar_content" }));
 

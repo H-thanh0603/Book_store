@@ -13,6 +13,7 @@ import type {
   CartLine,
   Fulfillment,
   GiftWrapping,
+  PaymentMethodChoice,
   Product,
   StockConflictDetail,
 } from "./types";
@@ -55,6 +56,7 @@ export function useStorefront() {
   const [couponInput, setCouponInput] = useState("");
   const [success, setSuccess] = useState<{ number: string; total: number } | null>(null);
   const [fulfillment, setFulfillment] = useState<Fulfillment>("delivery");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodChoice>("COD");
   const [customer, setCustomer] = useState(defaultCustomer);
   const [toast, setToast] = useState<Toast | null>(null);
 
@@ -426,6 +428,7 @@ export function useStorefront() {
     const request = {
       storeId,
       fulfillment,
+      paymentMethod,
       customer: {
         ...customer,
         address:
@@ -452,6 +455,12 @@ export function useStorefront() {
         return;
       }
       checkoutAttempt.current = null;
+      // VNPay: hand off to the gateway page — the return route settles the
+      // payment and lands on /shop/payment/callback.
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl as string;
+        return;
+      }
       setSuccess({ number: data.number, total: data.total });
       setCart([]);
       setCheckoutOpen(false);
@@ -477,6 +486,7 @@ export function useStorefront() {
     shelfProduct, setShelfProduct, flipbookProduct, setFlipbookProduct,
     giftWrapping, setGiftWrapping, giftMessage, setGiftMessage,
     fulfillment, setFulfillment, customer, setCustomer,
+    paymentMethod, setPaymentMethod,
     couponInput, setCouponInput,
     // totals / derived
     itemCount, subtotal, wrappingFee, grandTotal, progressToFreeShipping,

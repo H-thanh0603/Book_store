@@ -5,6 +5,7 @@ import { NextRequest } from "next/server";
 import { prisma, prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok, fail, toMoney } from "@/lib/api";
+import { embedProduct } from "@/lib/embeddings";
 
 // GET /api/products?q=&barcode=&sku=&page=&search=
 // Admin browse is read-only and seconds-stale-tolerant → replica when configured.
@@ -108,6 +109,8 @@ export async function POST(req: NextRequest) {
     await prisma.auditLog.create({
       data: { actorId: auth.userId, action: "product.create", entity: "Product", entityId: product.id, after: { name: product.name } },
     });
+    // Refresh the semantic-search embedding; never blocks/fails the request.
+    void embedProduct(product.id).catch(() => {});
     return ok({ product }, 201);
   } catch (err) {
     return apiError(err);
@@ -144,6 +147,8 @@ export async function PATCH(req: NextRequest) {
         before: { name: before.name, status: before.status }, after: { name: product.name, status: product.status },
       },
     });
+    // Text fields may have changed — refresh the embedding (fire-and-forget).
+    void embedProduct(product.id).catch(() => {});
     return ok({ product });
   } catch (err) {
     return apiError(err);

@@ -269,6 +269,8 @@ export default function ShopPage() {
           grandTotal={s.grandTotal}
           fulfillment={s.fulfillment}
           onFulfillment={s.setFulfillment}
+          paymentMethod={s.paymentMethod}
+          onPaymentMethod={s.setPaymentMethod}
           giftWrapping={s.giftWrapping}
           onGiftWrapping={s.setGiftWrapping}
           giftMessage={s.giftMessage}

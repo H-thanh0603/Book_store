@@ -447,6 +447,7 @@ export const ModelName = {
   PosTransaction: 'PosTransaction',
   PosTransactionItem: 'PosTransactionItem',
   Payment: 'Payment',
+  WebPayment: 'WebPayment',
   Shipment: 'Shipment',
   ReturnPayment: 'ReturnPayment',
   Return: 'Return',
@@ -482,7 +483,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "organization" | "region" | "store" | "warehouse" | "stockLocation" | "user" | "role" | "permission" | "userRole" | "rolePermission" | "session" | "rateLimitBucket" | "category" | "attributeDefinition" | "brand" | "author" | "publisher" | "product" | "productVariant" | "productBarcode" | "attributeValue" | "priceList" | "price" | "inventoryBalance" | "inventoryMovement" | "inventoryAdjustment" | "inventoryAdjustmentItem" | "supplier" | "supplierProductPrice" | "purchaseOrder" | "purchaseOrderItem" | "goodsReceipt" | "goodsReceiptItem" | "stockTransfer" | "stockTransferItem" | "customer" | "loyaltyAccount" | "loyaltyTransaction" | "promotion" | "promotionStore" | "bundle" | "bundleItem" | "order" | "orderItem" | "orderStatusHistory" | "posTerminal" | "posShift" | "posTransaction" | "posTransactionItem" | "payment" | "shipment" | "returnPayment" | "return" | "returnItem" | "giftCard" | "giftCardTransaction" | "supplierReturn" | "supplierReturnItem" | "inventoryCount" | "inventoryCountItem" | "auditLog" | "systemConfig" | "sequenceCounter" | "replenishmentSuggestion" | "integrationJob" | "integrationProvider" | "warehouseTask" | "warehouseTaskItem" | "jobRun" | "lossAlert"
+    modelProps: "organization" | "region" | "store" | "warehouse" | "stockLocation" | "user" | "role" | "permission" | "userRole" | "rolePermission" | "session" | "rateLimitBucket" | "category" | "attributeDefinition" | "brand" | "author" | "publisher" | "product" | "productVariant" | "productBarcode" | "attributeValue" | "priceList" | "price" | "inventoryBalance" | "inventoryMovement" | "inventoryAdjustment" | "inventoryAdjustmentItem" | "supplier" | "supplierProductPrice" | "purchaseOrder" | "purchaseOrderItem" | "goodsReceipt" | "goodsReceiptItem" | "stockTransfer" | "stockTransferItem" | "customer" | "loyaltyAccount" | "loyaltyTransaction" | "promotion" | "promotionStore" | "bundle" | "bundleItem" | "order" | "orderItem" | "orderStatusHistory" | "posTerminal" | "posShift" | "posTransaction" | "posTransactionItem" | "payment" | "webPayment" | "shipment" | "returnPayment" | "return" | "returnItem" | "giftCard" | "giftCardTransaction" | "supplierReturn" | "supplierReturnItem" | "inventoryCount" | "inventoryCountItem" | "auditLog" | "systemConfig" | "sequenceCounter" | "replenishmentSuggestion" | "integrationJob" | "integrationProvider" | "warehouseTask" | "warehouseTaskItem" | "jobRun" | "lossAlert"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -4186,6 +4187,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    WebPayment: {
+      payload: Prisma.$WebPaymentPayload<ExtArgs>
+      fields: Prisma.WebPaymentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.WebPaymentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebPaymentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.WebPaymentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebPaymentPayload>
+        }
+        findFirst: {
+          args: Prisma.WebPaymentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebPaymentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.WebPaymentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebPaymentPayload>
+        }
+        findMany: {
+          args: Prisma.WebPaymentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebPaymentPayload>[]
+        }
+        create: {
+          args: Prisma.WebPaymentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebPaymentPayload>
+        }
+        createMany: {
+          args: Prisma.WebPaymentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.WebPaymentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebPaymentPayload>[]
+        }
+        delete: {
+          args: Prisma.WebPaymentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebPaymentPayload>
+        }
+        update: {
+          args: Prisma.WebPaymentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebPaymentPayload>
+        }
+        deleteMany: {
+          args: Prisma.WebPaymentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.WebPaymentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.WebPaymentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebPaymentPayload>[]
+        }
+        upsert: {
+          args: Prisma.WebPaymentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebPaymentPayload>
+        }
+        aggregate: {
+          args: Prisma.WebPaymentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWebPayment>
+        }
+        groupBy: {
+          args: Prisma.WebPaymentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WebPaymentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.WebPaymentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WebPaymentCountAggregateOutputType> | number
+        }
+      }
+    }
     Shipment: {
       payload: Prisma.$ShipmentPayload<ExtArgs>
       fields: Prisma.ShipmentFieldRefs
@@ -6305,6 +6380,23 @@ export const PaymentScalarFieldEnum = {
 export type PaymentScalarFieldEnum = (typeof PaymentScalarFieldEnum)[keyof typeof PaymentScalarFieldEnum]
 
 
+export const WebPaymentScalarFieldEnum = {
+  id: 'id',
+  orderId: 'orderId',
+  provider: 'provider',
+  txnRef: 'txnRef',
+  amount: 'amount',
+  status: 'status',
+  responseCode: 'responseCode',
+  bankCode: 'bankCode',
+  rawParams: 'rawParams',
+  createdAt: 'createdAt',
+  paidAt: 'paidAt'
+} as const
+
+export type WebPaymentScalarFieldEnum = (typeof WebPaymentScalarFieldEnum)[keyof typeof WebPaymentScalarFieldEnum]
+
+
 export const ShipmentScalarFieldEnum = {
   id: 'id',
   orderId: 'orderId',
@@ -6887,6 +6979,20 @@ export type ListEnumPaymentMethodFieldRefInput<$PrismaModel> = FieldRefInputType
 
 
 /**
+ * Reference to a field of type 'Json'
+ */
+export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+/**
+ * Reference to a field of type 'QueryMode'
+ */
+export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
+    
+
+
+/**
  * Reference to a field of type 'ShipmentStatus'
  */
 export type EnumShipmentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ShipmentStatus'>
@@ -6939,20 +7045,6 @@ export type EnumInventoryCountStatusFieldRefInput<$PrismaModel> = FieldRefInputT
  * Reference to a field of type 'InventoryCountStatus[]'
  */
 export type ListEnumInventoryCountStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'InventoryCountStatus[]'>
-    
-
-
-/**
- * Reference to a field of type 'Json'
- */
-export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
-    
-
-
-/**
- * Reference to a field of type 'QueryMode'
- */
-export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 
@@ -7254,6 +7346,7 @@ export type GlobalOmitConfig = {
   posTransaction?: Prisma.PosTransactionOmit
   posTransactionItem?: Prisma.PosTransactionItemOmit
   payment?: Prisma.PaymentOmit
+  webPayment?: Prisma.WebPaymentOmit
   shipment?: Prisma.ShipmentOmit
   returnPayment?: Prisma.ReturnPaymentOmit
   return?: Prisma.ReturnOmit

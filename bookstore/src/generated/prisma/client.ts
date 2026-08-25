@@ -292,6 +292,11 @@ export type PosTransactionItem = Prisma.PosTransactionItemModel
  */
 export type Payment = Prisma.PaymentModel
 /**
+ * Model WebPayment
+ * 
+ */
+export type WebPayment = Prisma.WebPaymentModel
+/**
  * Model Shipment
  * 
  */
