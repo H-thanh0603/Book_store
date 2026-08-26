@@ -445,7 +445,10 @@ export function useStorefront() {
     try {
       const response = await fetch("/api/storefront", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-check": "1",
+        },
         body: JSON.stringify({ ...request, idempotencyKey: checkoutAttempt.current.key }),
       });
       const data = await response.json();

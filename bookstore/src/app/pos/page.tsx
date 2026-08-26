@@ -107,7 +107,7 @@ export default function PosPage() {
     const t = setTimeout(() => {
       fetch("/api/pos/quote", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
         body: JSON.stringify({
           shiftId,
           storeId,
@@ -148,7 +148,7 @@ export default function PosPage() {
     }
     const r = await fetch("/api/pos", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
       body: JSON.stringify({
         action: "open_shift",
         terminalId: term.id,
@@ -168,7 +168,7 @@ export default function PosPage() {
     if (!window.confirm("Bạn có chắc chắn muốn kết thúc và đóng ca làm việc này?")) return;
     const r = await fetch("/api/pos", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
       body: JSON.stringify({ action: "close_shift", shiftId, closingCash: 0 }),
     });
     const d = await r.json();
@@ -216,7 +216,7 @@ export default function PosPage() {
       paymentAttemptRef.current = { signature, key: crypto.randomUUID() };
     const r = await fetch("/api/pos", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
       body: JSON.stringify({
         ...requestBody,
         idempotencyKey: paymentAttemptRef.current.key,
@@ -272,7 +272,7 @@ export default function PosPage() {
       return;
     const r = await fetch("/api/pos", {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
       body: JSON.stringify({ txNumber: refundNumber.trim(), shiftId, storeId }),
     });
     const d = await r.json();
