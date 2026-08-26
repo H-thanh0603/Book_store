@@ -74,6 +74,14 @@ export default function PosPage() {
     fetch("/api/customers").then(async (r) => {
       if (r.ok) setCustomers((await r.json()).customers);
     });
+
+    // Register service worker for offline support
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").then((reg) => {
+        // Pre-cache products for offline
+        reg.active?.postMessage({ type: "CACHE_PRODUCTS" });
+      }).catch(() => {});
+    }
   }, []);
 
   const decreaseQty = (variantId: string) => {
@@ -173,14 +181,44 @@ export default function PosPage() {
     const signature = JSON.stringify(requestBody);
     if (paymentAttemptRef.current?.signature !== signature)
       paymentAttemptRef.current = { signature, key: crypto.randomUUID() };
-    const r = await fetch("/api/pos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
-      body: JSON.stringify({
-        ...requestBody,
-        idempotencyKey: paymentAttemptRef.current.key,
-      }),
-    });
+
+    // Try online first, queue for offline if network fails
+    let r: Response;
+    try {
+      r = await fetch("/api/pos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+        body: JSON.stringify({
+          ...requestBody,
+          idempotencyKey: paymentAttemptRef.current.key,
+        }),
+      });
+    } catch {
+      // Network failure — queue for offline sync
+      const offlineSale = {
+        id: paymentAttemptRef.current.key,
+        requestBody,
+        timestamp: Date.now(),
+        storeId,
+        items: lines.map((l) => ({ ...l })),
+        total,
+      };
+      if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: "QUEUE_SALE",
+          sale: offlineSale,
+        });
+      }
+      setMsg({
+        text: "Mất mạng! Đơn hàng đã được lưu offline. Sẽ tự động đồng bộ khi có mạng.",
+        type: "info",
+      });
+      setLines([]);
+      setCustomerId("");
+      searchRef.current?.focus();
+      return;
+    }
+
     const d = await r.json();
     if (r.ok) {
       paymentAttemptRef.current = null;
