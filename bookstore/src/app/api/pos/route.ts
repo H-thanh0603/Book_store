@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { assertStoreAccess, requirePermission } from "@/lib/auth";
 import { apiError, ok, fail, toMoney } from "@/lib/api";
 import { completeSale, openShift, closeShift, refundSale } from "@/lib/pos";
+import { withCheckoutSlot } from "@/lib/throttle";
 
 // PUT /api/pos — full refund of a completed transaction (spec Module 18: POS return)
 export async function PUT(req: NextRequest) {
@@ -98,19 +99,21 @@ export async function POST(req: NextRequest) {
         else
           overrides = body.items.filter((i: { unitPrice?: unknown }) => i.unitPrice != null).length;
       }
-      const txn = await completeSale({
-        shiftId: body.shiftId,
-        storeId: body.storeId,
-        userId: auth.userId,
-        items: body.items,
-        customerId: body.customerId ?? null,
-        redeemPoints: body.redeemPoints,
-        idempotencyKey: body.idempotencyKey.trim().slice(0, 128),
-        payments: (body.payments as Record<string, unknown>[]).map((p) => ({
-          method: p.method as PaymentMethod, amount: toMoney(p.amount, "payment.amount"),
-          giftCardCode: typeof p.giftCardCode === "string" ? p.giftCardCode : undefined,
-        })),
-      });
+      const txn = await withCheckoutSlot(() =>
+        completeSale({
+          shiftId: body.shiftId,
+          storeId: body.storeId,
+          userId: auth.userId,
+          items: body.items,
+          customerId: body.customerId ?? null,
+          redeemPoints: body.redeemPoints,
+          idempotencyKey: body.idempotencyKey.trim().slice(0, 128),
+          payments: (body.payments as Record<string, unknown>[]).map((p) => ({
+            method: p.method as PaymentMethod, amount: toMoney(p.amount, "payment.amount"),
+            giftCardCode: typeof p.giftCardCode === "string" ? p.giftCardCode : undefined,
+          })),
+        })
+      );
       // audit
       await prisma.auditLog.create({
         data: {
