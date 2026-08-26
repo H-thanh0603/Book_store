@@ -4,22 +4,26 @@ import Nav from "../nav";
 import {
   Tag,
   Plus,
+  Edit2,
+  Eye,
+  XCircle,
+  CheckCircle2,
+  AlertCircle,
   Percent,
   DollarSign,
   Gift,
-  CheckCircle2,
-  AlertCircle,
-  Sparkles,
 } from "lucide-react";
 
-type Promo = {
+type Promotion = {
   id: string;
   name: string;
   code: string | null;
   type: string;
-  value: number;
+  value: string;
   buyQty: number | null;
   getQty: number | null;
+  categoryId: string | null;
+  category: { name: string } | null;
   minQty: number;
   channel: string;
   stackable: boolean;
@@ -28,447 +32,305 @@ type Promo = {
   memberOnly: boolean;
   priority: number;
   active: boolean;
-  category: { name: string } | null;
+  startAt: string;
+  endAt: string | null;
+  stores: { store: { name: string } }[];
 };
 
+type Category = { id: string; name: string };
+type Store = { id: string; name: string };
+
 export default function PromotionsPage() {
-  const [promos, setPromos] = useState<Promo[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editPromo, setEditPromo] = useState<Promotion | null>(null);
+
   const [form, setForm] = useState({
-    name: "",
-    code: "",
-    type: "percentage",
-    value: 10,
-    minQty: 0,
-    buyQty: 1,
-    getQty: 1,
-    categoryId: "",
-    channel: "ALL",
-    stackable: false,
-    usageLimit: "",
-    memberOnly: false,
-    priority: 0,
-    endAt: "",
+    name: "", code: "", type: "percentage", value: 10, buyQty: 2, getQty: 1,
+    categoryId: "", minQty: 0, channel: "ALL", stackable: false,
+    usageLimit: 0, memberOnly: false, priority: 0, startAt: "", endAt: "",
+    storeIds: [] as string[],
   });
 
   async function load() {
-    const r = await fetch("/api/promotions");
-    if (r.ok) setPromos((await r.json()).promotions);
+    setLoading(true);
+    try {
+      const [promoRes, catRes, storeRes] = await Promise.all([
+        fetch("/api/promotions?active=false"),
+        fetch("/api/categories"),
+        fetch("/api/stores"),
+      ]);
+      if (promoRes.ok) setPromotions((await promoRes.json()).promotions ?? []);
+      if (catRes.ok) setCategories((await catRes.json()).categories ?? []);
+      if (storeRes.ok) setStores((await storeRes.json()).stores ?? []);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-    fetch("/api/refs?kind=categories").then(async (r) => {
-      if (r.ok) setCategories((await r.json()).categories);
-    });
-  }, []);
+  useEffect(() => { void load(); }, []);
 
-  async function create() {
-    if (!form.name.trim()) {
-      setMsg({ text: "Vui lòng nhập tên chương trình khuyến mãi", type: "error" });
-      return;
-    }
-    const r = await fetch("/api/promotions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        code: form.code || undefined,
-        categoryId: form.categoryId || undefined,
-        usageLimit: form.usageLimit ? Number(form.usageLimit) : undefined,
-        endAt: form.endAt || undefined,
-      }),
+  function openCreate() {
+    setForm({
+      name: "", code: "", type: "percentage", value: 10, buyQty: 2, getQty: 1,
+      categoryId: "", minQty: 0, channel: "ALL", stackable: false,
+      usageLimit: 0, memberOnly: false, priority: 0, startAt: "", endAt: "",
+      storeIds: [],
+    });
+    setEditPromo(null);
+    setShowForm(true);
+  }
+
+  function openEdit(p: Promotion) {
+    setForm({
+      name: p.name, code: p.code ?? "", type: p.type,
+      value: Number(p.value), buyQty: p.buyQty ?? 2, getQty: p.getQty ?? 1,
+      categoryId: p.categoryId ?? "", minQty: p.minQty, channel: p.channel,
+      stackable: p.stackable, usageLimit: p.usageLimit ?? 0,
+      memberOnly: p.memberOnly, priority: p.priority,
+      startAt: p.startAt.split("T")[0], endAt: p.endAt?.split("T")[0] ?? "",
+      storeIds: p.stores.map((s) => s.store.name),
+    });
+    setEditPromo(p);
+    setShowForm(true);
+  }
+
+  async function savePromo() {
+    const url = editPromo ? `/api/promotions/${editPromo.id}` : "/api/promotions";
+    const method = editPromo ? "PUT" : "POST";
+    const body = { ...form, value: Number(form.value) };
+    const r = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      body: JSON.stringify(body),
     });
     const d = await r.json();
     if (r.ok) {
-      setMsg({ text: "Tạo chương trình khuyến mãi thành công!", type: "success" });
-      setForm({
-        name: "",
-        code: "",
-        type: "percentage",
-        value: 10,
-        minQty: 0,
-        buyQty: 1,
-        getQty: 1,
-        categoryId: "",
-        channel: "ALL",
-        stackable: false,
-        usageLimit: "",
-        memberOnly: false,
-        priority: 0,
-        endAt: "",
-      });
-      load();
+      setMsg({ text: editPromo ? "Cập nhật thành công" : "Tạo khuyến mãi thành công", type: "success" });
+      setShowForm(false);
+      void load();
     } else {
-      setMsg({ text: d.message, type: "error" });
+      setMsg({ text: d.message ?? "Lỗi", type: "error" });
     }
   }
 
-  async function toggle(p: Promo) {
-    const r = await fetch("/api/promotions", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: p.id, active: !p.active }),
+  async function deactivatePromo(id: string) {
+    if (!window.confirm("Tắt khuyến mãi này?")) return;
+    const r = await fetch(`/api/promotions/${id}`, {
+      method: "DELETE",
+      headers: { "x-csrf-check": "1" },
     });
-    if (r.ok) load();
-    else setMsg({ text: (await r.json()).message, type: "error" });
+    if (r.ok) {
+      setMsg({ text: "Đã tắt", type: "success" });
+      void load();
+    }
   }
 
-  function describe(p: Promo): string {
-    if (p.type === "percentage") return `Giảm ${p.value}%`;
-    if (p.type === "fixed") return `Giảm ${p.value.toLocaleString("vi-VN")} ₫`;
-    return `Mua ${p.buyQty} tặng ${p.getQty}`;
+  function formatValue(type: string, value: string) {
+    if (type === "percentage") return `${value}%`;
+    if (type === "fixed") return `${Number(value).toLocaleString("vi-VN")} ₫`;
+    return "BOGO";
   }
 
   return (
     <main className="min-h-screen bg-slate-50/60 pb-16">
       <Nav />
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
-        {/* Header bar */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                Khuyến Mãi &amp; Mã Giảm Giá (Promotions &amp; Coupons)
+        {/* Header */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                <Tag className="w-6 h-6 text-indigo-600" />
+                Khuyến Mãi
               </h1>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
-                <Sparkles className="w-3 h-3" />
-                {promos.length} quy tắc khuyến mãi
-              </span>
+              <p className="text-xs text-slate-500 mt-1">Quản lý mã giảm giá, chương trình khuyến mãi</p>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Thiết lập chính sách giảm giá theo %, trừ tiền trực tiếp, combo Mua X tặng Y và phân bổ kênh POS / Web
-            </p>
+            <button onClick={openCreate} className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+              <Plus className="w-3.5 h-3.5" />
+              Thêm mới
+            </button>
           </div>
         </div>
 
-        {/* Global Toast */}
         {msg && (
-          <div
-            className={`p-4 rounded-2xl flex items-center justify-between gap-2 text-xs font-semibold ${
-              msg.type === "success"
-                ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
-                : "bg-red-50 border border-red-200 text-red-800"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              {msg.type === "success" ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-red-600" />}
-              <span>{msg.text}</span>
-            </div>
-            <button onClick={() => setMsg(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+          <div className={`p-3 rounded-xl flex items-center gap-2 text-xs font-medium ${msg.type === "success" ? "bg-emerald-50 border border-emerald-200 text-emerald-800" : "bg-red-50 border border-red-200 text-red-800"}`}>
+            {msg.type === "success" ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+            {msg.text}
+            <button onClick={() => setMsg(null)} className="ml-auto"><XCircle className="w-3.5 h-3.5" /></button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Form: Create Promo (5 cols) */}
-          <div className="lg:col-span-5 bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <Plus className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="font-bold text-slate-900 text-sm">Tạo Khuyến Mãi Mới</h2>
-                <p className="text-[11px] text-slate-400">Quy tắc chiết khấu và điều kiện áp dụng</p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Tên chương trình khuyến mãi</label>
-                <input
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  placeholder="VD: Hội sách mùa thu giảm 15%..."
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Mã Coupon (Bỏ trống nếu áp dụng tự động)</label>
-                <input
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono uppercase placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  placeholder="VD: MELIO10, BOOKFEST..."
-                  value={form.code}
-                  onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Hình thức giảm giá</label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {[
-                    { id: "percentage", label: "Giảm %", icon: Percent },
-                    { id: "fixed", label: "Giảm tiền ₫", icon: DollarSign },
-                    { id: "buy_x_get_y", label: "Mua X tặng Y", icon: Gift },
-                  ].map((t) => {
-                    const Icon = t.icon;
-                    const active = form.type === t.id;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setForm({ ...form, type: t.id })}
-                        className={`p-2 rounded-xl text-center text-[11px] font-semibold border flex flex-col items-center gap-1 transition-all ${
-                          active
-                            ? "bg-indigo-50 border-indigo-300 text-indigo-700"
-                            : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                        }`}
-                      >
-                        <Icon className="w-3.5 h-3.5" />
-                        <span>{t.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
-                <div className="flex gap-2">
-                  {form.type === "buy_x_get_y" ? (
-                    <>
-                      <div className="flex-1">
-                        <span className="block text-[10px] text-slate-500 mb-0.5">Mua số lượng (X)</span>
-                        <input
-                          type="number"
-                          min={1}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900"
-                          value={form.buyQty ?? 1}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              buyQty: Number(e.target.value),
-                              minQty: Number(e.target.value),
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <span className="block text-[10px] text-slate-500 mb-0.5">Tặng số lượng (Y)</span>
-                        <input
-                          type="number"
-                          min={1}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900"
-                          value={form.getQty ?? 1}
-                          onChange={(e) => setForm({ ...form, getQty: Number(e.target.value) })}
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex-1">
-                      <span className="block text-[10px] text-slate-500 mb-0.5">
-                        {form.type === "percentage" ? "Mức giảm (%)" : "Số tiền giảm (₫)"}
+        {/* Promo List */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
+                <tr>
+                  <th className="p-4">Tên</th>
+                  <th className="p-4">Mã code</th>
+                  <th className="p-4">Loại</th>
+                  <th className="p-4">Giá trị</th>
+                  <th className="p-4">Kênh</th>
+                  <th className="p-4">Sử dụng</th>
+                  <th className="p-4">Trạng thái</th>
+                  <th className="p-4 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {promotions.map((p) => (
+                  <tr key={p.id} className="hover:bg-slate-50/60">
+                    <td className="p-4">
+                      <p className="font-bold text-slate-900">{p.name}</p>
+                      {p.category && <p className="text-[10px] text-slate-500">{p.category.name}</p>}
+                    </td>
+                    <td className="p-4 font-mono text-indigo-700 font-bold">{p.code || "—"}</td>
+                    <td className="p-4">
+                      <span className="inline-flex items-center gap-1">
+                        {p.type === "percentage" && <Percent className="w-3 h-3 text-blue-600" />}
+                        {p.type === "fixed" && <DollarSign className="w-3 h-3 text-emerald-600" />}
+                        {p.type === "buy_x_get_y" && <Gift className="w-3 h-3 text-purple-600" />}
+                        {p.type === "buy_x_get_y" ? `Mua ${p.buyQty} tặng ${p.getQty}` : p.type}
                       </span>
-                      <input
-                        type="number"
-                        min={0}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900"
-                        value={form.value}
-                        onChange={(e) => setForm({ ...form, value: Number(e.target.value) })}
-                      />
-                    </div>
-                  )}
-                  <div className="w-28">
-                    <span className="block text-[10px] text-slate-500 mb-0.5">SL tối thiểu</span>
-                    <input
-                      type="number"
-                      min={0}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900"
-                      value={form.minQty}
-                      onChange={(e) => setForm({ ...form, minQty: Number(e.target.value) })}
-                    />
+                    </td>
+                    <td className="p-4 font-bold text-slate-900">{formatValue(p.type, p.value)}</td>
+                    <td className="p-4"><span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">{p.channel}</span></td>
+                    <td className="p-4 text-slate-600">{p.usedCount}{p.usageLimit ? `/${p.usageLimit}` : ""}</td>
+                    <td className="p-4">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${p.active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                        {p.active ? "Hoạt động" : "Tắt"}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600">
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                        {p.active && (
+                          <button onClick={() => deactivatePromo(p.id)} className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600">
+                            <XCircle className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {promotions.length === 0 && !loading && (
+            <div className="py-12 text-center text-slate-400 text-xs">
+              <Tag className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              Chưa có khuyến mãi nào
+            </div>
+          )}
+        </div>
+
+        {/* Create/Edit Modal */}
+        {showForm && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl">
+              <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                <h3 className="font-bold text-slate-900">{editPromo ? "Sửa khuyến mãi" : "Tạo khuyến mãi mới"}</h3>
+                <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600"><XCircle className="w-5 h-5" /></button>
+              </div>
+              <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Tên khuyến mãi *</label>
+                  <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Mã code (để trống = tự động)</label>
+                    <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono uppercase" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Loại</label>
+                    <select className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+                      <option value="percentage">% Giảm giá</option>
+                      <option value="fixed">Số tiền cố định</option>
+                      <option value="buy_x_get_y">Mua X tặng Y</option>
+                    </select>
                   </div>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Ngành hàng áp dụng</label>
-                <select
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  value={form.categoryId}
-                  onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                >
-                  <option value="">Tất cả ngành hàng (Toàn bộ)</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Kênh bán hàng</label>
-                  <select
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    value={form.channel}
-                    onChange={(e) => setForm({ ...form, channel: e.target.value })}
-                  >
-                    <option value="ALL">Tất cả kênh</option>
-                    <option value="POS">Chỉ quầy POS</option>
-                    <option value="WEB">Chỉ Web online</option>
-                  </select>
+                {form.type === "buy_x_get_y" ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Mua (SL)</label>
+                      <input type="number" min={1} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.buyQty} onChange={(e) => setForm({ ...form, buyQty: Number(e.target.value) || 1 })} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Tặng (SL)</label>
+                      <input type="number" min={1} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.getQty} onChange={(e) => setForm({ ...form, getQty: Number(e.target.value) || 1 })} />
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Giá trị {form.type === "percentage" ? "(%)" : "(₫)"}</label>
+                    <input type="number" min={0} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.value} onChange={(e) => setForm({ ...form, value: Number(e.target.value) || 0 })} />
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Danh mục</label>
+                    <select className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
+                      <option value="">Tất cả</option>
+                      {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Kênh</label>
+                    <select className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value })}>
+                      <option value="ALL">Tất cả</option>
+                      <option value="POS">POS</option>
+                      <option value="WEB">Web</option>
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Độ ưu tiên</label>
-                  <input
-                    type="number"
-                    min={0}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    value={form.priority}
-                    onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })}
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">SL tối thiểu</label>
+                    <input type="number" min={0} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.minQty} onChange={(e) => setForm({ ...form, minQty: Number(e.target.value) || 0 })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Giới hạn sử dụng</label>
+                    <input type="number" min={0} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.usageLimit} onChange={(e) => setForm({ ...form, usageLimit: Number(e.target.value) || 0 })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Ngày bắt đầu</label>
+                    <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Ngày kết thúc</label>
+                    <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.endAt} onChange={(e) => setForm({ ...form, endAt: e.target.value })} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                    <input type="checkbox" checked={form.stackable} onChange={(e) => setForm({ ...form, stackable: e.target.checked })} className="rounded border-slate-300" />
+                    Gộp được
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                    <input type="checkbox" checked={form.memberOnly} onChange={(e) => setForm({ ...form, memberOnly: e.target.checked })} className="rounded border-slate-300" />
+                    Chỉ thành viên
+                  </label>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Ngày hết hạn</label>
-                  <input
-                    type="datetime-local"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    value={form.endAt}
-                    onChange={(e) => setForm({ ...form, endAt: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Giới hạn lượt dùng</label>
-                  <input
-                    type="number"
-                    min={0}
-                    placeholder="Không giới hạn"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    value={form.usageLimit}
-                    onChange={(e) => setForm({ ...form, usageLimit: e.target.value })}
-                  />
-                </div>
+              <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
+                <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold">Hủy</button>
+                <button onClick={savePromo} disabled={!form.name.trim()} className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-semibold">
+                  {editPromo ? "Cập nhật" : "Tạo mới"}
+                </button>
               </div>
-
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between text-xs">
-                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={form.stackable}
-                    onChange={(e) => setForm({ ...form, stackable: e.target.checked })}
-                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                  />
-                  Cộng dồn khuyến mãi
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={form.memberOnly}
-                    onChange={(e) => setForm({ ...form, memberOnly: e.target.checked })}
-                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                  />
-                  Chỉ cho thành viên
-                </label>
-              </div>
-
-              <button
-                onClick={create}
-                disabled={!form.name.trim()}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold text-xs shadow-md shadow-indigo-600/20 transition-all hover:scale-[1.01]"
-              >
-                Tạo Chương Trình Khuyến Mãi
-              </button>
             </div>
           </div>
-
-          {/* Right Section: Promo List (7 cols) */}
-          <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
-            <div className="p-5 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-sm">Danh Sách Chương Trình Đang Thiết Lập</h3>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
-                  <tr>
-                    <th className="p-4">Tên &amp; Mã Coupon</th>
-                    <th className="p-4">Quy tắc giảm</th>
-                    <th className="p-4">Kênh</th>
-                    <th className="p-4">Lượt dùng</th>
-                    <th className="p-4">Trạng thái</th>
-                    <th className="p-4 text-right">Bật / Tắt</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {promos.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="p-4">
-                        <p className="font-bold text-slate-900">{p.name}</p>
-                        {p.code ? (
-                          <span className="inline-block mt-0.5 font-mono text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded">
-                            {p.code}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-slate-400">Tự động áp dụng</span>
-                        )}
-                        {p.category && (
-                          <span className="block text-[10px] text-indigo-600 mt-0.5">
-                            Ngành: {p.category.name}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-4 font-semibold text-slate-800">
-                        {describe(p)}
-                        {p.minQty > 0 && p.type !== "buy_x_get_y" && (
-                          <span className="block text-[10px] text-slate-400">
-                            (từ {p.minQty} món)
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <span className="font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-                          {p.channel}
-                        </span>
-                      </td>
-                      <td className="p-4 font-mono font-medium text-slate-700">
-                        {p.usedCount}
-                        {p.usageLimit != null ? ` / ${p.usageLimit}` : ""}
-                      </td>
-                      <td className="p-4">
-                        {p.active ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            Đang chạy
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500">
-                            Đã tắt
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-4 text-right whitespace-nowrap">
-                        <button
-                          onClick={() => toggle(p)}
-                          className={`px-3 py-1 rounded-xl text-xs font-semibold transition-colors ${
-                            p.active
-                              ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                              : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
-                          }`}
-                        >
-                          {p.active ? "Tắt" : "Kích hoạt"}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {promos.length === 0 && (
-              <div className="py-12 text-center text-slate-400 text-xs">
-                <Tag className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                Chưa có chương trình khuyến mãi nào.
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
     </main>
   );
