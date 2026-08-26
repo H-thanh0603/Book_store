@@ -19,6 +19,7 @@ import {
   Menu,
   X,
   Sparkles,
+  Barcode,
 } from "lucide-react";
 
 type AuthUser = {
@@ -33,6 +34,7 @@ const LINKS = [
   { href: "/pos", label: "POS Bán Hàng", icon: Store, highlight: true },
   { href: "/orders", label: "Đơn hàng", icon: ShoppingBag },
   { href: "/products", label: "Sản phẩm", icon: BookOpen },
+  { href: "/products/barcodes", label: "In tem", icon: Barcode },
   { href: "/inventory", label: "Tồn kho", icon: Boxes },
   { href: "/purchase-orders", label: "Nhập hàng", icon: Truck },
   { href: "/transfers", label: "Điều chuyển", icon: ArrowLeftRight },
