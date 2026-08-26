@@ -18,8 +18,10 @@ import {
   Trash2,
   X,
   Printer,
+  Camera,
 } from "lucide-react";
 import { printReceipt, type ReceiptData } from "@/lib/receipt";
+import BarcodeScanner from "@/components/BarcodeScanner";
 
 type Product = {
   id: string;
@@ -54,6 +56,7 @@ export default function PosPage() {
   const [customerId, setCustomerId] = useState<string>("");
   const [refundNumber, setRefundNumber] = useState("");
   const [lastTx, setLastTx] = useState<{ number: string; total: number; method: string; items: typeof lines; date: string } | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const paymentAttemptRef = useRef<{ signature: string; key: string } | null>(null);
 
@@ -251,6 +254,17 @@ export default function PosPage() {
     printReceipt(receiptData);
   }
 
+  function handleBarcodeScan(barcode: string) {
+    setScannerOpen(false);
+    setQ(barcode);
+    // Auto-add if exact barcode match
+    const match = products.find((p) =>
+      p.variants.some((v) => v.barcodes.some((bc) => bc.barcode === barcode))
+    );
+    if (match) addLine(match);
+    else searchRef.current?.focus();
+  }
+
   return (
     <main className="min-h-screen bg-slate-100/70 pb-12 flex flex-col">
       <Nav />
@@ -382,24 +396,33 @@ export default function PosPage() {
             {/* LEFT: Search + Products */}
             <div className="lg:col-span-7 xl:col-span-8 space-y-3">
               {/* Barcode / Search Input */}
-              <div className="relative">
-                <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                <input
-                  ref={searchRef}
-                  autoFocus
-                  className="w-full bg-white border-2 border-indigo-200 rounded-2xl pl-12 pr-4 py-3.5 text-base text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
-                  placeholder="Quét mã barcode hoặc gõ tên sách..."
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                />
-                {q && (
-                  <button
-                    onClick={() => { setQ(""); searchRef.current?.focus(); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                )}
+              <div className="relative flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                  <input
+                    ref={searchRef}
+                    autoFocus
+                    className="w-full bg-white border-2 border-indigo-200 rounded-2xl pl-12 pr-4 py-3.5 text-base text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                    placeholder="Quét mã barcode hoặc gõ tên sách..."
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                  />
+                  {q && (
+                    <button
+                      onClick={() => { setQ(""); searchRef.current?.focus(); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => setScannerOpen(true)}
+                  className="shrink-0 w-12 h-12 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shadow-sm transition-colors"
+                  title="Quét barcode bằng camera"
+                >
+                  <Camera className="w-5 h-5" />
+                </button>
               </div>
 
               {/* Product Grid */}
@@ -570,6 +593,10 @@ export default function PosPage() {
           </div>
         )}
       </div>
+
+      {scannerOpen && (
+        <BarcodeScanner onScan={handleBarcodeScan} onClose={() => setScannerOpen(false)} />
+      )}
     </main>
   );
 }
