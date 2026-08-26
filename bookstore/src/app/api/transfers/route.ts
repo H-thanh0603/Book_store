@@ -1,149 +1,117 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
-import { requirePermission, assertStoreAccess, audit, resolveStoreScope } from "@/lib/auth";
-import { apiError, ok, fail, nextBusinessNumber } from "@/lib/api";
-import { applyMovement } from "@/lib/inventory";
-import { TransferStatus } from "@/generated/prisma/client";
+import { prisma, prismaRead, withTxRetry, TX_OPTIONS } from "@/lib/db";
+import { requirePermission } from "@/lib/auth";
+import { apiError, ok, nextBusinessNumber } from "@/lib/api";
+import { Prisma } from "@/generated/prisma/client";
 
-type TransferItemInput = { variantId: string; quantity: number };
+// GET /api/transfers — List transfers
+export async function GET(req: NextRequest) {
+  try {
+    await requirePermission("inventory:read");
+  } catch (e: unknown) {
+    const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
+    return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
+  }
 
-function parseItems(raw: unknown): TransferItemInput[] {
-  if (!Array.isArray(raw) || raw.length === 0) fail(400, "VALIDATION", "items required");
-  return raw.map((i: Record<string, unknown>) => {
-    const item = i as { variantId?: unknown; quantity?: unknown };
-    if (typeof item.variantId !== "string" || !item.variantId || !Number.isInteger(item.quantity) || (item.quantity as number) <= 0)
-      fail(400, "VALIDATION", "Each item needs a variantId and positive integer quantity");
-    return { variantId: item.variantId as string, quantity: item.quantity as number };
+  const url = new URL(req.url);
+  const statusFilter = url.searchParams.get("status");
+
+  const where: Prisma.StockTransferWhereInput = {};
+  if (statusFilter) where.status = statusFilter as Prisma.EnumTransferStatusFilter["equals"];
+
+  const transfers = await prismaRead.stockTransfer.findMany({
+    where,
+    include: {
+      fromLocation: { select: { id: true, name: true } },
+      toLocation: { select: { id: true, name: true } },
+      items: {
+        include: {
+          variant: { include: { product: { select: { name: true } } } },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 100,
   });
+
+  return ok({ transfers });
 }
 
-const ALLOWED: Record<string, string[]> = {
-  DRAFT: ["REQUESTED", "CANCELLED"],
-  REQUESTED: ["APPROVED", "CANCELLED"],
-  APPROVED: ["PICKING", "CANCELLED"],
-  PICKING: ["IN_TRANSIT", "CANCELLED"],
-  IN_TRANSIT: ["RECEIVED"],
-  RECEIVED: ["COMPLETED"],
-};
-
-function assertTransition(from: string, to: string) {
-  if (!(ALLOWED[from] ?? []).includes(to))
-    fail(409, "INVALID_STATUS_TRANSITION", `Cannot transition ${from} -> ${to}`);
-}
-
-// POST /api/transfers { action:"create"|"transition", ... }
+// POST /api/transfers — Create transfer
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-
-    if (body.action === "create") {
-      const auth = await requirePermission("inventory.transfer");
-      const items = parseItems(body.items);
-      if (!body.fromLocationId || !body.toLocationId)
-        fail(400, "VALIDATION", "fromLocationId, toLocationId, items required");
-      // Both endpoints must be inside the caller's store scope.
-      for (const locationId of [body.fromLocationId, body.toLocationId]) {
-        const loc = await prisma.stockLocation.findUnique({ where: { id: locationId } });
-        if (!loc) fail(404, "NOT_FOUND", `Location ${locationId} not found`);
-        assertStoreAccess(auth, loc.storeId, "inventory.transfer");
-      }
-      const number = await nextBusinessNumber("TRF");
-      const trf = await prisma.$transaction(async (tx) => {
-        const created = await tx.stockTransfer.create({
-          data: {
-            number, fromLocationId: body.fromLocationId, toLocationId: body.toLocationId,
-            status: "REQUESTED", requestedBy: auth.userId,
-            items: { create: items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })) },
-          },
-          include: { items: true },
-        });
-        await audit(auth.userId, "transfer.create", "StockTransfer", created.id, { number }, tx);
-        return created;
-      });
-      return ok({ id: trf.id, number: trf.number, status: trf.status }, 201);
-    }
-
-    if (body.action === "transition") {
-      const to: string = body.to;
-      const needsApprove = ["APPROVED"].includes(to);
-      const auth = await requirePermission("inventory.transfer");
-
-      const result = await prisma.$transaction(async (tx) => {
-        const trf = await tx.stockTransfer.findUnique({
-          where: { id: body.transferId },
-          include: { items: true },
-        });
-        if (!trf) fail(404, "NOT_FOUND", "Transfer not found");
-        // Store scope: check both endpoints of the loaded transfer.
-        for (const locationId of [trf.fromLocationId, trf.toLocationId]) {
-          const loc = await tx.stockLocation.findUnique({ where: { id: locationId } });
-          assertStoreAccess(auth, loc?.storeId, "inventory.transfer");
-        }
-        assertTransition(trf.status, to);
-        // Approval integrity, mirroring purchase orders: the requester may not
-        // approve their own transfer.
-        if (needsApprove && trf.requestedBy === auth.userId)
-          fail(403, "FORBIDDEN", "Cannot approve your own transfer");
-        const claimed = await tx.stockTransfer.updateMany({
-          where: { id: trf.id, status: trf.status },
-          data: { status: to as TransferStatus, approvedBy: to === "APPROVED" ? auth.userId : trf.approvedBy },
-        });
-        if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Transfer was already updated");
-
-        if (to === "IN_TRANSIT") {
-          for (const item of trf.items) {
-            await applyMovement(tx, {
-              variantId: item.variantId, locationId: trf.fromLocationId,
-              type: "TRANSFER_OUT", quantityDelta: -item.quantity,
-              refType: "stock_transfer", refId: trf.id, userId: auth.userId,
-            });
-            await applyMovement(tx, {
-              variantId: item.variantId, locationId: trf.toLocationId,
-              type: "TRANSFER_IN", quantityDelta: 0, inTransitDelta: item.quantity,
-              refType: "stock_transfer", refId: trf.id, userId: auth.userId,
-            });
-          }
-        }
-        if (to === "RECEIVED") {
-          for (const item of trf.items) {
-            await applyMovement(tx, {
-              variantId: item.variantId, locationId: trf.toLocationId,
-              type: "TRANSFER_IN", quantityDelta: item.quantity, inTransitDelta: -item.quantity,
-              refType: "stock_transfer", refId: trf.id, userId: auth.userId,
-            });
-          }
-        }
-
-        const updated = await tx.stockTransfer.findUniqueOrThrow({ where: { id: trf.id } });
-        await audit(auth.userId, `transfer.${to.toLowerCase()}`, "StockTransfer", trf.id, undefined, tx);
-        return updated;
-      });
-      return ok({ number: result.number, status: result.status });
-    }
-
-    fail(400, "VALIDATION", "Unknown action");
-  } catch (err) {
-    return apiError(err);
+    await requirePermission("inventory:manage");
+  } catch (e: unknown) {
+    const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
+    return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
   }
-}
 
-export async function GET() {
-  try {
-    const auth = await requirePermission("inventory.view");
-    const scope = resolveStoreScope(auth, undefined, "inventory.view");
-    const transfers = await prisma.stockTransfer.findMany({
-      where: scope ? {
-        OR: [
-          { fromLocation: { storeId: { in: scope } } },
-          { toLocation: { storeId: { in: scope } } },
-        ],
-      } : undefined,
-      include: { fromLocation: true, toLocation: true, items: { include: { variant: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 50,
+  const body = await req.json().catch(() => ({}));
+  const { fromLocationId, toLocationId, items } = body;
+
+  if (!fromLocationId || !toLocationId || !Array.isArray(items) || items.length === 0) {
+    return apiError({ status: 400, code: "VALIDATION", message: "fromLocationId, toLocationId, and items are required" });
+  }
+  if (fromLocationId === toLocationId) {
+    return apiError({ status: 400, code: "VALIDATION", message: "Source and destination cannot be the same" });
+  }
+
+  // Verify locations
+  const [fromLoc, toLoc] = await Promise.all([
+    prismaRead.stockLocation.findUnique({ where: { id: fromLocationId } }),
+    prismaRead.stockLocation.findUnique({ where: { id: toLocationId } }),
+  ]);
+  if (!fromLoc || !toLoc) return apiError({ status: 404, code: "NOT_FOUND", message: "Location not found" });
+
+  // Verify stock availability
+  for (const item of items) {
+    const balance = await prismaRead.inventoryBalance.findUnique({
+      where: { variantId_locationId: { variantId: item.variantId, locationId: fromLocationId } },
     });
-    return ok({ transfers });
-  } catch (err) {
-    return apiError(err);
+    const available = (balance?.onHand ?? 0) - (balance?.reserved ?? 0);
+    if (available < item.quantity) {
+      return apiError({ status: 400, code: "VALIDATION", message: `Insufficient stock for variant ${item.variantId}: available ${available}, requested ${item.quantity}` });
+    }
   }
+
+  const trfNumber = await nextBusinessNumber("TRF");
+
+  const transfer = await withTxRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        const transfer = await tx.stockTransfer.create({
+          data: {
+            number: trfNumber,
+            fromLocationId,
+            toLocationId,
+            requestedBy: "system",
+            items: {
+              create: items.map((item: { variantId: string; quantity: number }) => ({
+                variantId: item.variantId,
+                quantity: item.quantity,
+              })),
+            },
+          },
+          include: {
+            items: {
+              include: { variant: { include: { product: { select: { name: true } } } } },
+            },
+          },
+        });
+
+        // Reserve stock at source location
+        for (const item of items) {
+          await tx.inventoryBalance.update({
+            where: { variantId_locationId: { variantId: item.variantId, locationId: fromLocationId } },
+            data: { reserved: { increment: item.quantity } },
+          });
+        }
+
+        return transfer;
+      },
+      TX_OPTIONS
+    )
+  );
+
+  return ok({ transfer });
 }
