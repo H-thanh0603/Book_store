@@ -4,6 +4,8 @@ import { prisma, prismaRead } from "./db";
 import { createReservedOrder } from "./orders";
 import { embedText } from "./embeddings";
 import { buildVnpayUrl, vnpayConfigured } from "./vnpay";
+import { sendMail } from "./mail";
+import { orderConfirmationEmail, type OrderEmailData } from "./email-templates";
 
 // ponytail: tiny in-process cache for the public catalog (30s TTL, LRU-capped).
 // Absorbs burst traffic and scrapes; a CDN in front makes this redundant.
@@ -230,6 +232,14 @@ export async function checkoutStorefrontOrder(
     // Guest checkout must not overwrite an existing member profile using only a known phone number.
     update: {},
   });
+
+  // Fetch variant details for email template
+  const variantIds = input.items.map((item) => item.variantId);
+  const variants = await prisma.productVariant.findMany({
+    where: { id: { in: variantIds } },
+    select: { id: true, product: { select: { name: true } } },
+  });
+
   try {
     const order = await createReservedOrder({
       channel: "WEB",
@@ -241,6 +251,32 @@ export async function checkoutStorefrontOrder(
       shipping: input.fulfillment === "delivery" ? { recipientName: name, recipientPhone: phone!, address: address! } : null,
       items: input.items,
     }, "storefront");
+
+    // Fire-and-forget order confirmation email — never block checkout on mail.
+    if (email) {
+      const itemsWithDetails = order.items.map((item) => {
+        const variant = variants.find((v) => v.id === item.variantId);
+        return {
+          name: variant?.product.name ?? item.variantId,
+          quantity: item.quantity,
+          unitPrice: Number(item.unitPrice),
+        };
+      });
+      const emailData: OrderEmailData = {
+        orderNumber: order.number,
+        customerName: name,
+        items: itemsWithDetails,
+        subtotal: Number(order.subtotal),
+        discountTotal: Number(order.discountTotal),
+        total: Number(order.total),
+        fulfillment: input.fulfillment,
+        address: address ?? undefined,
+        phone: phone ?? undefined,
+      };
+      const msg = orderConfirmationEmail(emailData);
+      sendMail({ to: email, ...msg }).catch(() => {});
+    }
+
     return withPayment(order, method, opts);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
