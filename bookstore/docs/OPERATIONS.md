@@ -165,6 +165,23 @@ the first hop of `X-Forwarded-For` only when trusting proxies.
 Never set `true` on a directly-exposed server: attackers could rotate fake
 `X-Forwarded-For` values to bypass login/checkout rate limits entirely.
 
+## SMTP mail / password reset
+
+Password reset (`POST /api/auth {action:"request_reset"|"reset_password"}`) emails a
+single-use link via SMTP (Nodemailer). Configuration:
+
+- `SMTP_HOST`, `SMTP_PORT` (587 STARTTLS or 465 implicit TLS), `SMTP_USER`,
+  `SMTP_PASS`, `MAIL_FROM`.
+- **Unconfigured in dev**: the link is logged server-side
+  (`mail_unconfigured_fallback`) instead of sent — handy for local testing.
+- **Production must configure SMTP.** Without it, requests still return the
+  generic OK but no mail goes out and an `reset_mail_failed`-style error is
+  logged — users cannot reset until this is fixed.
+
+Token policy: 256-bit random, stored SHA-256-hashed, 30-minute expiry, single
+use (atomic claim), all sessions revoked on successful reset, rate-limited per
+IP and per account. Verify with `npm run test:reset`.
+
 ## Timezone
 
 **Storage is UTC, always.** Datetime columns are `timestamp without time zone`

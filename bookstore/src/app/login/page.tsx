@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -17,13 +17,27 @@ import {
   Loader2,
 } from "lucide-react";
 
+type Mode = "login" | "forgot" | "reset";
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>("login");
+  const [resetToken, setResetToken] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
   const router = useRouter();
+
+  // Deep links: /login?reset=<token> opens the set-new-password form directly.
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("reset");
+    if (t) {
+      setResetToken(t);
+      setMode("reset");
+    }
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -118,9 +132,24 @@ export default function LoginPage() {
           <div className="lg:col-span-5">
             <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200/80">
               <div className="mb-6">
-                <h2 className="text-xl font-bold text-slate-900 tracking-tight">Đăng nhập tài khoản</h2>
-                <p className="text-xs text-slate-500 mt-1">Truy cập cổng làm việc Melio Bookstore</p>
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                  {mode === "login" ? "Đăng nhập tài khoản" : mode === "forgot" ? "Quên mật khẩu" : "Đặt lại mật khẩu"}
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  {mode === "login"
+                    ? "Truy cập cổng làm việc Melio Bookstore"
+                    : mode === "forgot"
+                      ? "Nhập email để nhận link đặt lại mật khẩu"
+                      : "Nhập mật khẩu mới cho tài khoản của bạn"}
+                </p>
               </div>
+
+              {notice && (
+                <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center gap-2.5 text-xs text-emerald-700">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>{notice}</span>
+                </div>
+              )}
 
               {error && (
                 <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200/80 flex items-center gap-2.5 text-xs text-red-700">
@@ -129,6 +158,17 @@ export default function LoginPage() {
                 </div>
               )}
 
+              {mode !== "login" && (
+                <button
+                  type="button"
+                  onClick={() => { setMode("login"); setError(null); setNotice(null); }}
+                  className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 mb-3"
+                >
+                  ← Quay lại đăng nhập
+                </button>
+              )}
+
+              {mode === "login" && (
               <form onSubmit={submit} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">Email làm việc</label>
@@ -167,6 +207,16 @@ export default function LoginPage() {
                   </div>
                 </div>
 
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => { setMode("forgot"); setError(null); setNotice(null); }}
+                    className="text-xs font-medium text-slate-500 hover:text-indigo-600"
+                  >
+                    Quên mật khẩu?
+                  </button>
+                </div>
+
                 <button
                   type="submit"
                   disabled={loading}
@@ -185,6 +235,9 @@ export default function LoginPage() {
                   )}
                 </button>
               </form>
+              )}
+
+              {mode !== "login" && <ForgotResetForms mode={mode} token={resetToken} setError={setError} setNotice={setNotice} onDone={() => { setMode("login"); }} />}
 
               {/* Demo Account Quick Selectors — never rendered in production builds */}
               {process.env.NODE_ENV !== "production" && (
@@ -223,5 +276,100 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ForgotResetForms({
+  mode, token, setError, setNotice, onDone,
+}: {
+  mode: "forgot" | "reset";
+  token: string;
+  setError: (msg: string | null) => void;
+  setNotice: (msg: string | null) => void;
+  onDone: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setNotice(null);
+    setLoading(true);
+    try {
+      const body = mode === "forgot"
+        ? { action: "request_reset", email }
+        : { action: "reset_password", token, newPassword };
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setError(d.message ?? "Yêu cầu thất bại. Vui lòng thử lại.");
+        return;
+      }
+      if (mode === "forgot") {
+        // Generic by design — do not reveal whether the account exists.
+        setNotice("Nếu email tồn tại trong hệ thống, link đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư.");
+        onDone();
+      } else {
+        setNotice("Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.");
+        onDone();
+      }
+    } catch {
+      setError("Không thể kết nối đến máy chủ.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      {mode === "forgot" && (
+        <div>
+          <label htmlFor="reset-email" className="block text-xs font-semibold text-slate-700 mb-1.5">Email làm việc</label>
+          <div className="relative">
+            <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              id="reset-email"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              placeholder="ten@melio.vn"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+      {mode === "reset" && (
+        <div>
+          <label htmlFor="new-password" className="block text-xs font-semibold text-slate-700 mb-1.5">Mật khẩu mới</label>
+          <div className="relative">
+            <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              id="new-password"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              placeholder="Tối thiểu 10 ký tự"
+              type="password"
+              required
+              minLength={10}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-semibold py-2.5 rounded-xl shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 text-sm transition-all hover:scale-[1.01]"
+      >
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === "forgot" ? "Gửi link đặt lại" : "Đặt lại mật khẩu"}
+      </button>
+    </form>
   );
 }

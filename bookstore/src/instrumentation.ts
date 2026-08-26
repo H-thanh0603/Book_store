@@ -23,10 +23,10 @@ export async function register() {
   }
   const { scheduleNightly, tickScheduler, pruneFinishedRuns } = await import("./lib/jobs");
   const { pruneRateLimits } = await import("./lib/rate-limit");
-  const { pruneExpiredSessions } = await import("./lib/auth");
+  const { pruneExpiredSessions, pruneExpiredResetTokens } = await import("./lib/auth");
   const tick = () => scheduleNightly()
     .then(() => tickScheduler())
-    .then(() => Promise.all([pruneRateLimits(), pruneExpiredSessions(), pruneFinishedRuns()]))
+    .then(() => Promise.all([pruneRateLimits(), pruneExpiredSessions(), pruneExpiredResetTokens(), pruneFinishedRuns()]))
     .catch((err) => console.error(JSON.stringify({ level: "error", event: "scheduler_error", message: String(err) })));
   void tick();
   // Database claims make duplicate timers safe; use a dedicated worker when job load warrants it.

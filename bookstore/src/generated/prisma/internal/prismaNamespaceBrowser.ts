@@ -57,6 +57,7 @@ export const ModelName = {
   Warehouse: 'Warehouse',
   StockLocation: 'StockLocation',
   User: 'User',
+  PasswordResetToken: 'PasswordResetToken',
   Role: 'Role',
   Permission: 'Permission',
   UserRole: 'UserRole',
@@ -198,6 +199,18 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const PasswordResetTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type PasswordResetTokenScalarFieldEnum = (typeof PasswordResetTokenScalarFieldEnum)[keyof typeof PasswordResetTokenScalarFieldEnum]
 
 
 export const RoleScalarFieldEnum = {

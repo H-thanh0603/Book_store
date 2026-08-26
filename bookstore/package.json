@@ -12,6 +12,7 @@
     "test:p0": "tsx scripts/test-p0.ts",
     "test:storefront": "tsx scripts/test-storefront.ts",
     "test:hardening": "tsx scripts/test-hardening.ts",
+    "test:reset": "tsx scripts/test-reset-flow.ts",
     "test:pos": "tsx scripts/test-pos-expiry.ts",
     "security:encrypt-integrations": "tsx scripts/encrypt-integration-secrets.ts",
     "security:rotate-integration-key": "tsx scripts/rotate-integration-key.ts",
@@ -25,6 +26,7 @@
     "dotenv": "^17.4.2",
     "lucide-react": "^1.33.0",
     "next": "16.3.2",
+    "nodemailer": "^9.0.5",
     "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
@@ -32,6 +34,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

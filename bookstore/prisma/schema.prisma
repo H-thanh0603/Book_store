@@ -76,13 +76,29 @@ model StockLocation {
 // ── Auth / RBAC ───────────────────────────────────────────────
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
+  id           String     @id @default(uuid())
+  email        String     @unique
   passwordHash String
-  active       Boolean  @default(true)
+  active       Boolean    @default(true)
   roles        UserRole[]
   sessions     Session[]
+  resetTokens  PasswordResetToken[]
   auditLogs    AuditLog[]
+}
+
+// Single-use, expiring password-reset tokens. Stored SHA-256-hashed like
+// sessions — a DB leak yields nothing usable. Claimed atomically via a guarded
+// updateMany (usedAt IS NULL AND expiresAt > now()).
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model Role {

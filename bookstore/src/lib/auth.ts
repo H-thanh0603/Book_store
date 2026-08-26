@@ -205,3 +205,10 @@ export async function requireAuth(): Promise<AuthContext> {
 export async function pruneExpiredSessions() {
   return prisma.session.deleteMany({ where: { expiresAt: { lt: new Date() } } });
 }
+
+export async function pruneExpiredResetTokens() {
+  // Keep recently-used rows briefly for audit value; drop everything stale.
+  return prisma.passwordResetToken.deleteMany({
+    where: { OR: [{ expiresAt: { lt: new Date() } }, { usedAt: { lt: new Date(Date.now() - 7 * 86_400_000) } }] },
+  });
+}

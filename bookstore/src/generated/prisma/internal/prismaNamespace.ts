@@ -403,6 +403,7 @@ export const ModelName = {
   Warehouse: 'Warehouse',
   StockLocation: 'StockLocation',
   User: 'User',
+  PasswordResetToken: 'PasswordResetToken',
   Role: 'Role',
   Permission: 'Permission',
   UserRole: 'UserRole',
@@ -483,7 +484,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "organization" | "region" | "store" | "warehouse" | "stockLocation" | "user" | "role" | "permission" | "userRole" | "rolePermission" | "session" | "rateLimitBucket" | "category" | "attributeDefinition" | "brand" | "author" | "publisher" | "product" | "productVariant" | "productBarcode" | "attributeValue" | "priceList" | "price" | "inventoryBalance" | "inventoryMovement" | "inventoryAdjustment" | "inventoryAdjustmentItem" | "supplier" | "supplierProductPrice" | "purchaseOrder" | "purchaseOrderItem" | "goodsReceipt" | "goodsReceiptItem" | "stockTransfer" | "stockTransferItem" | "customer" | "loyaltyAccount" | "loyaltyTransaction" | "promotion" | "promotionStore" | "bundle" | "bundleItem" | "order" | "orderItem" | "orderStatusHistory" | "posTerminal" | "posShift" | "posTransaction" | "posTransactionItem" | "payment" | "webPayment" | "shipment" | "returnPayment" | "return" | "returnItem" | "giftCard" | "giftCardTransaction" | "supplierReturn" | "supplierReturnItem" | "inventoryCount" | "inventoryCountItem" | "auditLog" | "systemConfig" | "sequenceCounter" | "replenishmentSuggestion" | "integrationJob" | "integrationProvider" | "warehouseTask" | "warehouseTaskItem" | "jobRun" | "lossAlert"
+    modelProps: "organization" | "region" | "store" | "warehouse" | "stockLocation" | "user" | "passwordResetToken" | "role" | "permission" | "userRole" | "rolePermission" | "session" | "rateLimitBucket" | "category" | "attributeDefinition" | "brand" | "author" | "publisher" | "product" | "productVariant" | "productBarcode" | "attributeValue" | "priceList" | "price" | "inventoryBalance" | "inventoryMovement" | "inventoryAdjustment" | "inventoryAdjustmentItem" | "supplier" | "supplierProductPrice" | "purchaseOrder" | "purchaseOrderItem" | "goodsReceipt" | "goodsReceiptItem" | "stockTransfer" | "stockTransferItem" | "customer" | "loyaltyAccount" | "loyaltyTransaction" | "promotion" | "promotionStore" | "bundle" | "bundleItem" | "order" | "orderItem" | "orderStatusHistory" | "posTerminal" | "posShift" | "posTransaction" | "posTransactionItem" | "payment" | "webPayment" | "shipment" | "returnPayment" | "return" | "returnItem" | "giftCard" | "giftCardTransaction" | "supplierReturn" | "supplierReturnItem" | "inventoryCount" | "inventoryCountItem" | "auditLog" | "systemConfig" | "sequenceCounter" | "replenishmentSuggestion" | "integrationJob" | "integrationProvider" | "warehouseTask" | "warehouseTaskItem" | "jobRun" | "lossAlert"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -928,6 +929,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.UserCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.UserCountAggregateOutputType> | number
+        }
+      }
+    }
+    PasswordResetToken: {
+      payload: Prisma.$PasswordResetTokenPayload<ExtArgs>
+      fields: Prisma.PasswordResetTokenFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PasswordResetTokenFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PasswordResetTokenFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>
+        }
+        findFirst: {
+          args: Prisma.PasswordResetTokenFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PasswordResetTokenFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>
+        }
+        findMany: {
+          args: Prisma.PasswordResetTokenFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>[]
+        }
+        create: {
+          args: Prisma.PasswordResetTokenCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>
+        }
+        createMany: {
+          args: Prisma.PasswordResetTokenCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PasswordResetTokenCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>[]
+        }
+        delete: {
+          args: Prisma.PasswordResetTokenDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>
+        }
+        update: {
+          args: Prisma.PasswordResetTokenUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>
+        }
+        deleteMany: {
+          args: Prisma.PasswordResetTokenDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PasswordResetTokenUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PasswordResetTokenUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>[]
+        }
+        upsert: {
+          args: Prisma.PasswordResetTokenUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>
+        }
+        aggregate: {
+          args: Prisma.PasswordResetTokenAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePasswordResetToken>
+        }
+        groupBy: {
+          args: Prisma.PasswordResetTokenGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PasswordResetTokenGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PasswordResetTokenCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PasswordResetTokenCountAggregateOutputType> | number
         }
       }
     }
@@ -5840,6 +5915,18 @@ export const UserScalarFieldEnum = {
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
+export const PasswordResetTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type PasswordResetTokenScalarFieldEnum = (typeof PasswordResetTokenScalarFieldEnum)[keyof typeof PasswordResetTokenScalarFieldEnum]
+
+
 export const RoleScalarFieldEnum = {
   id: 'id',
   name: 'name'
@@ -7302,6 +7389,7 @@ export type GlobalOmitConfig = {
   warehouse?: Prisma.WarehouseOmit
   stockLocation?: Prisma.StockLocationOmit
   user?: Prisma.UserOmit
+  passwordResetToken?: Prisma.PasswordResetTokenOmit
   role?: Prisma.RoleOmit
   permission?: Prisma.PermissionOmit
   userRole?: Prisma.UserRoleOmit
