@@ -23,7 +23,7 @@ type Product = {
   id: string;
   name: string;
   category?: { name: string } | null;
-  variants: { id: string; sku: string; prices: { amount: string }[] }[];
+  variants: { id: string; sku: string; prices: { amount: string }[]; barcodes: { barcode: string }[] }[];
 };
 type Line = {
   variantId: string;
@@ -209,11 +209,14 @@ export default function PosPage() {
 
   // Search: match by name, SKU, or barcode
   const filtered = products.filter((p) => {
-    const query = q.toLowerCase();
+    const query = q.toLowerCase().trim();
     if (!query) return true;
     return (
       p.name.toLowerCase().includes(query) ||
-      p.variants.some((v) => v.sku.toLowerCase().includes(query))
+      p.variants.some((v) =>
+        v.sku.toLowerCase().includes(query) ||
+        v.barcodes.some((bc) => bc.barcode.includes(query))
+      )
     );
   });
   const selectedStore = stores.find((s) => s.id === storeId);
