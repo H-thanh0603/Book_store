@@ -17,7 +17,9 @@ import {
   Boxes,
   Trash2,
   X,
+  Printer,
 } from "lucide-react";
+import { printReceipt, type ReceiptData } from "@/lib/receipt";
 
 type Product = {
   id: string;
@@ -51,6 +53,7 @@ export default function PosPage() {
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
   const [customerId, setCustomerId] = useState<string>("");
   const [refundNumber, setRefundNumber] = useState("");
+  const [lastTx, setLastTx] = useState<{ number: string; total: number; method: string; items: typeof lines; date: string } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const paymentAttemptRef = useRef<{ signature: string; key: string } | null>(null);
 
@@ -178,6 +181,13 @@ export default function PosPage() {
     const d = await r.json();
     if (r.ok) {
       paymentAttemptRef.current = null;
+      setLastTx({
+        number: d.number,
+        total: d.total,
+        method,
+        items: [...lines],
+        date: new Date().toLocaleString("vi-VN"),
+      });
       setMsg({
         text: `Thanh toán thành công! ${d.number} — ${d.total.toLocaleString("vi-VN")} ₫`,
         type: "success",
@@ -220,6 +230,26 @@ export default function PosPage() {
     );
   });
   const selectedStore = stores.find((s) => s.id === storeId);
+
+  function handlePrintReceipt() {
+    if (!lastTx) return;
+    const receiptData: ReceiptData = {
+      storeName: selectedStore?.name ?? "Melio Bookstore",
+      receiptNumber: lastTx.number,
+      date: lastTx.date,
+      items: lastTx.items.map((l) => ({
+        name: l.name,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        total: l.quantity * l.unitPrice,
+      })),
+      subtotal: lastTx.total,
+      discountTotal: 0,
+      total: lastTx.total,
+      paymentMethod: lastTx.method === "CASH" ? "Tiền mặt" : "QR Code",
+    };
+    printReceipt(receiptData);
+  }
 
   return (
     <main className="min-h-screen bg-slate-100/70 pb-12 flex flex-col">
@@ -285,6 +315,15 @@ export default function PosPage() {
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
+          {lastTx && msg?.type === "success" && (
+            <button
+              onClick={handlePrintReceipt}
+              className="mt-2 w-full py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-colors"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              In hóa đơn
+            </button>
+          )}
         </div>
       )}
 
