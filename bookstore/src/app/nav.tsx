@@ -44,8 +44,8 @@ const LINKS = [
   { href: "/transfers", label: "Điều chuyển", icon: ArrowLeftRight },
   { href: "/customers", label: "Khách hàng", icon: Users },
   { href: "/promotions", label: "Khuyến mãi", icon: Tag },
-  { href: "/gift-cards", label: "Gift & Kiểm kê", icon: Gift },
-  { href: "/reports", label: "Vận hành", icon: Activity },
+  { href: "/gift-cards", label: "Gift Card", icon: Gift },
+  { href: "/reports", label: "Báo cáo", icon: Activity },
   { href: "/audit-logs", label: "Audit log", icon: ShieldCheck },
 ];
 

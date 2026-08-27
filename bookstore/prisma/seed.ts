@@ -188,18 +188,111 @@ async function main() {
   // Products — real Vietnamese bookstore items
   type SeedP = { name: string; cat: string; brand?: string; author?: string; pub?: string; sku: string; barcode: string; price: number; attrs?: [string, string][] };
   const products: SeedP[] = [
+    // ── Sách Văn Học Việt Nam ──
     { name: "Dế Mèn Phiêu Lưu Ký", cat: "Sách", author: "Tô Hoài", pub: "NXB Kim Đồng", sku: "BK-DEMEN-01", barcode: "9786042089131", price: 89000, attrs: [["isbn", "978-604-2-08913-1"], ["author_name", "Tô Hoài"], ["publisher_name", "NXB Kim Đồng"], ["pages", "288"], ["cover", "Bìa mềm"]] },
     { name: "Tôi Thấy Hoa Vàng Trên Cỏ Xanh", cat: "Sách", author: "Nguyễn Nhật Ánh", pub: "NXB Trẻ", sku: "BK-HOAVANG-01", barcode: "9786042096436", price: 118000, attrs: [["isbn", "978-604-2-09643-6"], ["author_name", "Nguyễn Nhật Ánh"], ["publisher_name", "NXB Trẻ"], ["pages", "352"], ["cover", "Bìa mềm"]] },
+    { name: "Mắt Biếc", cat: "Sách", author: "Nguyễn Nhật Ánh", pub: "NXB Trẻ", sku: "BK-MATBIEC-01", barcode: "9786042090780", price: 108000, attrs: [["isbn", "978-604-2-09078-0"], ["author_name", "Nguyễn Nhật Ánh"], ["publisher_name", "NXB Trẻ"], ["pages", "320"], ["cover", "Bìa mềm"]] },
+    { name: "Cho Tôi Xin Một Vé Đi Tuổi Thơ", cat: "Sách", author: "Nguyễn Nhật Ánh", pub: "NXB Trẻ", sku: "BK-CHOIXIN-01", barcode: "9786042094375", price: 98000, attrs: [["isbn", "978-604-2-09437-5"], ["author_name", "Nguyễn Nhật Ánh"], ["publisher_name", "NXB Trẻ"], ["pages", "280"], ["cover", "Bìa mềm"]] },
+    { name: "Cánh Đồng Bất Tận", cat: "Sách", author: "Nguyễn Ngọc Tư", pub: "NXB Trẻ", sku: "BK-CANHDONG-01", barcode: "9786042083592", price: 95000, attrs: [["isbn", "978-604-2-08359-2"], ["author_name", "Nguyễn Ngọc Tư"], ["publisher_name", "NXB Trẻ"], ["pages", "344"], ["cover", "Bìa mềm"]] },
+    { name: "Nhà Giả Kim", cat: "Sách", author: "Paulo Coelho", pub: "NXB Văn Học", sku: "BK-NHAGIAKIM-01", barcode: "9786042084338", price: 79000, attrs: [["isbn", "978-604-2-08433-8"], ["author_name", "Paulo Coelho"], ["publisher_name", "NXB Văn Học"], ["pages", "224"], ["cover", "Bìa mềm"]] },
+    { name: "Đắc Nhân Tâm", cat: "Sách", author: "Dale Carnegie", pub: "NXB Tổng Hợp", sku: "BK-DACNHANTAM-01", barcode: "9786042084574", price: 89000, attrs: [["isbn", "978-604-2-08457-4"], ["author_name", "Dale Carnegie"], ["publisher_name", "NXB Tổng Hợp"], ["pages", "320"], ["cover", "Bìa mềm"]] },
+    { name: "Tuổi Trẻ Đáng Giá Bao Nhiêu", cat: "Sách", author: "Rosie Nguyễn", pub: "NXB Thế Giới", sku: "BK-TUOITRE-01", barcode: "9786042082792", price: 79000, attrs: [["isbn", "978-604-2-08279-2"], ["author_name", "Rosie Nguyễn"], ["publisher_name", "NXB Thế Giới"], ["pages", "248"], ["cover", "Bìa mềm"]] },
+    { name: "Sapiens: Lược Sử Loài Người", cat: "Sách", author: "Yuval Noah Harari", pub: "NXB Tổng Hợp", sku: "BK-SAPIENS-01", barcode: "9786042083201", price: 199000, attrs: [["isbn", "978-604-2-08320-1"], ["author_name", "Yuval Noah Harari"], ["publisher_name", "NXB Tổng Hợp"], ["pages", "528"], ["cover", "Bìa mềm"]] },
+    { name: "Atomic Habits", cat: "Sách", author: "James Clear", pub: "NXB Trẻ", sku: "BK-ATOMIC-01", barcode: "9786042098014", price: 169000, attrs: [["isbn", "978-604-2-09801-4"], ["author_name", "James Clear"], ["publisher_name", "NXB Trẻ"], ["pages", "320"], ["cover", "Bìa mềm"]] },
+    { name: "Cha Giàu Cha Nghèo", cat: "Sách", author: "Robert Kiyosaki", pub: "NXB Tổng Hợp", sku: "BK-CHAGIAU-01", barcode: "9786042083608", price: 109000, attrs: [["isbn", "978-604-2-08360-8"], ["author_name", "Robert Kiyosaki"], ["publisher_name", "NXB Tổng Hợp"], ["pages", "368"], ["cover", "Bìa mềm"]] },
+    { name: "Nhật Ký Đặng Thùy Trâm", cat: "Sách", author: "Đặng Thùy Trâm", pub: "NXB Hội Nhà Văn", sku: "BK-NHATKY-01", barcode: "9786042078207", price: 89000, attrs: [["isbn", "978-604-2-07820-7"], ["author_name", "Đặng Thùy Trâm"], ["publisher_name", "NXB Hội Nhà Văn"], ["pages", "360"], ["cover", "Bìa mềm"]] },
+    // ── Sách Kinh Doanh ──
+    { name: "Đừng Bao Giờ Đi Ăn Một Mình", cat: "Sách", author: "Keith Ferrazzi", pub: "NXB Trẻ", sku: "BK-DUNGBAOGIO-01", barcode: "9786042091046", price: 89000, attrs: [["isbn", "978-604-2-09104-6"], ["author_name", "Keith Ferrazzi"], ["publisher_name", "NXB Trẻ"], ["pages", "288"], ["cover", "Bìa mềm"]] },
+    { name: "Tri Thức Về Cuộc Sống", cat: "Sách", author: "Napoleon Hill", pub: "NXB Văn Học", sku: "BK-TRITHUC-01", barcode: "9786042084543", price: 79000, attrs: [["isbn", "978-604-2-08454-3"], ["author_name", "Napoleon Hill"], ["publisher_name", "NXB Văn Học"], ["pages", "288"], ["cover", "Bìa mềm"]] },
+    // ── Sách Thiếu Nhi ──
     { name: "Harry Potter và Hòn Đá Phù Thủy", cat: "Sách", author: "J.K. Rowling", pub: "NXB Hội Nhà Văn", sku: "BK-HP1-VN", barcode: "9786042133261", price: 189000, attrs: [["isbn", "978-604-2-13326-1"], ["author_name", "J.K. Rowling"], ["publisher_name", "NXB Hội Nhà Văn"], ["pages", "448"], ["cover", "Bìa cứng"]] },
+    { name: "Harry Potter và Phòng Chứa Bí Mật", cat: "Sách", author: "J.K. Rowling", pub: "NXB Hội Nhà Văn", sku: "BK-HP2-VN", barcode: "9786042133278", price: 199000, attrs: [["isbn", "978-604-2-13327-8"], ["author_name", "J.K. Rowling"], ["publisher_name", "NXB Hội Nhà Văn"], ["pages", "432"], ["cover", "Bìa cứng"]] },
+    { name: "Cô Bé Người cá (The Little Mermaid)", cat: "Sách", author: "Hans Christian Andersen", pub: "NXB Kim Đồng", sku: "BK-COBE-01", barcode: "9786042085100", price: 45000, attrs: [["isbn", "978-604-2-08510-0"], ["author_name", "Hans Christian Andersen"], ["publisher_name", "NXB Kim Đồng"], ["pages", "96"], ["cover", "Bìa mềm"]] },
+    { name: "Tắc Kè Hoa", cat: "Sách", author: "Nguyễn Việt Hà", pub: "NXB Trẻ", sku: "BK-TACKEHOA-01", barcode: "9786042094276", price: 98000, attrs: [["isbn", "978-604-2-09427-6"], ["author_name", "Nguyễn Việt Hà"], ["publisher_name", "NXB Trẻ"], ["pages", "328"], ["cover", "Bìa mềm"]] },
+    { name: "Cây Cam Ngọt Của Tôi", cat: "Sách", author: "José Mauro de Vasconcelos", pub: "NXB Văn Học", sku: "BK-CAYCAM-01", barcode: "9786042085526", price: 109000, attrs: [["isbn", "978-604-2-08552-6"], ["author_name", "José Mauro de Vasconcelos"], ["publisher_name", "NXB Văn Học"], ["pages", "288"], ["cover", "Bìa mềm"]] },
+    { name: "Thép Đã Tôi Thành Thế Đấy", cat: "Sách", author: "Nikolai Ostrovsky", pub: "NXB Văn Học", sku: "BK-THEP-01", barcode: "9786042079365", price: 85000, attrs: [["isbn", "978-604-2-07936-5"], ["author_name", "Nikolai Ostrovsky"], ["publisher_name", "NXB Văn Học"], ["pages", "456"], ["cover", "Bìa mềm"]] },
+    // ── Manga ──
     { name: "One Piece Tập 101", cat: "Sách", sku: "BK-OP-101", barcode: "9786042110019", price: 39000, attrs: [["isbn", "978-604-2-11001-9"], ["cover", "Bìa mềm"]] },
+    { name: "One Piece Tập 102", cat: "Sách", sku: "BK-OP-102", barcode: "9786042110026", price: 39000, attrs: [["isbn", "978-604-2-11002-6"], ["cover", "Bìa mềm"]] },
+    { name: "One Piece Tập 103", cat: "Sách", sku: "BK-OP-103", barcode: "9786042110033", price: 39000, attrs: [["isbn", "978-604-2-11003-3"], ["cover", "Bìa mềm"]] },
+    { name: "Dragon Ball Super Tập 15", cat: "Sách", sku: "BK-DBS-15", barcode: "9786042110118", price: 42000, attrs: [["isbn", "978-604-2-11011-8"], ["cover", "Bìa mềm"]] },
+    { name: "Jujutsu Kaisen Tập 0", cat: "Sách", sku: "BK-JJK-0", barcode: "9786042110224", price: 45000, attrs: [["isbn", "978-604-2-11022-4"], ["cover", "Bìa mềm"]] },
+    { name: "Attack on Titan Tập 34", cat: "Sách", sku: "BK-AOT-34", barcode: "9786042110330", price: 42000, attrs: [["isbn", "978-604-2-11033-0"], ["cover", "Bìa mềm"]] },
+    { name: "Doraemon Tập 1", cat: "Sách", sku: "BK-DORA-01", barcode: "9786042080019", price: 35000, attrs: [["isbn", "978-604-2-08001-9"], ["cover", "Bìa mềm"]] },
+    { name: "Naruto Tập 1", cat: "Sách", sku: "BK-NARUTO-01", barcode: "9786042080316", price: 35000, attrs: [["isbn", "978-604-2-08031-6"], ["cover", "Bìa mềm"]] },
+    // ── Văn Phòng Phẩm ──
     { name: "Bút bi Thiên Long TL-027 (hộp 20)", cat: "Văn phòng phẩm", brand: "Thiên Long", sku: "VPP-TL027-20", barcode: "8934563100271", price: 62000, attrs: [["brand_name", "Thiên Long"], ["color", "Xanh"]] },
+    { name: "Bút bi Thiên Long TL-027 (hộp 20 - Đỏ)", cat: "Văn phòng phẩm", brand: "Thiên Long", sku: "VPP-TL027-20-DO", barcode: "8934563100288", price: 62000, attrs: [["brand_name", "Thiên Long"], ["color", "Đỏ"]] },
     { name: "Giấy A4 Double A 70gsm (500 tờ)", cat: "Văn phòng phẩm", brand: "Double A", sku: "VPP-DA-A4-70", barcode: "8851561100704", price: 58000, attrs: [["brand_name", "Double A"]] },
+    { name: "Giấy A4 Double A 80gsm (500 tờ)", cat: "Văn phòng phẩm", brand: "Double A", sku: "VPP-DA-A4-80", barcode: "8851561100803", price: 68000, attrs: [["brand_name", "Double A"]] },
     { name: "Vở ô ly 200 trang", cat: "Văn phòng phẩm", sku: "VPP-VO-200OL", barcode: "8936000001234", price: 25000 },
+    { name: "Vở kẻ ngang 200 trang", cat: "Văn phòng phẩm", sku: "VPP-VO-200KN", barcode: "8936000001235", price: 25000 },
+    { name: "Bút gel Thiên Long TL-08 (hộp 12)", cat: "Văn phòng phẩm", brand: "Thiên Long", sku: "VPP-TL08-12", barcode: "8934563100806", price: 48000, attrs: [["brand_name", "Thiên Long"], ["color", "Đen"]] },
+    { name: "Bút chì 2B Thiên Long (hộp 2)", cat: "Văn phòng phẩm", brand: "Thiên Long", sku: "VPP-CHI2B-02", barcode: "8934563100202", price: 12000, attrs: [["brand_name", "Thiên Long"]] },
+    { name: "Gôm tẩy Thiên Long W301", cat: "Văn phòng phẩm", brand: "Thiên Long", sku: "VPP-GOM-W301", barcode: "8934563103012", price: 8000, attrs: [["brand_name", "Thiên Long"]] },
+    { name: "Thước kẻ 30cm planner", cat: "Văn phòng phẩm", sku: "VPP-THUOC-30", barcode: "8936000002345", price: 15000 },
+    { name: "Compas vẽ tròn Excel", cat: "Văn phòng phẩm", sku: "VPP-COMPASS-01", barcode: "8936000002346", price: 35000 },
+    { name: "Hộp bút nhựa 2 tầng", cat: "Văn phòng phẩm", sku: "VPP-HOPBUT-2T", barcode: "8936000003456", price: 45000 },
+    { name: "Keo sữa Delta 500ml", cat: "Văn phòng phẩm", sku: "VPP-KEO-500", barcode: "8936000004567", price: 32000 },
+    { name: "Kéo học sinh 18cm", cat: "Văn phòng phẩm", sku: "VPP-KEO-18", barcode: "8936000004568", price: 18000 },
+    { name: "Bấm kim Thiên Long 23/6", cat: "Văn phòng phẩm", brand: "Thiên Long", sku: "VPP-BAMKIM-23", barcode: "8934563100233", price: 28000, attrs: [["brand_name", "Thiên Long"]] },
+    { name: "Ghim bấm Thiên Long 26/6 (hộp 1000)", cat: "Văn phòng phẩm", brand: "Thiên Long", sku: "VPP-GHIM-26", barcode: "8934563100264", price: 22000, attrs: [["brand_name", "Thiên Long"]] },
+    { name: "Bìa file nhựa A4 (hộp 10)", cat: "Văn phòng phẩm", sku: "VPP-BIA-A4-10", barcode: "8936000005678", price: 35000 },
+    { name: "Giấy note Sticky Notes 76x76 (3 màu)", cat: "Văn phòng phẩm", sku: "VPP-NOTE-3M", barcode: "8936000005679", price: 25000 },
+    { name: "Bút xóa Esteem BP-05", cat: "Văn phòng phẩm", brand: "Thiên Long", sku: "VPP-XOA-BP05", barcode: "8934563100500", price: 18000, attrs: [["brand_name", "Thiên Long"]] },
+    { name: "Keo hai mặt 3M (5m)", cat: "Văn phòng phẩm", sku: "VPP-KEO2MAT-3M", barcode: "8936000006789", price: 28000 },
+    { name: "Bìa hồ sơ A4 (hộp 50)", cat: "Văn phòng phẩm", sku: "VPP-BIARU-A4-50", barcode: "8936000006790", price: 85000 },
+    { name: "Ruột hồ sơ A4 clear (hộp 100)", cat: "Văn phòng phẩm", sku: "VPP-RUOT-A4-100", barcode: "8936000006791", price: 65000 },
+    { name: "Phong bì A4 trắng (hộp 100)", cat: "Văn phòng phẩm", sku: "VPP-PHONGBI-A4", barcode: "8936000006792", price: 75000 },
+    // ── Đồ Chơi ──
     { name: "LEGO Classic Creative Bricks 11002", cat: "Đồ chơi", brand: "LEGO", sku: "TOY-LEGO-11002", barcode: "5702016110228", price: 899000, attrs: [["age_range", "6+"], ["character", "LEGO Classic"]] },
+    { name: "LEGO City Fire Station 60320", cat: "Đồ chơi", brand: "LEGO", sku: "TOY-LEGO-60320", barcode: "5702017100208", price: 1299000, attrs: [["age_range", "6+"], ["character", "LEGO City"]] },
+    { name: "LEGO Technic Lamborghini 42115", cat: "Đồ chơi", brand: "LEGO", sku: "TOY-LEGO-42115", barcode: "5702016630200", price: 6999000, attrs: [["age_range", "12+"], ["character", "LEGO Technic"]] },
+    { name: "LEGO Friends Heartlake City 41717", cat: "Đồ chơi", brand: "LEGO", sku: "TOY-LEGO-41717", barcode: "5702016810206", price: 799000, attrs: [["age_range", "6+"], ["character", "LEGO Friends"]] },
     { name: "Gấu bông Hello Kitty 30cm", cat: "Đồ chơi", brand: "Sanrio", sku: "TOY-HK-30", barcode: "8938500004567", price: 259000, attrs: [["character", "Hello Kitty"]] },
-    { name: "Bộ màu nước 12 màu", cat: "Mỹ thuật", sku: "MT-MAUNUOC-12", barcode: "8936000005678", price: 78000 },
+    { name: "Gấu bông Doraemon 35cm", cat: "Đồ chơi", sku: "TOY-DORAEMON-35", barcode: "8938500004568", price: 299000, attrs: [["character", "Doraemon"]] },
+    { name: "Gấu bông Pikachu 25cm", cat: "Đồ chơi", sku: "TOY-PIKACHU-25", barcode: "8938500004569", price: 199000, attrs: [["character", "Pikachu"]] },
+    { name: "Rubik 3x3 MoYu MeiLong", cat: "Đồ chơi", sku: "TOY-RUBIK-3X3", barcode: "8938500005678", price: 120000, attrs: [["age_range", "6+"]] },
+    { name: "Rubik 4x4 MoYu MeiLong", cat: "Đồ chơi", sku: "TOY-RUBIK-4X4", barcode: "8938500005679", price: 180000, attrs: [["age_range", "6+"]] },
+    { name: "Xe điều khiển từ xa Traxxas", cat: "Đồ chơi", sku: "TOY-XE-RC-01", barcode: "8938500006789", price: 1590000, attrs: [["age_range", "12+"]] },
+    { name: "Bộ xếp hình 100 mảnh gỗ", cat: "Đồ chơi", sku: "TOY-XEPHINH-100", barcode: "8938500006790", price: 159000, attrs: [["age_range", "3+"]] },
+    { name: "Bóng đá mini mini Adidas", cat: "Đồ chơi", sku: "TOY-BONGDA-MINI", barcode: "8938500006791", price: 89000, attrs: [["age_range", "3+"]] },
+    { name: "Yo-yo chuyên nghiệp Yomega", cat: "Đồ chơi", sku: "TOY-YOYO-01", barcode: "8938500006792", price: 189000, attrs: [["age_range", "6+"]] },
+    { name: "Bộ thí nghiệm khoa học 15 experiments", cat: "Đồ chơi", sku: "TOY-THINHGHIEM-15", barcode: "8938500006793", price: 299000, attrs: [["age_range", "8+"]] },
+    { name: "Bộ cờ vua gỗ cao cấp", cat: "Đồ chơi", sku: "TOY-COVO-01", barcode: "8938500006794", price: 450000, attrs: [["age_range", "6+"]] },
+    { name: "Bộ cờ tướng gỗ mini", cat: "Đồ chơi", sku: "TOY-COTUONG-01", barcode: "8938500006795", price: 120000, attrs: [["age_range", "6+"]] },
+    { name: "LEGO Star Wars Millennium Falcon 75257", cat: "Đồ chơi", brand: "LEGO", sku: "TOY-LEGO-75257", barcode: "5702016370205", price: 8999000, attrs: [["age_range", "12+"], ["character", "LEGO Star Wars"]] },
+    { name: "LEGO Harry Potter Hogwarts Castle 71043", cat: "Đồ chơi", brand: "LEGO", sku: "TOY-LEGO-71043", barcode: "5702016310201", price: 5999000, attrs: [["age_range", "12+"], ["character", "LEGO Harry Potter"]] },
+    { name: "Bộ nam châm BUILDON 120 mảnh", cat: "Đồ chơi", sku: "TOY-NAMCHAM-120", barcode: "8938500007890", price: 399000, attrs: [["age_range", "6+"]] },
+    // ── Mỹ Thuật ──
+    { name: "Bộ màu nước 12 màu Artline", cat: "Mỹ thuật", sku: "MT-MAUNUOC-12", barcode: "8936000005678", price: 78000 },
+    { name: "Bộ màu nước 24 màu Sakura", cat: "Mỹ thuật", sku: "MT-MAUNUOC-24-SK", barcode: "8936000005679", price: 145000 },
+    { name: "Bút lông Artline 101 (hộp 12 màu)", cat: "Mỹ thuật", sku: "MT-BUTLONG-12", barcode: "8936000007891", price: 89000 },
+    { name: "Bút chì màu Staedtler 24 màu", cat: "Mỹ thuật", sku: "MT-CHIMAU-24", barcode: "8936000007892", price: 125000 },
+    { name: "Giấy vẽ A3 200gsm (20 tờ)", cat: "Mỹ thuật", sku: "MT-GIAY-VE-A3", barcode: "8936000007893", price: 55000 },
+    { name: "Bộ cọ vẽ 5 cây", cat: "Mỹ thuật", sku: "MT-CO-VE-05", barcode: "8936000007894", price: 35000 },
+    { name: "Keo polycrylic Mod Podge 240ml", cat: "Mỹ thuật", sku: "MT-KEO-MODPODGE", barcode: "8936000007895", price: 85000 },
+    { name: "Bộ màu acrylic 6 hũ", cat: "Mỹ thuật", sku: "MT-ACRYLIC-06", barcode: "8936000007896", price: 120000 },
+    // ── Lifestyle ──
     { name: "Balo học sinh 20L", cat: "Lifestyle", sku: "LS-BALO-20-BLK", barcode: "8936000009012", price: 349000 },
+    { name: "Balo laptop 15.6 inch", cat: "Lifestyle", sku: "LS-BALO-LT15", barcode: "8936000009013", price: 459000 },
+    { name: "Cặp xách công sở", cat: "Lifestyle", sku: "LS-CAP-CONGSO", barcode: "8936000009014", price: 599000 },
+    { name: "Ly giữ nhiệt 500ml Inox", cat: "Lifestyle", sku: "LS-LY-500ML", barcode: "8936000009015", price: 259000 },
+    { name: "Bình nước thể thao 750ml", cat: "Lifestyle", sku: "LS-BINH-750ML", barcode: "8936000009016", price: 189000 },
+    { name: "Đồng hồ treo tường 30cm", cat: "Lifestyle", sku: "LS-DONGHO-30", barcode: "8936000009017", price: 199000 },
+    { name: "Đèn bàn LED học sinh", cat: "Lifestyle", sku: "LS-DEN-LED", barcode: "8936000009018", price: 399000 },
+    { name: "Ổ cắm điện 3 ổ USB", cat: "Lifestyle", sku: "LS-OCAM-3USB", barcode: "8936000009019", price: 249000 },
+    { name: "Tai nghe Bluetooth JBL Tune 510", cat: "Lifestyle", sku: "LS-TAI-NGHE-JBL", barcode: "8936000009020", price: 1290000 },
+    { name: "Sạc nhanh Type-C 20W", cat: "Lifestyle", sku: "LS-SAC-C20W", barcode: "8936000009021", price: 199000 },
+    // ── Quà Tặng ──
     { name: "Bộ quà Tết: sổ tay + bookmark", cat: "Quà tặng", sku: "GT-BOX-TET01", barcode: "8936000003456", price: 159000 },
+    { name: "Hộp quà sinh nhật nhỏ", cat: "Quà tặng", sku: "GT-BOX-SINHNHAT", barcode: "8936000003457", price: 129000 },
+    { name: "Ly sứ in hình theo yêu cầu", cat: "Quà tặng", sku: "GT-LYSU-INHINH", barcode: "8936000003458", price: 189000 },
+    { name: "Sổ tay bìa da A5", cat: "Quà tặng", sku: "GT-SOTAY-DA-A5", barcode: "8936000003459", price: 149000 },
+    { name: "Bút quà tặng cao cấp", cat: "Quà tặng", sku: "GT-BUT-CAOCAP", barcode: "8936000003460", price: 299000 },
+    { name: "Móc chìa khóa USB 16GB", cat: "Quà tặng", sku: "GT-MOCCHIA-USB", barcode: "8936000003461", price: 199000 },
+    { name: "Album ảnh mini 36 trang", cat: "Quà tặng", sku: "GT-ALBUM-MINI", barcode: "8936000003462", price: 89000 },
+    { name: "Bộ thiệp chúc mừng (10 chiếc)", cat: "Quà tặng", sku: "GT-THIEP-10", barcode: "8936000003463", price: 65000 },
   ];
 
   const variantIds: Record<string, string> = {};
@@ -207,6 +300,15 @@ async function main() {
     // idempotent: skip if SKU already exists
     let variant = await prisma.productVariant.findUnique({ where: { sku: p.sku } });
     if (!variant) {
+      // also skip if barcode already exists (from previous seed runs)
+      const existingBarcode = await prisma.productBarcode.findUnique({ where: { barcode: p.barcode } });
+      if (existingBarcode) {
+        variant = await prisma.productVariant.findUnique({ where: { id: existingBarcode.variantId } });
+        if (variant) {
+          variantIds[p.sku] = variant.id;
+          continue;
+        }
+      }
       const product = await prisma.product.create({
         data: {
           name: p.name,
@@ -327,9 +429,9 @@ async function main() {
 
   // Bulk product generator — spec baseline §2358: 100–500 products.
   // Deterministic combos so re-seeding is a no-op via SKU lookup above.
-  const bookTitles = ["Nhật ký Đặng Thùy Trâm", "Mắt Biếc", "Cây Cam Ngọt Của Tôi", "Sapiens", "Atomic Habits", "Đắc Nhân Tâm", "Nhà Giả Kim", "Tuổi Trẻ Đáng Giá Bao Nhiêu", "Cha Giàu Cha Nghèo", "Tâm Lý Học Tiền Bạc"];
-  const stationery = ["Bút gel Thiên Long TL-08", "Bút chì 2B", "Gôm tẩy", "Thước kẻ 30cm", "Compas vẽ tròn", "Hộp bút nhựa", "Sổ tay A6 cứng", "Sticker trang trí", "Keo sữa nhỏ", "Kéo học sinh"];
-  const toys = ["Xe điều khiển từ xa", "Bộ lego thành phố", "Rubik 3x3", "Đồ chơi xếp hình 100 mảnh", "Bóng đá mini", "Yo-yo chuyên nghiệp", "Bộ thí nghiệm khoa học", "Gấu bông Doremon"];
+  const bookTitles = ["Hạ đen", "Bóng đè", "Thời xa vắng", "Truyện Kiều", "Chí Phèo", "Lão Hạc", "Số Đỏ", "Tắt Đèn", "Bỉ vỏ", "Quãng đời còn lại nhớ em", "Rừng Na Uy", "1984", "Tiếng gọi nơi hoang dã", "Ba người lính ngự lâm", "Bố già", "Xuân Diệu tuyển tập", "Hồn ülke Ý", "Bông故居", "Người tình", "Đại gia đình"];
+  const stationery = ["Bút viếtroller", "Bút highlight 5 màu", "Bút kỹ thuật Artline", "Bút chì cơ khí 0.5mm", "Ruột bút bi Thiên Long", "Giấy A5 80gsm", "Kệ sách mini", "Giá bìa hồ sơ", "Kẹp gim", "Bấm lỗ 2 lỗ"];
+  const toys = ["Xe lửa barbie", "Bộ búp bê Barbie", "Đồ chơi bếp mini", "Bộ công cụ sửa chữa", "Máy tính Casio", "Bộ cờ caro", "Xe mô hìnhdiecast", "Bộ puzzle 500 mảnh"];
   const catPool: [string, string[], number][] = [
     ["Sách", bookTitles, 79000],
     ["Văn phòng phẩm", stationery, 32000],
