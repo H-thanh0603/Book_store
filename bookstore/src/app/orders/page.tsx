@@ -47,6 +47,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [searchFilter, setSearchFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
 
   async function loadOrders() {
     const r = await fetch("/api/orders");
@@ -441,10 +442,53 @@ export default function OrdersPage() {
 
             {/* Orders Table */}
             <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
+              {selectedOrders.size > 0 && (
+                <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-200 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-indigo-700">
+                    Đã chọn {selectedOrders.size} đơn hàng
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        selectedOrders.forEach((id) => {
+                          const order = orders.find((o) => o.id === id);
+                          if (order && ["CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(order.status)) {
+                            fulfill(order, "cancel");
+                          }
+                        });
+                        setSelectedOrders(new Set());
+                      }}
+                      className="px-3 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                    >
+                      Huỷ đã chọn
+                    </button>
+                    <button
+                      onClick={() => setSelectedOrders(new Set())}
+                      className="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                    >
+                      Bỏ chọn
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
                     <tr>
+                      <th className="p-4 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedOrders.size === filteredOrders.length && filteredOrders.length > 0}
+                          onChange={() => {
+                            if (selectedOrders.size === filteredOrders.length) {
+                              setSelectedOrders(new Set());
+                            } else {
+                              setSelectedOrders(new Set(filteredOrders.map((o) => o.id)));
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                      </th>
                       <th className="p-4">Mã ĐH &amp; Kênh</th>
                       <th className="p-4">Khách hàng</th>
                       <th className="p-4">Phương thức</th>
@@ -455,7 +499,23 @@ export default function OrdersPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredOrders.map((o) => (
-                      <tr key={o.id} className="hover:bg-slate-50/60 transition-colors">
+                      <tr key={o.id} className={`hover:bg-slate-50/60 transition-colors ${selectedOrders.has(o.id) ? "bg-indigo-50/50" : ""}`}>
+                        <td className="p-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedOrders.has(o.id)}
+                            onChange={() => {
+                              const next = new Set(selectedOrders);
+                              if (next.has(o.id)) {
+                                next.delete(o.id);
+                              } else {
+                                next.add(o.id);
+                              }
+                              setSelectedOrders(next);
+                            }}
+                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                        </td>
                         <td className="p-4 font-medium text-slate-900">
                           <span className="font-bold text-indigo-700">{o.number}</span>
                           <span className="block text-[10px] text-slate-400 font-mono mt-0.5">
