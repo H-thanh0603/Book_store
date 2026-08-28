@@ -31,6 +31,8 @@ self.addEventListener("activate", (event) => {
     )
   );
   self.clients.claim();
+  // Sync offline sales when service worker activates
+  self.registration.sync.register("sync-offline-sales").catch(() => {});
 });
 
 // Fetch strategy: network-first for API, cache-first for static
@@ -76,6 +78,67 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
+// Background sync for offline sales
+self.addEventListener("sync", (event) => {
+  if (event.tag === "sync-offline-sales") {
+    event.waitUntil(syncOfflineSales());
+  }
+});
+
+async function syncOfflineSales() {
+  const db = await openDB();
+  const tx = db.transaction("sales", "readwrite");
+  const store = tx.objectStore("sales");
+  const getAll = store.getAll();
+
+  return new Promise((resolve, reject) => {
+    getAll.onsuccess = async () => {
+      const sales = getAll.result;
+      for (const sale of sales) {
+        try {
+          const response = await fetch("/api/pos", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+            body: JSON.stringify({
+              ...sale.requestBody,
+              idempotencyKey: sale.id,
+            }),
+          });
+          if (response.ok) {
+            // Remove synced sale
+            const deleteTx = db.transaction("sales", "readwrite");
+            const deleteStore = deleteTx.objectStore("sales");
+            deleteStore.delete(sale.id);
+          }
+        } catch {
+          // Will retry on next sync
+        }
+      }
+      // Notify clients about sync completion
+      const clients = await self.clients.matchAll();
+      clients.forEach((client) => {
+        client.postMessage({ type: "SYNC_COMPLETE", count: sales.length });
+      });
+      resolve();
+    };
+    getAll.onerror = reject;
+  });
+}
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("melio-offline-sales", 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains("sales")) {
+        db.createObjectStore("sales", { keyPath: "id" });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
 // Handle messages from main thread
 self.addEventListener("message", (event) => {
   if (event.data?.type === "CACHE_PRODUCTS") {
@@ -95,9 +158,7 @@ self.addEventListener("message", (event) => {
 
   if (event.data?.type === "GET_OFFLINE_SALES") {
     // Return queued offline sales
-    const dbRequest = indexedDB.open("melio-offline-sales", 1);
-    dbRequest.onsuccess = () => {
-      const db = dbRequest.result;
+    openDB().then((db) => {
       const tx = db.transaction("sales", "readonly");
       const store = tx.objectStore("sales");
       const getAll = store.getAll();
@@ -107,34 +168,26 @@ self.addEventListener("message", (event) => {
           sales: getAll.result,
         });
       };
-    };
+    });
   }
 
   if (event.data?.type === "QUEUE_SALE") {
     // Queue a sale for later sync
-    const dbRequest = indexedDB.open("melio-offline-sales", 1);
-    dbRequest.onupgradeneeded = () => {
-      const db = dbRequest.result;
-      if (!db.objectStoreNames.contains("sales")) {
-        db.createObjectStore("sales", { keyPath: "id" });
-      }
-    };
-    dbRequest.onsuccess = () => {
-      const db = dbRequest.result;
+    openDB().then((db) => {
       const tx = db.transaction("sales", "readwrite");
       const store = tx.objectStore("sales");
       store.put(event.data.sale);
-    };
+    });
+    // Request background sync
+    self.registration.sync.register("sync-offline-sales").catch(() => {});
   }
 
   if (event.data?.type === "SYNC_COMPLETE") {
     // Remove synced sales from IndexedDB
-    const dbRequest = indexedDB.open("melio-offline-sales", 1);
-    dbRequest.onsuccess = () => {
-      const db = dbRequest.result;
+    openDB().then((db) => {
       const tx = db.transaction("sales", "readwrite");
       const store = tx.objectStore("sales");
       store.clear();
-    };
+    });
   }
 });

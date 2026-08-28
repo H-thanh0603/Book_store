@@ -19,6 +19,8 @@ import {
   X,
   Printer,
   Camera,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { printReceipt, type ReceiptData } from "@/lib/receipt";
 import BarcodeScanner from "@/components/BarcodeScanner";
@@ -57,10 +59,19 @@ export default function PosPage() {
   const [refundNumber, setRefundNumber] = useState("");
   const [lastTx, setLastTx] = useState<{ number: string; total: number; method: string; items: typeof lines; date: string } | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [pendingSync, setPendingSync] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
   const paymentAttemptRef = useRef<{ signature: string; key: string } | null>(null);
 
   useEffect(() => {
+    // Track online status
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
     fetch("/api/stores").then(async (r) => {
       if (r.ok) {
         const d = await r.json();
@@ -81,7 +92,20 @@ export default function PosPage() {
         // Pre-cache products for offline
         reg.active?.postMessage({ type: "CACHE_PRODUCTS" });
       }).catch(() => {});
+
+      // Listen for sync completion messages
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data?.type === "SYNC_COMPLETE") {
+          setMsg({ text: `Đã đồng bộ ${event.data.count} đơn hàng offline`, type: "success" });
+          setPendingSync(0);
+        }
+      });
     }
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
   }, []);
 
   const decreaseQty = (variantId: string) => {
@@ -209,6 +233,7 @@ export default function PosPage() {
           sale: offlineSale,
         });
       }
+      setPendingSync((p) => p + 1);
       setMsg({
         text: "Mất mạng! Đơn hàng đã được lưu offline. Sẽ tự động đồng bộ khi có mạng.",
         type: "info",
@@ -327,6 +352,19 @@ export default function PosPage() {
                     CHƯA MỞ CA
                   </span>
                 )}
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  isOnline 
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200" 
+                    : "bg-amber-50 text-amber-700 border border-amber-200"
+                }`}>
+                  {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                  {isOnline ? "ONLINE" : "OFFLINE"}
+                  {!isOnline && pendingSync > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-200 text-amber-800 text-[9px]">
+                      {pendingSync} chờ sync
+                    </span>
+                  )}
+                </span>
               </div>
               <p className="text-[11px] text-slate-500">{selectedStore?.name ?? "Chưa chọn"}</p>
             </div>
