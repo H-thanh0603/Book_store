@@ -87,7 +87,7 @@ export default function FlashSale({
                 <button
                   onClick={() => onAddToCart(product)}
                   disabled={!variant?.available}
-                  className="w-full py-2.5 bg-[#c83f49] hover:bg-rose-600 disabled:bg-slate-700 disabled:text-slate-400 text-white font-serif font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 bg-[#c83f49] hover:bg-[#b33640] disabled:bg-[#574431] disabled:text-[#a8a29e] text-white font-serif font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5"
                 >
                   <ShoppingBag className="w-3.5 h-3.5" /> {variant?.available ? "Săn Deal Ngay" : "Hết Deal"}
                 </button>

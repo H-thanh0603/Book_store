@@ -86,11 +86,11 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
         onClick={() => setOpen(true)}
         className="fixed bottom-6 left-6 z-40 px-4 py-3 rounded-full bg-gradient-to-r from-[#0f172a] via-[#1e293b] to-[#334155] text-white font-bold text-xs shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2.5 border border-white/20 group"
       >
-        <div className="size-6 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow">
+        <div className="size-6 rounded-full bg-amber-400 text-[#1c1917] flex items-center justify-center shadow">
           <Bot className="w-3.5 h-3.5" />
         </div>
         <span>Thủ Thư AI</span>
-        <span className="bg-amber-400 text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full uppercase">
+        <span className="bg-amber-400 text-[#1c1917] text-[9px] font-black px-1.5 py-0.2 rounded-full uppercase">
           Tư Vấn
         </span>
       </button>
@@ -102,7 +102,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
             {/* Header */}
             <div className="p-4 bg-[#1c1917] text-white flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="size-9 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center shadow">
+                <div className="size-9 rounded-xl bg-amber-400 text-[#1c1917] flex items-center justify-center shadow">
                   <Bot className="w-5 h-5" />
                 </div>
                 <div>

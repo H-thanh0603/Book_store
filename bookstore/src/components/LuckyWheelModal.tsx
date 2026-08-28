@@ -61,7 +61,7 @@ export default function LuckyWheelModal({ onRewardWon }: { onRewardWon?: (reward
       {/* Floating Trigger Button */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 size-12 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 text-white shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-white animate-bounce"
+        className="fixed bottom-6 right-6 z-40 size-12 rounded-full bg-gradient-to-tr from-[#d97706] via-[#c83f49] to-[#8c2d19] text-white shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-white"
         title="Vòng quay may mắn & Điểm danh nhận quà"
       >
         <Trophy className="w-5 h-5" />

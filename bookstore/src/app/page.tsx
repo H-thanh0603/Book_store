@@ -31,7 +31,7 @@ export default async function Home() {
       desc: "Bán hàng tại quầy, quét mã, mở/đóng ca, tích điểm và thanh toán QR",
       href: "/pos",
       icon: Store,
-      color: "from-blue-600 to-indigo-600",
+      color: "from-[#8c2d19] to-[#c83f49]",
       badge: "Bán hàng",
       primary: true,
     },
@@ -40,7 +40,7 @@ export default async function Home() {
       desc: "Doanh thu ngày/tháng, top sản phẩm bán chạy và cảnh báo tồn thấp",
       href: "/dashboard",
       icon: LayoutDashboard,
-      color: "from-indigo-600 to-violet-600",
+      color: "from-[#8c2d19] to-[#7a2816]",
       badge: "Tổng quan",
     },
     {
@@ -48,7 +48,7 @@ export default async function Home() {
       desc: "Xử lý đơn online, giao tận nơi, Click & Collect và đổi trả hàng",
       href: "/orders",
       icon: ShoppingBag,
-      color: "from-emerald-600 to-teal-600",
+      color: "from-[#14532d] to-[#166534]",
       badge: "Đơn hàng",
     },
     {
@@ -56,7 +56,7 @@ export default async function Home() {
       desc: "Tra cứu sách, tác giả, nhà xuất bản, mã vạch và biểu giá bán lẻ",
       href: "/products",
       icon: BookOpen,
-      color: "from-amber-500 to-orange-600",
+      color: "from-[#d97706] to-[#b45309]",
       badge: "Sản phẩm",
     },
     {
@@ -64,7 +64,7 @@ export default async function Home() {
       desc: "Tồn thực tế, khả dụng, tạm giữ và hàng hỏng trên toàn hệ thống kho",
       href: "/inventory",
       icon: Boxes,
-      color: "from-cyan-600 to-blue-600",
+      color: "from-[#574431] to-[#44403c]",
       badge: "Kho vận",
     },
     {
@@ -72,7 +72,7 @@ export default async function Home() {
       desc: "Tạo đơn đặt hàng NCC, phê duyệt quy trình và nhận hàng nhập kho",
       href: "/purchase-orders",
       icon: Truck,
-      color: "from-violet-600 to-purple-600",
+      color: "from-[#d97706] to-[#b45309]",
       badge: "Mua hàng",
     },
     {
@@ -80,7 +80,7 @@ export default async function Home() {
       desc: "Luân chuyển sách giữa các chi nhánh, duyệt xuất kho và nhận hàng",
       href: "/transfers",
       icon: ArrowLeftRight,
-      color: "from-rose-500 to-pink-600",
+      color: "from-[#c83f49] to-[#e11d48]",
       badge: "Điều phối",
     },
     {
@@ -88,7 +88,7 @@ export default async function Home() {
       desc: "Hồ sơ khách hàng, phân hạng thành viên, tích lũy điểm và quà sinh nhật",
       href: "/customers",
       icon: Users,
-      color: "from-blue-500 to-cyan-500",
+      color: "from-[#8c2d19] to-[#d97706]",
       badge: "Loyalty",
     },
     {
@@ -96,7 +96,7 @@ export default async function Home() {
       desc: "Chiết khấu %, giảm tiền mặt, combo Mua X tặng Y và mã giảm giá",
       href: "/promotions",
       icon: Tag,
-      color: "from-fuchsia-600 to-rose-600",
+      color: "from-[#c83f49] to-[#881337]",
       badge: "Marketing",
     },
     {
@@ -104,7 +104,7 @@ export default async function Home() {
       desc: "Phát hành thẻ quà tặng, duyệt biên bản kiểm kê và trả hàng NCC",
       href: "/gift-cards",
       icon: Gift,
-      color: "from-amber-600 to-yellow-500",
+      color: "from-[#d97706] to-[#f59e0b]",
       badge: "Quản trị",
     },
     {
@@ -112,7 +112,7 @@ export default async function Home() {
       desc: "Giám sát tác vụ tự động (Jobs) và phát hiện bất thường thất thoát",
       href: "/reports",
       icon: Activity,
-      color: "from-slate-700 to-slate-900",
+      color: "from-[#44403c] to-[#1c1917]",
       badge: "Vận hành",
     },
     {
@@ -126,27 +126,27 @@ export default async function Home() {
   ];
 
   return (
-    <main className="min-h-screen bg-slate-50/60 pb-16">
+    <main className="min-h-screen bg-[#faf7f2] pb-16">
       <Nav />
 
       {/* Hero Welcome Banner */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-8 sm:p-10 text-white shadow-xl">
-          <div className="absolute right-0 top-0 -mt-8 -mr-8 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative overflow-hidden rounded-3xl bg-[#1c1917] p-8 sm:p-10 text-white shadow-xl">
+          <div className="absolute right-0 top-0 -mt-8 -mr-8 w-96 h-96 bg-[#8c2d19]/10 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#8c2d19]/20 text-[#ffd56a] border border-[#8c2d19]/30">
                 <Sparkles className="w-3.5 h-3.5" />
                 Hệ thống Quản lý Bán lẻ Đa kênh Melio
               </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#14532d]/20 text-emerald-300 border border-[#14532d]/30">
                 <CheckCircle2 className="w-3 h-3" />
                 Trạng thái: Hoạt động bình thường
               </span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3 text-white">
-              Xin chào, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-blue-200">{auth.email}</span>!
+              Xin chào, <span className="text-[#ffd56a]">{auth.email}</span>!
             </h1>
             <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
               Hệ thống vận hành tổng thể cho chuỗi nhà sách và phong cách sống: POS thu ngân, tồn kho liên kho, đơn hàng đa kênh và quản trị khuyến mãi.
@@ -155,7 +155,7 @@ export default async function Home() {
             <div className="flex flex-wrap items-center gap-3">
               <Link
                 href="/pos"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 transition-all hover:translate-y-[-1px]"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#8c2d19] hover:bg-[#7a2816] text-white shadow-lg shadow-[#8c2d19]/30 transition-all hover:translate-y-[-1px]"
               >
                 <Store className="w-4 h-4" />
                 Mở POS Bán hàng ngay
@@ -171,13 +171,13 @@ export default async function Home() {
             </div>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-400">
+          <div className="mt-6 pt-6 border-t border-[#2a2523] flex flex-wrap items-center justify-between gap-4 text-xs text-[#a8a29e]">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-slate-300">Quyền hạn kích hoạt:</span>
+              <span className="font-medium text-[#d6d3d1]">Quyền hạn kích hoạt:</span>
               {auth.roles.map((r, i) => (
                 <span
                   key={i}
-                  className="px-2 py-0.5 rounded bg-slate-800 text-indigo-300 border border-slate-700 font-mono font-medium"
+                  className="px-2 py-0.5 rounded bg-[#292524] text-[#ffd56a] border border-[#44403c] font-mono font-medium"
                 >
                   {r.role}
                 </span>
@@ -192,10 +192,10 @@ export default async function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-xl font-bold text-[#1c1917] tracking-tight">
               Trung tâm nghiệp vụ &amp; Quản trị
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-[#574431] mt-0.5">
               Truy cập nhanh các phân hệ chức năng trong chuỗi bán lẻ
             </p>
           </div>
@@ -208,7 +208,7 @@ export default async function Home() {
               <Link
                 key={idx}
                 href={m.href}
-                className="group relative flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:shadow-md hover:border-indigo-300 transition-all duration-200 hover:-translate-y-0.5"
+                className="group relative flex flex-col justify-between p-5 rounded-2xl bg-white border border-[#ede5d8] shadow-xs hover:shadow-md hover:border-[#8c2d19]/30 transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -217,19 +217,19 @@ export default async function Home() {
                     >
                       <Icon className="w-5 h-5" />
                     </div>
-                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#faf4ea] text-[#574431] group-hover:bg-[#8c2d19]/10 group-hover:text-[#8c2d19] transition-colors">
                       {m.badge}
                     </span>
                   </div>
-                  <h3 className="font-bold text-slate-900 text-base group-hover:text-indigo-600 transition-colors flex items-center gap-1">
+                  <h3 className="font-bold text-[#1c1917] text-base group-hover:text-[#8c2d19] transition-colors flex items-center gap-1">
                     {m.title}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed line-clamp-2">
+                  <p className="text-xs text-[#574431] mt-1.5 leading-relaxed line-clamp-2">
                     {m.desc}
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-indigo-600 group-hover:text-indigo-700">
+                <div className="mt-4 pt-3 border-t border-[#ede5d8] flex items-center justify-between text-xs font-semibold text-[#8c2d19] group-hover:text-[#7a2816]">
                   <span>Truy cập</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>

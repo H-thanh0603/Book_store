@@ -134,7 +134,7 @@ export default function GiftCardsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {cards.map((card) => (
             <div key={card.id} className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden hover:shadow-md transition-shadow">
-              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white">
+              <div className="bg-gradient-to-r from-[#8c2d19] to-[#c83f49] p-4 text-white">
                 <div className="flex items-center justify-between mb-4">
                   <CreditCard className="w-6 h-6 opacity-80" />
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${card.active ? "bg-white/20" : "bg-red-500/50"}`}>

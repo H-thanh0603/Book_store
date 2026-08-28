@@ -421,7 +421,7 @@ export default function PosPage() {
                 <button
                   disabled={!refundNumber.trim()}
                   onClick={refund}
-                  className="px-3 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-lg text-xs font-semibold transition-colors"
+                  className="px-3 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-white/50 text-white rounded-lg text-xs font-semibold transition-colors"
                 >
                   Hoàn tiền
                 </button>
@@ -600,7 +600,7 @@ export default function PosPage() {
                           // Just use CASH method with the actual total
                           pay("CASH");
                         }}
-                        className="py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 disabled:opacity-40 text-[10px] font-bold text-slate-600 transition-colors"
+                        className="py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 disabled:opacity-40 text-[10px] font-bold text-slate-700 transition-colors"
                       >
                         {(amt / 1000).toFixed(0)}k
                       </button>
@@ -611,7 +611,7 @@ export default function PosPage() {
                     <button
                       disabled={!lines.length}
                       onClick={() => pay("CASH")}
-                      className="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                      className="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-white/50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
                     >
                       <Banknote className="w-4 h-4" />
                       Tiền mặt
@@ -619,7 +619,7 @@ export default function PosPage() {
                     <button
                       disabled={!lines.length}
                       onClick={() => pay("QR")}
-                      className="py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                      className="py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-white/50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
                     >
                       <QrCode className="w-4 h-4" />
                       QR

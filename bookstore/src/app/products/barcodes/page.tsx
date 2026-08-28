@@ -114,7 +114,7 @@ export default function BarcodeLabelPage() {
               <button
                 onClick={handlePrint}
                 disabled={selected.size === 0}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white shadow-sm transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-white/50 text-white shadow-sm transition-colors"
               >
                 <Printer className="w-3.5 h-3.5" />
                 In {selected.size} tem

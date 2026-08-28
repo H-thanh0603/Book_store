@@ -87,12 +87,12 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
           {/* Scanning overlay */}
           {scanning && !error && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-3/4 h-1/2 border-2 border-indigo-500 rounded-lg relative">
-                <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-indigo-500 rounded-tl-lg" />
-                <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-indigo-500 rounded-tr-lg" />
-                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-indigo-500 rounded-bl-lg" />
-                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-indigo-500 rounded-br-lg" />
-                <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-indigo-500 animate-pulse" />
+              <div className="w-3/4 h-1/2 border-2 border-[#8c2d19] rounded-lg relative">
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-[#8c2d19] rounded-tl-lg" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-[#8c2d19] rounded-tr-lg" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-[#8c2d19] rounded-bl-lg" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-[#8c2d19] rounded-br-lg" />
+                <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-[#8c2d19] animate-pulse" />
               </div>
             </div>
           )}

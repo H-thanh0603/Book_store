@@ -96,7 +96,7 @@ export default function InventoryPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setAutoPOModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-[#1c1917] font-bold text-xs rounded-xl shadow-xs transition-colors"
             >
               <Zap className="w-4 h-4 fill-slate-950" />
               Đề Xuất Nhập Hàng Tự Động ({lowStockItems.length})
@@ -150,8 +150,8 @@ export default function InventoryPage() {
             <div className="text-2xl font-bold text-amber-700 font-mono mt-1">{lowStockItems.length} SKUs</div>
           </div>
           <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-            <span className="text-[11px] font-semibold text-indigo-600">Đang luân chuyển</span>
-            <div className="text-2xl font-bold text-indigo-700 font-mono mt-1">Hoạt động</div>
+            <span className="text-[11px] font-semibold text-[#d97706]">Đang luân chuyển</span>
+            <div className="text-2xl font-bold text-[#b45309] font-mono mt-1">Hoạt động</div>
           </div>
         </div>
 
@@ -259,7 +259,7 @@ export default function InventoryPage() {
                   </button>
                   <button
                     onClick={createAutoPO}
-                    className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md"
+                    className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-[#1c1917] font-bold text-xs shadow-md"
                   >
                     Xác Nhận Tạo Đơn Nhập
                   </button>

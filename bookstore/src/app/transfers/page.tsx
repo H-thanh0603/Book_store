@@ -223,7 +223,7 @@ export default function TransfersPage() {
 
             <div className="flex justify-end gap-2">
               <button onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold">Hủy</button>
-              <button onClick={createTransfer} disabled={!fromLoc || !toLoc || trfItems.length === 0} className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-semibold">Tạo phiếu</button>
+              <button onClick={createTransfer} disabled={!fromLoc || !toLoc || trfItems.length === 0} className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-white/50 text-white text-xs font-semibold">Tạo phiếu</button>
             </div>
           </div>
         )}
