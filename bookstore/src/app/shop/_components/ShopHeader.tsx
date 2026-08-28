@@ -71,9 +71,9 @@ export default function ShopHeader({
               <button
                 onClick={() => onQuery("")}
                 aria-label="Xóa từ khóa"
-                className="absolute right-3 top-1/2 -translate-y-1/2 size-5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-xs"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center"
               >
-                <X className="w-3 h-3" />
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>

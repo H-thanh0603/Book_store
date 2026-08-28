@@ -198,27 +198,27 @@ export function CartDrawer({
                     <button
                       onClick={() => onChangeQuantity(line.variantId, -1)}
                       aria-label={`Giảm số lượng ${line.name}`}
-                      className="size-5 rounded hover:bg-white flex items-center justify-center text-slate-700"
+                      className="w-8 h-8 rounded-lg hover:bg-white flex items-center justify-center text-slate-700"
                     >
-                      <Minus className="w-3 h-3" />
+                      <Minus className="w-4 h-4" />
                     </button>
                     <span className="w-6 text-center text-xs font-bold text-slate-900">{line.quantity}</span>
                     <button
                       onClick={() => onChangeQuantity(line.variantId, 1)}
                       disabled={line.quantity >= line.available}
                       aria-label={`Tăng số lượng ${line.name}`}
-                      className="size-5 rounded hover:bg-white disabled:opacity-30 flex items-center justify-center text-slate-700"
+                      className="w-8 h-8 rounded-lg hover:bg-white disabled:opacity-30 flex items-center justify-center text-slate-700"
                     >
-                      <Plus className="w-3 h-3" />
+                      <Plus className="w-4 h-4" />
                     </button>
                   </div>
 
                   <button
                     onClick={() => onRemoveLine(line.variantId)}
                     aria-label={`Xóa ${line.name} khỏi giỏ`}
-                    className="text-slate-400 hover:text-rose-600 transition-colors p-1"
+                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 transition-colors"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
 

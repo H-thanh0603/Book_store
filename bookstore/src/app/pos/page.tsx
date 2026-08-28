@@ -486,7 +486,7 @@ export default function PosPage() {
                   {q && (
                     <button
                       onClick={() => { setQ(""); searchRef.current?.focus(); }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -587,16 +587,16 @@ export default function PosPage() {
                           <div className="flex items-center gap-1 shrink-0">
                             <button
                               onClick={() => decreaseQty(l.variantId)}
-                              className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
+                              className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
                             >
-                              <Minus className="w-2.5 h-2.5" />
+                              <Minus className="w-4 h-4" />
                             </button>
-                            <span className="w-5 text-center text-xs font-bold">{l.quantity}</span>
+                            <span className="w-6 text-center text-xs font-bold">{l.quantity}</span>
                             <button
                               onClick={() => increaseQty(l.variantId)}
-                              className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
+                              className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
                             >
-                              <Plus className="w-2.5 h-2.5" />
+                              <Plus className="w-4 h-4" />
                             </button>
                           </div>
 
@@ -608,9 +608,9 @@ export default function PosPage() {
 
                           <button
                             onClick={() => removeLine(l.variantId)}
-                            className="text-slate-300 hover:text-red-500 shrink-0"
+                            className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-500 shrink-0"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       ))

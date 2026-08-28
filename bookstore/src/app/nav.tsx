@@ -214,9 +214,9 @@ export default function Nav() {
                 <button
                   onClick={handleLogout}
                   title="Đăng xuất"
-                  className="p-2 text-[#574431] hover:text-[#c83f49] hover:bg-red-50 rounded-lg transition-colors"
+                  className="w-10 h-10 flex items-center justify-center text-[#574431] hover:text-[#c83f49] hover:bg-red-50 rounded-lg transition-colors"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-5 h-5" />
                 </button>
               </div>
             ) : (
@@ -232,7 +232,7 @@ export default function Nav() {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="xl:hidden p-2 text-[#574431] hover:bg-[#faf4ea] rounded-lg"
+              className="xl:hidden w-10 h-10 flex items-center justify-center text-[#574431] hover:bg-[#faf4ea] rounded-lg"
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>

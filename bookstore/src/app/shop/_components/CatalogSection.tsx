@@ -103,11 +103,11 @@ export default function CatalogSection({
                 onClick={() => onViewMode(mode)}
                 aria-label={title}
                 title={title}
-                className={`p-1.5 rounded-xl transition-all ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
                   viewMode === mode ? "bg-white text-[#8c2d19] shadow-xs" : "text-slate-500"
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-5 h-5" />
               </button>
             ))}
           </div>
@@ -119,7 +119,7 @@ export default function CatalogSection({
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           <button
             onClick={() => onCategory("")}
-            className={`px-4 py-1.5 rounded-full text-xs font-serif font-bold transition-all shrink-0 ${
+            className={`px-4 py-2.5 rounded-full text-xs font-serif font-bold transition-all shrink-0 ${
               !categoryId && activeDepartment === "all"
                 ? "bg-[#1c1917] text-white shadow-xs"
                 : "bg-[#faf7f2] hover:bg-[#ede5d8] text-slate-700 border border-[#ede5d8]"
@@ -131,7 +131,7 @@ export default function CatalogSection({
             <button
               key={c.id}
               onClick={() => onCategory(c.id)}
-              className={`px-4 py-1.5 rounded-full text-xs font-serif font-semibold transition-all shrink-0 ${
+              className={`px-4 py-2.5 rounded-full text-xs font-serif font-semibold transition-all shrink-0 ${
                 categoryId === c.id
                   ? "bg-[#1c1917] text-white font-bold shadow-xs"
                   : "bg-[#faf7f2] hover:bg-[#ede5d8] text-slate-700 border border-[#ede5d8]"
@@ -150,7 +150,7 @@ export default function CatalogSection({
               <button
                 key={pr.id}
                 onClick={() => onPriceRange(pr.id)}
-                className={`px-3 py-1 rounded-xl transition-all ${
+                className={`px-3 py-2 rounded-xl transition-all ${
                   priceRange === pr.id
                     ? "bg-[#8c2d19] text-white font-bold"
                     : "bg-[#faf7f2] text-slate-700 hover:bg-[#ede5d8]"
@@ -371,12 +371,12 @@ function ProductCard({
           e.stopPropagation();
           onToggleFavorite(product.id);
         }}
-        className={`absolute top-6 right-6 z-20 size-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-md ${
+        className={`absolute top-5 right-5 z-20 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-md ${
           isFav ? "bg-[#8c2d19] text-white scale-110" : "bg-white/90 hover:bg-white text-slate-600 hover:text-[#8c2d19]"
         }`}
         title={isFav ? "Bỏ yêu thích" : "Lưu vào tủ sách cá nhân"}
       >
-        <Heart className={`w-4 h-4 ${isFav ? "fill-white" : ""}`} />
+        <Heart className={`w-5 h-5 ${isFav ? "fill-white" : ""}`} />
       </button>
 
       {/* Book / Product Box */}
@@ -423,10 +423,10 @@ function ProductCard({
           <button
             onClick={() => onAddToCart(product)}
             disabled={!isAvailable}
-            className="size-10 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed flex items-center justify-center shadow-md transition-all hover:scale-105 active:scale-95 shrink-0"
+            className="w-11 h-11 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed flex items-center justify-center shadow-md transition-all hover:scale-105 active:scale-95 shrink-0"
             title={isAvailable ? "Thêm vào giỏ" : "Tạm hết hàng"}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
           </button>
         </div>
       </div>
