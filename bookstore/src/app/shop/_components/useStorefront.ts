@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { money, CART_KEY, WISHLIST_KEY, readingAtmospheres } from "./data";
+import { money, readingAtmospheres } from "./data";
 import type {
   Catalog,
   CartLine,
@@ -17,6 +17,7 @@ import type {
   Product,
   StockConflictDetail,
 } from "./types";
+import { useCart } from "@/contexts/CartContext";
 
 export type Toast = { id: string; message: string };
 
@@ -32,6 +33,7 @@ type ApiErrorBody = {
 };
 
 export function useStorefront() {
+  const { cart, addItem: addToCartContext, updateQuantity, removeItem: removeCartLineContext, clearCart, itemCount, subtotal: cartSubtotal } = useCart();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [storeId, setStoreId] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -40,7 +42,6 @@ export function useStorefront() {
   const [activeDepartment, setActiveDepartment] = useState("all");
   const [activeMood, setActiveMood] = useState("rain");
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [cart, setCart] = useState<CartLine[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
@@ -81,27 +82,20 @@ export function useStorefront() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Load cart & wishlist from localStorage (deferred past mount for hydration).
+  // Load wishlist from localStorage (deferred past mount for hydration).
   useEffect(() => {
-    let storedCart: CartLine[] = [];
     let storedWishlist: string[] = [];
     try {
-      storedCart = JSON.parse(localStorage.getItem(CART_KEY) ?? "[]");
-      storedWishlist = JSON.parse(localStorage.getItem(WISHLIST_KEY) ?? "[]");
+      storedWishlist = JSON.parse(localStorage.getItem("melio.storefront.wishlist.v1") ?? "[]");
     } catch {}
     const t = setTimeout(() => {
-      setCart(storedCart);
       setWishlist(storedWishlist);
     }, 0);
     return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(CART_KEY, JSON.stringify(cart));
-  }, [cart]);
-
-  useEffect(() => {
-    localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
+    localStorage.setItem("melio.storefront.wishlist.v1", JSON.stringify(wishlist));
   }, [wishlist]);
 
   // Countdown to midnight (store timezone) — a real deadline, not a loop.
@@ -232,12 +226,10 @@ export function useStorefront() {
     [allProducts]
   );
 
-  const itemCount = cart.reduce((sum, line) => sum + line.quantity, 0);
-  const subtotal = cart.reduce((sum, line) => sum + line.quantity * line.price, 0);
   const wrappingFee = giftWrapping === "vintage" ? 25000 : giftWrapping === "heritage" ? 45000 : 0;
-  const grandTotal = subtotal + wrappingFee;
+  const grandTotal = cartSubtotal + wrappingFee;
   const activeStore = catalog?.stores.find((store) => store.id === storeId);
-  const progressToFreeShipping = Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100));
+  const progressToFreeShipping = Math.min(100, Math.round((cartSubtotal / FREE_SHIPPING_THRESHOLD) * 100));
   const hasActiveFilters =
     Boolean(categoryId) ||
     activeDepartment !== "all" ||
@@ -268,31 +260,14 @@ export function useStorefront() {
   function addToCart(product: Product) {
     const variant = product.variants[0];
     if (!variant || variant.available <= 0) return;
-    setCart((lines) => {
-      const current = lines.find((line) => line.variantId === variant.id);
-      if (current)
-        return lines.map((line) =>
-          line.variantId === variant.id
-            ? {
-                ...line,
-                quantity: Math.min(line.quantity + 1, variant.available),
-                available: variant.available,
-              }
-            : line
-        );
-      return [
-        ...lines,
-        {
-          variantId: variant.id,
-          productId: product.id,
-          name: product.name,
-          category: product.category.name,
-          brand: product.brand?.name,
-          price: variant.price,
-          quantity: 1,
-          available: variant.available,
-        },
-      ];
+    addToCartContext({
+      variantId: variant.id,
+      productId: product.id,
+      name: product.name,
+      category: product.category.name,
+      brand: product.brand?.name,
+      price: variant.price,
+      available: variant.available,
     });
     showToast(`✨ Đã thêm "${product.name}" vào giỏ hàng!`);
     setCartOpen(true);
@@ -334,18 +309,19 @@ export function useStorefront() {
   }
 
   function changeQuantity(variantId: string, delta: number) {
-    setCart((lines) =>
-      lines.flatMap((line) => {
-        if (line.variantId !== variantId) return [line];
-        const latest = productByVariant.get(variantId)?.variant.available ?? line.available;
-        const quantity = Math.min(line.quantity + delta, latest);
-        return quantity > 0 ? [{ ...line, quantity, available: latest }] : [];
-      })
-    );
+    const line = cart.find((l) => l.variantId === variantId);
+    if (!line) return;
+    const latest = productByVariant.get(variantId)?.variant.available ?? line.available;
+    const newQuantity = line.quantity + delta;
+    if (newQuantity <= 0) {
+      removeCartLineContext(variantId);
+    } else {
+      updateQuantity(variantId, Math.min(newQuantity, latest));
+    }
   }
 
   function removeCartLine(variantId: string) {
-    setCart((lines) => lines.filter((line) => line.variantId !== variantId));
+    removeCartLineContext(variantId);
   }
 
   function changeStore(nextStoreId: string) {
@@ -354,7 +330,7 @@ export function useStorefront() {
       !window.confirm("Đổi chi nhánh sẽ làm mới giỏ hàng để cập nhật tồn kho thực tế. Bạn có muốn tiếp tục?")
     )
       return;
-    setCart([]);
+    clearCart();
     setStoreId(nextStoreId);
   }
 
@@ -366,13 +342,7 @@ export function useStorefront() {
 
   /** Clamp one cart line to freshly-reported availability (post-409 recovery). */
   function updateCartAvailability(variantId: string, available: number) {
-    setCart((lines) =>
-      lines.map((line) =>
-        line.variantId === variantId
-          ? { ...line, available, quantity: Math.min(line.quantity, available) }
-          : line
-      )
-    );
+    updateQuantity(variantId, available);
   }
 
   async function refreshCatalog() {
@@ -465,7 +435,7 @@ export function useStorefront() {
         return;
       }
       setSuccess({ number: data.number, total: data.total });
-      setCart([]);
+      clearCart();
       setCheckoutOpen(false);
     } catch {
       setError("Lỗi kết nối khi gửi đơn hàng");
@@ -492,7 +462,7 @@ export function useStorefront() {
     paymentMethod, setPaymentMethod,
     couponInput, setCouponInput,
     // totals / derived
-    itemCount, subtotal, wrappingFee, grandTotal, progressToFreeShipping,
+    itemCount, subtotal: cartSubtotal, wrappingFee, grandTotal, progressToFreeShipping,
     freeShippingThreshold: FREE_SHIPPING_THRESHOLD, hasActiveFilters,
     // server interaction
     loading, submitting, error, setError, success, setSuccess,
