@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { printReceipt, type ReceiptData } from "@/lib/receipt";
 import BarcodeScanner from "@/components/BarcodeScanner";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 type Product = {
   id: string;
@@ -107,6 +108,20 @@ export default function PosPage() {
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
+
+  // Keyboard shortcuts for POS
+  useKeyboardShortcuts({
+    "ctrl+k": () => searchRef.current?.focus(),
+    "ctrl+n": () => {
+      if (shiftId) {
+        setLines([]);
+        setCustomerId("");
+        searchRef.current?.focus();
+      }
+    },
+    "f2": () => searchRef.current?.focus(),
+    "f4": () => setScannerOpen(true),
+  });
 
   const decreaseQty = (variantId: string) => {
     setLines((ls) =>

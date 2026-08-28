@@ -39,6 +39,7 @@ import {
   CartDrawer,
   OrderSuccessModal,
 } from "./_components/ShopOverlays";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 // ── Code-split overlays ──────────────────────────────────────────────────────
 // ssr:false is safe: these are interaction-triggered modals; nothing above the
@@ -69,6 +70,25 @@ function OverlaySkeleton({ label }: { label: string }) {
 export default function ShopPage() {
   const s = useStorefront();
   const [copiedOrder, setCopiedOrder] = useState(false);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    "ctrl+k": () => {
+      const input = s.searchContainerRef.current?.querySelector("input");
+      input?.focus();
+      s.setSearchFocused(true);
+    },
+    "ctrl+b": () => s.setCartOpen(!s.cartOpen),
+    "ctrl+shift+w": () => s.setWishlistOpen(!s.wishlistOpen),
+    "escape": () => {
+      s.setCartOpen(false);
+      s.setWishlistOpen(false);
+      s.setCheckoutOpen(false);
+      s.setQuickViewProduct(null);
+      s.setShelfProduct(null);
+      s.setFlipbookProduct(null);
+    },
+  });
 
   // Rotate hero slides every 7s.
   useEffect(() => {
