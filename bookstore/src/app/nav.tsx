@@ -24,6 +24,7 @@ import {
   Building2,
   ChevronDown,
 } from "lucide-react";
+import SupportWidget from "./support-widget";
 
 type AuthUser = {
   userId?: string;
@@ -310,6 +311,7 @@ export default function Nav() {
           })}
         </div>
       )}
+      <SupportWidget />
     </header>
   );
 }
