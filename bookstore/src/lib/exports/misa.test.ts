@@ -84,10 +84,11 @@ describe("buildGeneralLedgerCsv", () => {
     const csv = await buildGeneralLedgerCsv({
       from: new Date("2026-08-01"), to: new Date("2026-08-31"), orgId: "org-1",
     });
-    const lines = csv.slice(1).split("\r\n").filter(Boolean);
-    expect(lines[0]).toContain("131");
-    expect(lines[0]).toContain("511");
-    expect(lines[0]).toContain("100000");
+    const lines = csv.replace(/^﻿/, "").split("\r\n").filter(Boolean);
+    // [0] is header, [1] is the first data row.
+    expect(lines[1]).toContain("131");
+    expect(lines[1]).toContain("511");
+    expect(lines[1]).toContain("100000");
   });
 });
 
@@ -108,7 +109,10 @@ describe("buildZip", () => {
     expect(totalEntries).toBe(2);
   });
   it("preserves the bytes when the input is incompressible (deflate fallback)", () => {
-    const noise = Buffer.alloc(2048, () => Math.floor(Math.random() * 256));
+    // crypto.randomBytes gives true random bytes; Buffer.alloc's 2nd arg
+    // only accepts string|number|Buffer, so a callback is silently ignored
+    // and the buffer would be all zeros (trivially compressible).
+    const noise = require("node:crypto").randomBytes(2048);
     const zip = buildZip([{ name: "noise.bin", data: noise }]);
     expect(zip.length).toBeGreaterThan(2048); // headers + payload
   });
