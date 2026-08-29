@@ -85,6 +85,9 @@ export async function revokeOtherSessions(userId: string) {
 export type AuthContext = {
   userId: string;
   email: string;
+  orgId: string | null;
+  orgStatus: "TRIAL" | "ACTIVE" | "PAST_DUE" | "SUSPENDED" | "CANCELLED" | null;
+  trialEndsAt: Date | null;
   roles: { role: string; storeId: string | null; permissions: string[] }[];
 };
 
@@ -97,6 +100,7 @@ export async function getAuth(): Promise<AuthContext | null> {
     include: {
       user: {
         include: {
+          org: true,
           roles: {
             include: { role: { include: { permissions: { include: { permission: true } } } } },
           },
@@ -108,6 +112,9 @@ export async function getAuth(): Promise<AuthContext | null> {
   return {
     userId: session.user.id,
     email: session.user.email,
+    orgId: session.user.orgId,
+    orgStatus: session.user.org?.status ?? null,
+    trialEndsAt: session.user.org?.trialEndsAt ?? null,
     roles: session.user.roles.map((ur) => ({
       role: ur.role.name,
       storeId: ur.storeId,
@@ -200,6 +207,20 @@ export async function requireAuth(): Promise<AuthContext> {
   const auth = await getAuth();
   if (!auth) throw Object.assign(new Error("Unauthorized"), { status: 401 });
   return auth;
+}
+
+/**
+ * Enforce that the caller's org is usable. Trial is allowed until
+ * trialEndsAt; ACTIVE always passes; everything else rejects. Owner role
+ * (legacy superuser without orgId) bypasses so the existing admin path
+ * keeps working through the migration window.
+ */
+export async function requireOrgActive(): Promise<AuthContext> {
+  const auth = await requireAuth();
+  if (!auth.orgId) return auth; // legacy user — bypass
+  if (auth.orgStatus === "ACTIVE") return auth;
+  if (auth.orgStatus === "TRIAL" && auth.trialEndsAt && auth.trialEndsAt > new Date()) return auth;
+  throw Object.assign(new Error(`Forbidden: org ${auth.orgStatus}`), { status: 403 });
 }
 
 export async function pruneExpiredSessions() {

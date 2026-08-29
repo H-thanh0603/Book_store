@@ -15,7 +15,22 @@ datasource db {
 model Organization {
   id        String  @id @default(uuid())
   name      String
+  slug      String  @unique
+  status    OrgStatus @default(TRIAL)
+  trialEndsAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   regions   Region[]
+  users     User[]
+  subscription Subscription?
+}
+
+enum OrgStatus {
+  TRIAL        // free trial, all features gated only by expiry date
+  ACTIVE       // paid, in good standing
+  PAST_DUE     // payment overdue, owner can still read but write is throttled
+  SUSPENDED    // admin or non-payment, all write blocked
+  CANCELLED    // terminal, read-only
 }
 
 model Region {
@@ -79,11 +94,16 @@ model User {
   id           String     @id @default(uuid())
   email        String     @unique
   passwordHash String
+  orgId        String?
+  org          Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
   active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
   roles        UserRole[]
   sessions     Session[]
   resetTokens  PasswordResetToken[]
   auditLogs    AuditLog[]
+
+  @@index([orgId])
 }
 
 // Single-use, expiring password-reset tokens. Stored SHA-256-hashed like
@@ -142,6 +162,36 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
   @@index([userId])
+}
+
+// Subscription plans. Seeded by prisma/seed.ts. Each tier caps the number
+// of stores and users; enforcement is in src/lib/billing.ts (out of scope
+// for the MVP - defined here so future plans can ship without a migration).
+model Plan {
+  id               String   @id @default(uuid())
+  code             String   @unique // FREE | PRO | ENTERPRISE
+  name             String
+  monthlyPriceCents Int     // VND, integer
+  maxStores        Int
+  maxUsers         Int
+  features         Json
+  active           Boolean  @default(true)
+  subscriptions    Subscription[]
+}
+
+model Subscription {
+  id                 String   @id @default(uuid())
+  orgId              String   @unique
+  org                Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  planId             String
+  plan               Plan     @relation(fields: [planId], references: [id])
+  status             OrgStatus @default(TRIAL)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean  @default(false)
+  cancelledAt        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 // Shared abuse-control state. Keys contain only SHA-256 digests, never raw IP/email.

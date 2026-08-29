@@ -120,6 +120,108 @@ export async function POST(req: NextRequest) {
       return ok({ ok: true });
     }
 
+    if (action === "signup") {
+      // Self-serve signup: create Org + Owner user + 1 default Store + 1
+      // default Region + Subscription on a free trial. Atomic so a partial
+      // failure can't leave an Org without an owner (which would block all
+      // logins for that org).
+      const orgName = typeof body.orgName === "string" ? body.orgName.trim() : "";
+      const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+      const password = typeof body.password === "string" ? body.password : "";
+      if (!orgName || orgName.length > 120) fail(400, "VALIDATION", "orgName required (max 120)");
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail(400, "VALIDATION", "valid email required");
+      if (password.length < 10) fail(400, "VALIDATION", "password must be at least 10 characters");
+      await Promise.all([
+        enforceRateLimit("signup-ip", clientIp(req.headers), 5, 60 * 60_000),
+        enforceRateLimit("signup-email", email, 3, 60 * 60_000),
+      ]);
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing) fail(409, "CONFLICT", "Email already registered");
+
+      // Slug: lowercased org name with diacritics stripped + dedupe suffix.
+      const baseSlug = orgName
+        .normalize("NFD").replace(/[̀-ͯ]/g, "")
+        .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+        .slice(0, 40) || "org";
+      let slug = baseSlug;
+      for (let i = 0; i < 5; i++) {
+        const dupe = await prisma.organization.findUnique({ where: { slug } });
+        if (!dupe) break;
+        slug = `${baseSlug}-${randomBytes(2).toString("hex")}`;
+      }
+
+      const trialDays = Number(process.env.SIGNUP_TRIAL_DAYS ?? 14);
+      const trialEndsAt = new Date(Date.now() + trialDays * 86_400_000);
+
+      const result = await prisma.$transaction(async (tx) => {
+        // 1. Get or create the FREE plan (idempotent across concurrent signups).
+        const freePlan = await tx.plan.upsert({
+          where: { code: "FREE" },
+          update: {},
+          create: {
+            code: "FREE",
+            name: "Free",
+            monthlyPriceCents: 0,
+            maxStores: 1,
+            maxUsers: 3,
+            features: { eInvoice: false, multiStore: false, webhooks: false },
+          },
+        });
+
+        // 2. Org
+        const org = await tx.organization.create({
+          data: { name: orgName, slug, status: "TRIAL", trialEndsAt },
+        });
+
+        // 3. Default Region + Store
+        const region = await tx.region.create({
+          data: { name: "Mặc định", orgId: org.id },
+        });
+        const store = await tx.store.create({
+          data: {
+            code: `${slug.slice(0, 8).toUpperCase()}-HQ`,
+            name: "Cửa hàng chính",
+            regionId: region.id,
+          },
+        });
+
+        // 4. Subscription on FREE plan
+        await tx.subscription.create({
+          data: {
+            orgId: org.id,
+            planId: freePlan.id,
+            status: "TRIAL",
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: trialEndsAt,
+          },
+        });
+
+        // 5. Owner user + role. The "owner" role is created idempotently
+        // with a wildcard permission on every perm code that exists.
+        let ownerRole = await tx.role.findUnique({ where: { name: "owner" } });
+        if (!ownerRole) {
+          ownerRole = await tx.role.create({ data: { name: "owner" } });
+          const allPerms = await tx.permission.findMany({ select: { id: true } });
+          if (allPerms.length) {
+            await tx.rolePermission.createMany({
+              data: allPerms.map((p) => ({ roleId: ownerRole!.id, permissionId: p.id })),
+            });
+          }
+        }
+        const user = await tx.user.create({
+          data: { email, passwordHash: hashPassword(password), orgId: org.id, active: true },
+        });
+        await tx.userRole.create({
+          data: { userId: user.id, roleId: ownerRole.id, storeId: null, scopeKey: "*" },
+        });
+
+        return { org, user, store };
+      });
+
+      await createSession(result.user.id);
+      return ok({ orgId: result.org.id, storeId: result.store.id, email: result.user.email }, 201);
+    }
+
     fail(400, "VALIDATION", "Unknown action");
   } catch (err) {
     return apiError(err);
