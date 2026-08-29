@@ -118,8 +118,8 @@ export type GiftWrapping = "none" | "vintage" | "heritage";
 
 export type Fulfillment = "delivery" | "pickup";
 
-/** Checkout payment method: cash-on-delivery or the VNPay sandbox gateway. */
-export type PaymentMethodChoice = "COD" | "VNPAY";
+/** Checkout payment method: cash-on-delivery or one of the sandbox gateways. */
+export type PaymentMethodChoice = "COD" | "VNPAY" | "MOMO" | "ZALOPAY";
 
 /** Shape of a backend 409 (INSUFFICIENT_STOCK) body after apiError surfaces details. */
 export type StockConflictDetail = {
