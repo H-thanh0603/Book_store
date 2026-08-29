@@ -20,6 +20,7 @@
     "test:reset": "tsx scripts/test-reset-flow.ts",
     "test:pos": "tsx scripts/test-pos-expiry.ts",
     "test:einvoice": "tsx scripts/test-einvoice.ts",
+    "test:webhooks": "tsx scripts/test-webhooks.ts",
     "security:encrypt-integrations": "tsx scripts/encrypt-integration-secrets.ts",
     "security:rotate-integration-key": "tsx scripts/rotate-integration-key.ts",
     "ops:check-alerts": "tsx scripts/check-alerts.ts",

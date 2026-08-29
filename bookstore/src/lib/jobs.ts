@@ -4,6 +4,7 @@ import { scanLossPrevention } from "./loss-prevention";
 import { generateReplenishmentSuggestions } from "./replenishment";
 import { expireStaleReservations } from "./order-expiry";
 import { issuePendingInvoices, pollPendingInvoices } from "./einvoice-jobs";
+import { processPendingDeliveries } from "./webhook-bus";
 import { randomUUID } from "crypto";
 
 export const JOB_KINDS = {
@@ -12,6 +13,7 @@ export const JOB_KINDS = {
   "order.expire_reservations": expireStaleReservations,
   "einvoice.issue": issuePendingInvoices,
   "einvoice.poll": pollPendingInvoices,
+  "webhook.deliver": processPendingDeliveries,
   // ponytail: integration dispatch is inline today (integrations route runs jobs on
   // request); add a real queue consumer here when a connector pushes work.
 } as const;
@@ -96,7 +98,7 @@ export async function tickScheduler() {
  * Called by the instrumentation interval; safe to call repeatedly.
  */
 const NIGHTLY: JobKind[] = ["replenishment.generate", "loss.scan"];
-const FREQUENT: JobKind[] = ["order.expire_reservations", "einvoice.issue", "einvoice.poll"];
+const FREQUENT: JobKind[] = ["order.expire_reservations", "einvoice.issue", "einvoice.poll", "webhook.deliver"];
 const TICK_MS = 5 * 60_000;
 
 export async function scheduleNightly() {

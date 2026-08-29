@@ -1242,3 +1242,48 @@ model EInvoiceAttempt {
   finishedAt  DateTime?
   @@index([einvoiceId, startedAt])
 }
+
+// Per-org outbound webhook subscription. The endpoint owner supplies a URL +
+// shared secret; we sign every delivery with HMAC-SHA256(secret, body) and
+// retry with exponential backoff. Provider-agnostic — same row is reused
+// for e-invoice status pushes, MISA sync notifications, POS register events.
+model WebhookEndpoint {
+  id          String   @id @default(uuid())
+  orgId       String
+  provider    String   // free-form: "einvoice", "misa", "pos", "custom"
+  url         String
+  secret      String   // HMAC shared secret (stored in clear for now; rotate via /rotate-secret; upgrade to secret-box when org-level KMS lands)
+  eventTypes  String[] // e.g. ["order.paid", "invoice.issued"]; empty = subscribe to all
+  active      Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deliveries  WebhookDelivery[]
+
+  @@index([orgId, active])
+  @@index([provider])
+}
+
+// One row per (endpoint, event). eventId is the deduplication key — emit()
+// looks up by eventId first to keep at-least-once semantics idempotent on
+// the receiver side. lastStatus mirrors the HTTP code from the most recent
+// attempt; nextRetryAt drives the worker poll.
+model WebhookDelivery {
+  id          String   @id @default(uuid())
+  endpointId  String
+  endpoint    WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  eventId     String   // e.g. "evt_01HV..." — stable across retries
+  eventType   String
+  payload     Json
+  attempts    Int      @default(0)
+  lastStatus  Int?     // last HTTP response code
+  lastError   String?
+  nextRetryAt DateTime @default(now())
+  deliveredAt DateTime? // set on first 2xx; null = still pending
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([endpointId, eventId])
+  @@index([nextRetryAt])
+  @@index([deliveredAt])
+}
