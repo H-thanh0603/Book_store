@@ -194,6 +194,21 @@ model Subscription {
   updatedAt          DateTime @updatedAt
 }
 
+// Customer-facing session (storefront). Mirrors the staff Session model:
+// SHA-256 hashed token, server-side expiry, single cookie. Separate cookie
+// name from staff session so the two don't collide when a customer also
+// happens to be a staff user (e.g. owner testing the storefront).
+model CustomerSession {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  @@index([customerId])
+  @@index([expiresAt])
+}
+
 // Shared abuse-control state. Keys contain only SHA-256 digests, never raw IP/email.
 model RateLimitBucket {
   key       String   @id
@@ -581,13 +596,20 @@ model Customer {
   code      String @unique // CUS-000001
   name      String
   phone     String @unique
-  email     String?
+  email     String? @unique
   birthday  DateTime?
   address   String?
+  passwordHash  String?
+  emailVerifiedAt DateTime?
+  emailVerifyTokenHash String?
+  emailVerifyExpiresAt DateTime?
   loyalty   LoyaltyAccount?
   orders    Order[]
   returns   Return[]
   posTransactions PosTransaction[]
+  sessions  CustomerSession[]
+
+  @@index([email])
 }
 
 model LoyaltyAccount {

@@ -196,6 +196,16 @@ export default function ShopHeader({
             </span>
           )}
         </button>
+
+        {/* Account Link */}
+        <Link
+          href="/shop/account"
+          aria-label="Tài khoản khách hàng"
+          className="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl border border-[#ede5d8] bg-white hover:bg-[#faf7f2] text-slate-700 font-serif font-bold text-xs transition-colors shrink-0"
+        >
+          <User className="w-4 h-4" />
+          <span className="hidden sm:inline">Tài khoản</span>
+        </Link>
       </div>
 
       {/* Secondary Department Sub-Navigation */}

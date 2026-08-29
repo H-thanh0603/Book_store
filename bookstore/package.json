@@ -22,6 +22,7 @@
     "test:einvoice": "tsx scripts/test-einvoice.ts",
     "test:webhooks": "tsx scripts/test-webhooks.ts",
     "test:tenant": "tsx scripts/test-tenant-isolation.ts",
+    "test:customer": "tsx scripts/test-customer-auth.ts",
     "security:encrypt-integrations": "tsx scripts/encrypt-integration-secrets.ts",
     "security:rotate-integration-key": "tsx scripts/rotate-integration-key.ts",
     "ops:check-alerts": "tsx scripts/check-alerts.ts",

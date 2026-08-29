@@ -5,6 +5,7 @@ import { generateReplenishmentSuggestions } from "./replenishment";
 import { expireStaleReservations } from "./order-expiry";
 import { issuePendingInvoices, pollPendingInvoices } from "./einvoice-jobs";
 import { processPendingDeliveries } from "./webhook-bus";
+import { rotateInventoryPartitions } from "./partitions";
 import { randomUUID } from "crypto";
 
 export const JOB_KINDS = {
@@ -14,6 +15,7 @@ export const JOB_KINDS = {
   "einvoice.issue": issuePendingInvoices,
   "einvoice.poll": pollPendingInvoices,
   "webhook.deliver": processPendingDeliveries,
+  "partitions.rotate": rotateInventoryPartitions,
   // ponytail: integration dispatch is inline today (integrations route runs jobs on
   // request); add a real queue consumer here when a connector pushes work.
 } as const;
@@ -97,7 +99,7 @@ export async function tickScheduler() {
  * expiry) get one slot per scheduler tick (5 min). Slot ids make both idempotent.
  * Called by the instrumentation interval; safe to call repeatedly.
  */
-const NIGHTLY: JobKind[] = ["replenishment.generate", "loss.scan"];
+const NIGHTLY: JobKind[] = ["replenishment.generate", "loss.scan", "partitions.rotate"];
 const FREQUENT: JobKind[] = ["order.expire_reservations", "einvoice.issue", "einvoice.poll", "webhook.deliver"];
 const TICK_MS = 5 * 60_000;
 
