@@ -124,6 +124,17 @@ export async function settleVnpayResponse(searchParams: URLSearchParams): Promis
   });
   if (settled.count === 0)
     console.info(JSON.stringify({ event: "vnpay_duplicate_callback", txnRef: payment.txnRef }));
+
+  // Fire-and-forget e-invoice. T-VAN outage must not block IPN; the job
+  // worker retries via the standard backoff in lib/einvoice-jobs.ts.
+  if (success && settled.count === 1) {
+    void import("./einvoice").then(({ enqueueEinvoiceForOrder }) =>
+      enqueueEinvoiceForOrder(payment.orderId).catch((err) => {
+        console.error(JSON.stringify({ level: "error", event: "einvoice_enqueue_failed", orderId: payment.orderId, message: String(err) }));
+      })
+    );
+  }
+
   return success
     ? { ok: true, rspCode: "00", message: "Confirm Success", orderId: payment.orderId }
     : { ok: true, rspCode: "01", message: "Payment failed at gateway", orderId: payment.orderId };
