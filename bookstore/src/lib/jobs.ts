@@ -3,12 +3,15 @@ import { prisma } from "./db";
 import { scanLossPrevention } from "./loss-prevention";
 import { generateReplenishmentSuggestions } from "./replenishment";
 import { expireStaleReservations } from "./order-expiry";
+import { issuePendingInvoices, pollPendingInvoices } from "./einvoice-jobs";
 import { randomUUID } from "crypto";
 
 export const JOB_KINDS = {
   "replenishment.generate": generateReplenishmentSuggestions,
   "loss.scan": scanLossPrevention,
   "order.expire_reservations": expireStaleReservations,
+  "einvoice.issue": issuePendingInvoices,
+  "einvoice.poll": pollPendingInvoices,
   // ponytail: integration dispatch is inline today (integrations route runs jobs on
   // request); add a real queue consumer here when a connector pushes work.
 } as const;
@@ -93,7 +96,7 @@ export async function tickScheduler() {
  * Called by the instrumentation interval; safe to call repeatedly.
  */
 const NIGHTLY: JobKind[] = ["replenishment.generate", "loss.scan"];
-const FREQUENT: JobKind[] = ["order.expire_reservations"];
+const FREQUENT: JobKind[] = ["order.expire_reservations", "einvoice.issue", "einvoice.poll"];
 const TICK_MS = 5 * 60_000;
 
 export async function scheduleNightly() {

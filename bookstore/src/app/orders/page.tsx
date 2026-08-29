@@ -151,6 +151,16 @@ export default function OrdersPage() {
     }
   }
 
+  async function issueInvoice(order: Order) {
+    const r = await fetch(`/api/orders/${order.id}/invoice`, { method: "POST" });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) {
+      setMsg({ text: `Đã gửi yêu cầu phát hành hóa đơn cho ${order.number}`, type: "success" });
+    } else {
+      setMsg({ text: d.message ?? `HTTP ${r.status}`, type: "error" });
+    }
+  }
+
   async function deliver(order: Order) {
     const r = await fetch("/api/fulfillment", {
       method: "POST",
@@ -570,12 +580,20 @@ export default function OrdersPage() {
                             </button>
                           )}
                           {["DELIVERED", "SHIPPED"].includes(o.status) && (
-                            <button
-                              onClick={() => createReturn(o)}
-                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors"
-                            >
-                              Trả hàng
-                            </button>
+                            <>
+                              <button
+                                onClick={() => issueInvoice(o)}
+                                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors"
+                              >
+                                Phát hành HĐ
+                              </button>
+                              <button
+                                onClick={() => createReturn(o)}
+                                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors"
+                              >
+                                Trả hàng
+                              </button>
+                            </>
                           )}
                         </td>
                       </tr>

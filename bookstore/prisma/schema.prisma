@@ -1168,3 +1168,77 @@ model LossAlert {
   @@unique([rule, entityType, entityId])
   @@index([status, severity])
 }
+
+// ── E-invoice (T-VAN) ───────────────────────────────────────────────────────
+// Vietnamese hóa đơn điện tử. Issue is fire-and-forget after a paid order or
+// POS sale: enqueueEinvoice() creates a DRAFT row, a job pushes it to the
+// provider, then polls for the signed XML/PDF. idempotencyKey is the order id
+// so the same order never issues twice; cancel is a separate transition that
+// records its own EInvoiceAttempt for the audit trail.
+enum EInvoiceProvider {
+  VNPT
+  VIETTEL
+  MISA
+  VN_EINVOICE
+}
+
+enum EInvoiceStatus {
+  DRAFT
+  PENDING       // queued, waiting for poll worker
+  SENDING       // request to provider in flight
+  ISSUED        // provider returned a signed invoice
+  CANCELED      // superseded by a replacement
+  ERROR         // terminal failure; needs human review
+}
+
+model EInvoice {
+  id              String   @id @default(uuid())
+  orgId           String   // snapshotted from Store -> Region -> Organization; avoids joins on every query
+  storeId         String?
+  store           Store?   @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  orderKind       String   // POS | WEB
+  invoiceNumber   String?  @unique // provider-assigned, only after ISSUED
+  templateCode    String   // e.g. "01GTKT0/001" — provider-specific
+  provider        EInvoiceProvider
+  status          EInvoiceStatus @default(DRAFT)
+  customerName    String
+  customerTaxCode String?
+  customerEmail   String?
+  customerAddress String?
+  subtotal        BigInt
+  tax             BigInt   @default(0)  // 0 = không chịu thuế
+  total           BigInt
+  signedXmlUrl    String?
+  pdfUrl          String?
+  rawResponse     Json?
+  errorMessage    String?
+  nextPollAt      DateTime? // poll-status backoff
+  pollAttempts    Int       @default(0)
+  issuedAt        DateTime?
+  canceledAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  attempts        EInvoiceAttempt[]
+
+  @@index([orgId, status])
+  @@index([orderId])
+  @@index([status, nextPollAt])
+}
+
+// Every provider round-trip: enqueue, send, poll. Keeps the audit trail for
+// the 5-year tax-record retention even when the invoice itself is canceled.
+model EInvoiceAttempt {
+  id          String   @id @default(uuid())
+  einvoiceId  String
+  einvoice    EInvoice @relation(fields: [einvoiceId], references: [id], onDelete: Cascade)
+  phase       String   // ISSUE | POLL | CANCEL
+  status      String   // OK | ERROR
+  requestPayload Json?
+  responsePayload Json?
+  errorMessage String?
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+  @@index([einvoiceId, startedAt])
+}

@@ -66,6 +66,7 @@ export type SettleResult = {
   ok: boolean;
   rspCode: string; // '00' confirmed; '01' unknown/failed; '04' amount; '97' signature
   message: string;
+  orderId?: string; // surfaced so the route can fan out side-effects (e-invoice, loyalty)
 };
 
 /**
@@ -124,6 +125,6 @@ export async function settleVnpayResponse(searchParams: URLSearchParams): Promis
   if (settled.count === 0)
     console.info(JSON.stringify({ event: "vnpay_duplicate_callback", txnRef: payment.txnRef }));
   return success
-    ? { ok: true, rspCode: "00", message: "Confirm Success" }
-    : { ok: true, rspCode: "01", message: "Payment failed at gateway" };
+    ? { ok: true, rspCode: "00", message: "Confirm Success", orderId: payment.orderId }
+    : { ok: true, rspCode: "01", message: "Payment failed at gateway", orderId: payment.orderId };
 }

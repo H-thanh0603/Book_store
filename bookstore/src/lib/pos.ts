@@ -5,6 +5,7 @@ import { applyMovement } from "./inventory";
 import { evaluatePromotions, mergeLineDiscounts, CartLine } from "./promotions";
 import { nextBusinessNumber, getSystemConfig } from "./api";
 import { MovementType, PaymentMethod, Prisma } from "../generated/prisma/client";
+import { enqueueEinvoice, enqueueEinvoiceForPosTransaction } from "./einvoice";
 const LOYALTY_RATE_FALLBACK = 10_000n; // 10.000 VND = 1 point (spec §101: override via SystemConfig "loyalty.vndPerPoint")
 
 export type CompleteSaleInput = {
@@ -32,7 +33,7 @@ export async function completeSale(input: CompleteSaleInput) {
   }
 
   try {
-    return await withTxRetry(() =>
+    const result = await withTxRetry(() =>
       prisma.$transaction(async (tx) => {
     const shift = await tx.posShift.findUnique({
       where: { id: input.shiftId }, include: { terminal: true },
@@ -218,6 +219,12 @@ export async function completeSale(input: CompleteSaleInput) {
 
     return txn;
     }, TX_OPTIONS));
+    // Fire-and-forget e-invoice enqueue. A T-VAN outage must never block a paid sale;
+    // the row is created DRAFT and the worker picks it up on the next tick.
+    enqueueEinvoiceForPosTransaction(result.id).catch((err) =>
+      console.error(JSON.stringify({ level: "error", event: "einvoice_enqueue_failed", txnId: result.id, message: err?.message }))
+    );
+    return result;
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const duplicate = await prisma.payment.findUnique({
@@ -226,6 +233,7 @@ export async function completeSale(input: CompleteSaleInput) {
       if (duplicate) {
         if (duplicate.tx.storeId !== input.storeId)
           fail(409, "DUPLICATE", "Idempotency key belongs to another sale");
+        enqueueEinvoiceForPosTransaction(duplicate.tx.id).catch(() => {});
         return duplicate.tx;
       }
     }
