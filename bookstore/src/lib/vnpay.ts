@@ -99,8 +99,9 @@ export async function settleVnpayResponse(searchParams: URLSearchParams): Promis
   const rawParams: Record<string, string> = params;
 
   // Paid money must not revive a CANCELLED order — claim it while CONFIRMED.
+  // Billing-cycle WebPayments have no orderId; skip the claim step entirely.
   let claimed = false;
-  if (success) {
+  if (success && payment.orderId) {
     const claim = await prisma.order.updateMany({
       where: { id: payment.orderId, status: "CONFIRMED" },
       data: { status: "CONFIRMED" },

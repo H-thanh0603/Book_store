@@ -23,6 +23,8 @@ model Organization {
   regions   Region[]
   users     User[]
   subscription Subscription?
+  billingInvoices BillingInvoice[]
+  supportConversations SupportConversation[]
 }
 
 enum OrgStatus {
@@ -177,6 +179,7 @@ model Plan {
   features         Json
   active           Boolean  @default(true)
   subscriptions    Subscription[]
+  billingInvoices  BillingInvoice[]
 }
 
 model Subscription {
@@ -190,8 +193,62 @@ model Subscription {
   currentPeriodEnd   DateTime
   cancelAtPeriodEnd  Boolean  @default(false)
   cancelledAt        DateTime?
+  billingInvoices    BillingInvoice[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+}
+
+// One subscription-cycle invoice per period. PENDING -> PAID when
+// the linked WebPayment settles. If unpaid 3 days after
+// currentPeriodEnd, the daily billing cron suspends the org.
+model BillingInvoice {
+  id            String   @id @default(uuid())
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  subscriptionId String
+  subscription  Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  planId        String
+  plan          Plan     @relation(fields: [planId], references: [id])
+  periodStart   DateTime
+  periodEnd     DateTime
+  amount        BigInt   // VND, integer (1 đồng = 1 unit, NOT cents)
+  status        String   @default("PENDING") // PENDING | PAID | FAILED | VOID
+  webPaymentId  String?  @unique
+  webPayment    WebPayment? @relation(fields: [webPaymentId], references: [id])
+  issuedAt      DateTime @default(now())
+  paidAt        DateTime?
+  @@index([orgId])
+  @@index([status, periodEnd])
+}
+
+// In-app support chat. One conversation per (org, customer) pair;
+// staff can drop into any conversation for the org. Messages are
+// append-only; status = OPEN when the bot hasn't escalated yet,
+// ESCALATED once a human reply exists, CLOSED when staff marks done.
+model SupportConversation {
+  id          String   @id @default(uuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  subject     String?
+  status      String   @default("OPEN") // OPEN | ESCALATED | CLOSED
+  lastMessageAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  messages    SupportMessage[]
+  @@unique([orgId, customerId])
+  @@index([orgId, status])
+}
+
+model SupportMessage {
+  id              String   @id @default(uuid())
+  conversationId  String
+  conversation    SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  kind            String   // USER | STAFF | BOT
+  body            String
+  createdAt       DateTime @default(now())
+  @@index([conversationId, createdAt])
 }
 
 // Customer-facing session (storefront). Mirrors the staff Session model:
@@ -608,6 +665,7 @@ model Customer {
   returns   Return[]
   posTransactions PosTransaction[]
   sessions  CustomerSession[]
+  supportConversations SupportConversation[]
 
   @@index([email])
 }
@@ -866,13 +924,14 @@ model Payment {
   @@index([txId])
 }
 
-// Online (non-POS) payment intents, e.g. VNPay storefront checkout. One per
-// order — txnRef is the provider-facing reference. status is a plain string:
+// Online (non-POS) payment intents, e.g. VNPay storefront checkout, or
+// subscription-cycle billing invoice. Either orderId or billingInvoice
+// is set, never both — txnRef is the provider-facing reference. status:
 // PENDING | PAID | FAILED, transitioned only by the settle handler.
 model WebPayment {
   id           String    @id @default(uuid())
-  orderId      String    @unique
-  order        Order     @relation(fields: [orderId], references: [id])
+  orderId      String?   @unique
+  order        Order?    @relation(fields: [orderId], references: [id])
   provider     String    @default("VNPAY")
   txnRef       String    @unique
   amount       BigInt
@@ -880,8 +939,9 @@ model WebPayment {
   responseCode String?
   bankCode     String?
   rawParams    Json?
-  createdAt    DateTime  @default(now())
+  createdAt    DateTime @default(now())
   paidAt       DateTime?
+  billingInvoice BillingInvoice?
   @@index([status])
 }
 
