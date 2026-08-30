@@ -5,7 +5,7 @@ import { applyMovement } from "./inventory";
 import { evaluatePromotions, mergeLineDiscounts, CartLine } from "./promotions";
 import { nextBusinessNumber, getSystemConfig } from "./api";
 import { MovementType, PaymentMethod, Prisma } from "../generated/prisma/client";
-import { enqueueEinvoice, enqueueEinvoiceForPosTransaction } from "./einvoice";
+import { enqueueEinvoiceForPosTransaction } from "./einvoice";
 const LOYALTY_RATE_FALLBACK = 10_000n; // 10.000 VND = 1 point (spec §101: override via SystemConfig "loyalty.vndPerPoint")
 
 export type CompleteSaleInput = {
@@ -49,7 +49,13 @@ export async function completeSale(input: CompleteSaleInput) {
       include: {
         product: { include: { category: true } },
         prices: {
-          where: { priceList: { kind: "retail" }, OR: [{ validTo: null }, { validTo: { gt: new Date() } }] },
+          // validFrom lte now (audit PRICE-001): without it a future-dated
+          // price row wins `orderBy validFrom desc` and is charged today.
+          where: {
+            priceList: { kind: "retail" },
+            validFrom: { lte: new Date() },
+            OR: [{ validTo: null }, { validTo: { gt: new Date() } }],
+          },
           orderBy: { validFrom: "desc" },
           take: 1,
         },

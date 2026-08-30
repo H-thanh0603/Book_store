@@ -9,14 +9,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok, optDate } from "@/lib/api";
-import { reportTypes, toCsv } from "@/lib/reports";
+import { reportTypes, toCsv, type ReportParams, type ReportResult } from "@/lib/reports";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
   try {
     const auth = await requirePermission("reports.financial.view");
     if (!auth.orgId) return ok({ error: "VALIDATION", message: "caller has no org" }, 400);
     const { type } = await params;
-    const fn = (reportTypes as Record<string, (p: any) => Promise<any>>)[type];
+    const fn = (reportTypes as Record<string, (p: ReportParams) => Promise<ReportResult>>)[type];
     if (!fn) return ok({ error: "VALIDATION", message: `unknown report type: ${type}` }, 400);
 
     const sp = req.nextUrl.searchParams;

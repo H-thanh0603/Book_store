@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { scryptSync, randomBytes } from 'crypto'
+import { describe, it, expect,} from 'vitest'
 import { hashPassword, verifyPassword, passwordNeedsRehash } from './auth'
 
 describe('hashPassword', () => {
@@ -38,7 +39,6 @@ describe('verifyPassword', () => {
 
   it('handles legacy format without version prefix', () => {
     // Manually construct a legacy hash using the old parameters
-    const { scryptSync, randomBytes } = require('crypto')
     const LEGACY_SCRYPT = { N: 16384, r: 8, p: 1, maxmem: 128 * 1024 * 1024 }
     const salt = randomBytes(16).toString('hex')
     const hash = scryptSync('legacy-test', salt, 64, LEGACY_SCRYPT).toString('hex')

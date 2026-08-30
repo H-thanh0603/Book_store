@@ -43,7 +43,9 @@ export async function GET(req: NextRequest) {
     const barcode = sp.get("barcode");
     const sku = sp.get("sku");
     const page = Math.max(1, Number(sp.get("page") ?? 1));
-    const take = 25;
+    // take is client-tunable (POS/order pickers request a bigger page) but
+    // hard-clamped so a hand-crafted ?take=100000 cannot dump the catalog.
+    const take = Math.min(200, Math.max(1, Number(sp.get("take") ?? 25)));
 
     const where = {
       AND: [

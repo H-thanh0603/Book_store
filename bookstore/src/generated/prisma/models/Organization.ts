@@ -27,16 +27,31 @@ export type AggregateOrganization = {
 export type OrganizationMinAggregateOutputType = {
   id: string | null
   name: string | null
+  slug: string | null
+  status: $Enums.OrgStatus | null
+  trialEndsAt: Date | null
+  createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type OrganizationMaxAggregateOutputType = {
   id: string | null
   name: string | null
+  slug: string | null
+  status: $Enums.OrgStatus | null
+  trialEndsAt: Date | null
+  createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type OrganizationCountAggregateOutputType = {
   id: number
   name: number
+  slug: number
+  status: number
+  trialEndsAt: number
+  createdAt: number
+  updatedAt: number
   _all: number
 }
 
@@ -44,16 +59,31 @@ export type OrganizationCountAggregateOutputType = {
 export type OrganizationMinAggregateInputType = {
   id?: true
   name?: true
+  slug?: true
+  status?: true
+  trialEndsAt?: true
+  createdAt?: true
+  updatedAt?: true
 }
 
 export type OrganizationMaxAggregateInputType = {
   id?: true
   name?: true
+  slug?: true
+  status?: true
+  trialEndsAt?: true
+  createdAt?: true
+  updatedAt?: true
 }
 
 export type OrganizationCountAggregateInputType = {
   id?: true
   name?: true
+  slug?: true
+  status?: true
+  trialEndsAt?: true
+  createdAt?: true
+  updatedAt?: true
   _all?: true
 }
 
@@ -132,6 +162,11 @@ export type OrganizationGroupByArgs<ExtArgs extends runtime.Types.Extensions.Int
 export type OrganizationGroupByOutputType = {
   id: string
   name: string
+  slug: string
+  status: $Enums.OrgStatus
+  trialEndsAt: Date | null
+  createdAt: Date
+  updatedAt: Date
   _count: OrganizationCountAggregateOutputType | null
   _min: OrganizationMinAggregateOutputType | null
   _max: OrganizationMaxAggregateOutputType | null
@@ -158,27 +193,59 @@ export type OrganizationWhereInput = {
   NOT?: Prisma.OrganizationWhereInput | Prisma.OrganizationWhereInput[]
   id?: Prisma.StringFilter<"Organization"> | string
   name?: Prisma.StringFilter<"Organization"> | string
+  slug?: Prisma.StringFilter<"Organization"> | string
+  status?: Prisma.EnumOrgStatusFilter<"Organization"> | $Enums.OrgStatus
+  trialEndsAt?: Prisma.DateTimeNullableFilter<"Organization"> | Date | string | null
+  createdAt?: Prisma.DateTimeFilter<"Organization"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"Organization"> | Date | string
   regions?: Prisma.RegionListRelationFilter
+  users?: Prisma.UserListRelationFilter
+  subscription?: Prisma.XOR<Prisma.SubscriptionNullableScalarRelationFilter, Prisma.SubscriptionWhereInput> | null
+  billingInvoices?: Prisma.BillingInvoiceListRelationFilter
+  supportConversations?: Prisma.SupportConversationListRelationFilter
 }
 
 export type OrganizationOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  slug?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  trialEndsAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   regions?: Prisma.RegionOrderByRelationAggregateInput
+  users?: Prisma.UserOrderByRelationAggregateInput
+  subscription?: Prisma.SubscriptionOrderByWithRelationInput
+  billingInvoices?: Prisma.BillingInvoiceOrderByRelationAggregateInput
+  supportConversations?: Prisma.SupportConversationOrderByRelationAggregateInput
 }
 
 export type OrganizationWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  slug?: string
   AND?: Prisma.OrganizationWhereInput | Prisma.OrganizationWhereInput[]
   OR?: Prisma.OrganizationWhereInput[]
   NOT?: Prisma.OrganizationWhereInput | Prisma.OrganizationWhereInput[]
   name?: Prisma.StringFilter<"Organization"> | string
+  status?: Prisma.EnumOrgStatusFilter<"Organization"> | $Enums.OrgStatus
+  trialEndsAt?: Prisma.DateTimeNullableFilter<"Organization"> | Date | string | null
+  createdAt?: Prisma.DateTimeFilter<"Organization"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"Organization"> | Date | string
   regions?: Prisma.RegionListRelationFilter
-}, "id">
+  users?: Prisma.UserListRelationFilter
+  subscription?: Prisma.XOR<Prisma.SubscriptionNullableScalarRelationFilter, Prisma.SubscriptionWhereInput> | null
+  billingInvoices?: Prisma.BillingInvoiceListRelationFilter
+  supportConversations?: Prisma.SupportConversationListRelationFilter
+}, "id" | "slug">
 
 export type OrganizationOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  slug?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  trialEndsAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   _count?: Prisma.OrganizationCountOrderByAggregateInput
   _max?: Prisma.OrganizationMaxOrderByAggregateInput
   _min?: Prisma.OrganizationMinOrderByAggregateInput
@@ -190,60 +257,131 @@ export type OrganizationScalarWhereWithAggregatesInput = {
   NOT?: Prisma.OrganizationScalarWhereWithAggregatesInput | Prisma.OrganizationScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Organization"> | string
   name?: Prisma.StringWithAggregatesFilter<"Organization"> | string
+  slug?: Prisma.StringWithAggregatesFilter<"Organization"> | string
+  status?: Prisma.EnumOrgStatusWithAggregatesFilter<"Organization"> | $Enums.OrgStatus
+  trialEndsAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Organization"> | Date | string | null
+  createdAt?: Prisma.DateTimeWithAggregatesFilter<"Organization"> | Date | string
+  updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Organization"> | Date | string
 }
 
 export type OrganizationCreateInput = {
   id?: string
   name: string
+  slug: string
+  status?: $Enums.OrgStatus
+  trialEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
   regions?: Prisma.RegionCreateNestedManyWithoutOrgInput
+  users?: Prisma.UserCreateNestedManyWithoutOrgInput
+  subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrgInput
+  billingInvoices?: Prisma.BillingInvoiceCreateNestedManyWithoutOrgInput
+  supportConversations?: Prisma.SupportConversationCreateNestedManyWithoutOrgInput
 }
 
 export type OrganizationUncheckedCreateInput = {
   id?: string
   name: string
+  slug: string
+  status?: $Enums.OrgStatus
+  trialEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
   regions?: Prisma.RegionUncheckedCreateNestedManyWithoutOrgInput
+  users?: Prisma.UserUncheckedCreateNestedManyWithoutOrgInput
+  subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrgInput
+  billingInvoices?: Prisma.BillingInvoiceUncheckedCreateNestedManyWithoutOrgInput
+  supportConversations?: Prisma.SupportConversationUncheckedCreateNestedManyWithoutOrgInput
 }
 
 export type OrganizationUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   regions?: Prisma.RegionUpdateManyWithoutOrgNestedInput
+  users?: Prisma.UserUpdateManyWithoutOrgNestedInput
+  subscription?: Prisma.SubscriptionUpdateOneWithoutOrgNestedInput
+  billingInvoices?: Prisma.BillingInvoiceUpdateManyWithoutOrgNestedInput
+  supportConversations?: Prisma.SupportConversationUpdateManyWithoutOrgNestedInput
 }
 
 export type OrganizationUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   regions?: Prisma.RegionUncheckedUpdateManyWithoutOrgNestedInput
+  users?: Prisma.UserUncheckedUpdateManyWithoutOrgNestedInput
+  subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrgNestedInput
+  billingInvoices?: Prisma.BillingInvoiceUncheckedUpdateManyWithoutOrgNestedInput
+  supportConversations?: Prisma.SupportConversationUncheckedUpdateManyWithoutOrgNestedInput
 }
 
 export type OrganizationCreateManyInput = {
   id?: string
   name: string
+  slug: string
+  status?: $Enums.OrgStatus
+  trialEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type OrganizationUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type OrganizationUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type OrganizationCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  slug?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  trialEndsAt?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type OrganizationMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  slug?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  trialEndsAt?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type OrganizationMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  slug?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  trialEndsAt?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type OrganizationScalarRelationFilter = {
@@ -251,8 +389,25 @@ export type OrganizationScalarRelationFilter = {
   isNot?: Prisma.OrganizationWhereInput
 }
 
+export type OrganizationNullableScalarRelationFilter = {
+  is?: Prisma.OrganizationWhereInput | null
+  isNot?: Prisma.OrganizationWhereInput | null
+}
+
 export type StringFieldUpdateOperationsInput = {
   set?: string
+}
+
+export type EnumOrgStatusFieldUpdateOperationsInput = {
+  set?: $Enums.OrgStatus
+}
+
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
+}
+
+export type DateTimeFieldUpdateOperationsInput = {
+  set?: Date | string
 }
 
 export type OrganizationCreateNestedOneWithoutRegionsInput = {
@@ -269,14 +424,90 @@ export type OrganizationUpdateOneRequiredWithoutRegionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutRegionsInput, Prisma.OrganizationUpdateWithoutRegionsInput>, Prisma.OrganizationUncheckedUpdateWithoutRegionsInput>
 }
 
+export type OrganizationCreateNestedOneWithoutUsersInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutUsersInput, Prisma.OrganizationUncheckedCreateWithoutUsersInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutUsersInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+}
+
+export type OrganizationUpdateOneWithoutUsersNestedInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutUsersInput, Prisma.OrganizationUncheckedCreateWithoutUsersInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutUsersInput
+  upsert?: Prisma.OrganizationUpsertWithoutUsersInput
+  disconnect?: Prisma.OrganizationWhereInput | boolean
+  delete?: Prisma.OrganizationWhereInput | boolean
+  connect?: Prisma.OrganizationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutUsersInput, Prisma.OrganizationUpdateWithoutUsersInput>, Prisma.OrganizationUncheckedUpdateWithoutUsersInput>
+}
+
+export type OrganizationCreateNestedOneWithoutSubscriptionInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutSubscriptionInput, Prisma.OrganizationUncheckedCreateWithoutSubscriptionInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutSubscriptionInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+}
+
+export type OrganizationUpdateOneRequiredWithoutSubscriptionNestedInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutSubscriptionInput, Prisma.OrganizationUncheckedCreateWithoutSubscriptionInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutSubscriptionInput
+  upsert?: Prisma.OrganizationUpsertWithoutSubscriptionInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutSubscriptionInput, Prisma.OrganizationUpdateWithoutSubscriptionInput>, Prisma.OrganizationUncheckedUpdateWithoutSubscriptionInput>
+}
+
+export type OrganizationCreateNestedOneWithoutBillingInvoicesInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutBillingInvoicesInput, Prisma.OrganizationUncheckedCreateWithoutBillingInvoicesInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutBillingInvoicesInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+}
+
+export type OrganizationUpdateOneRequiredWithoutBillingInvoicesNestedInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutBillingInvoicesInput, Prisma.OrganizationUncheckedCreateWithoutBillingInvoicesInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutBillingInvoicesInput
+  upsert?: Prisma.OrganizationUpsertWithoutBillingInvoicesInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutBillingInvoicesInput, Prisma.OrganizationUpdateWithoutBillingInvoicesInput>, Prisma.OrganizationUncheckedUpdateWithoutBillingInvoicesInput>
+}
+
+export type OrganizationCreateNestedOneWithoutSupportConversationsInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutSupportConversationsInput, Prisma.OrganizationUncheckedCreateWithoutSupportConversationsInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutSupportConversationsInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+}
+
+export type OrganizationUpdateOneRequiredWithoutSupportConversationsNestedInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutSupportConversationsInput, Prisma.OrganizationUncheckedCreateWithoutSupportConversationsInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutSupportConversationsInput
+  upsert?: Prisma.OrganizationUpsertWithoutSupportConversationsInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutSupportConversationsInput, Prisma.OrganizationUpdateWithoutSupportConversationsInput>, Prisma.OrganizationUncheckedUpdateWithoutSupportConversationsInput>
+}
+
 export type OrganizationCreateWithoutRegionsInput = {
   id?: string
   name: string
+  slug: string
+  status?: $Enums.OrgStatus
+  trialEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  users?: Prisma.UserCreateNestedManyWithoutOrgInput
+  subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrgInput
+  billingInvoices?: Prisma.BillingInvoiceCreateNestedManyWithoutOrgInput
+  supportConversations?: Prisma.SupportConversationCreateNestedManyWithoutOrgInput
 }
 
 export type OrganizationUncheckedCreateWithoutRegionsInput = {
   id?: string
   name: string
+  slug: string
+  status?: $Enums.OrgStatus
+  trialEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  users?: Prisma.UserUncheckedCreateNestedManyWithoutOrgInput
+  subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrgInput
+  billingInvoices?: Prisma.BillingInvoiceUncheckedCreateNestedManyWithoutOrgInput
+  supportConversations?: Prisma.SupportConversationUncheckedCreateNestedManyWithoutOrgInput
 }
 
 export type OrganizationCreateOrConnectWithoutRegionsInput = {
@@ -298,11 +529,317 @@ export type OrganizationUpdateToOneWithWhereWithoutRegionsInput = {
 export type OrganizationUpdateWithoutRegionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.UserUpdateManyWithoutOrgNestedInput
+  subscription?: Prisma.SubscriptionUpdateOneWithoutOrgNestedInput
+  billingInvoices?: Prisma.BillingInvoiceUpdateManyWithoutOrgNestedInput
+  supportConversations?: Prisma.SupportConversationUpdateManyWithoutOrgNestedInput
 }
 
 export type OrganizationUncheckedUpdateWithoutRegionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.UserUncheckedUpdateManyWithoutOrgNestedInput
+  subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrgNestedInput
+  billingInvoices?: Prisma.BillingInvoiceUncheckedUpdateManyWithoutOrgNestedInput
+  supportConversations?: Prisma.SupportConversationUncheckedUpdateManyWithoutOrgNestedInput
+}
+
+export type OrganizationCreateWithoutUsersInput = {
+  id?: string
+  name: string
+  slug: string
+  status?: $Enums.OrgStatus
+  trialEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  regions?: Prisma.RegionCreateNestedManyWithoutOrgInput
+  subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrgInput
+  billingInvoices?: Prisma.BillingInvoiceCreateNestedManyWithoutOrgInput
+  supportConversations?: Prisma.SupportConversationCreateNestedManyWithoutOrgInput
+}
+
+export type OrganizationUncheckedCreateWithoutUsersInput = {
+  id?: string
+  name: string
+  slug: string
+  status?: $Enums.OrgStatus
+  trialEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  regions?: Prisma.RegionUncheckedCreateNestedManyWithoutOrgInput
+  subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrgInput
+  billingInvoices?: Prisma.BillingInvoiceUncheckedCreateNestedManyWithoutOrgInput
+  supportConversations?: Prisma.SupportConversationUncheckedCreateNestedManyWithoutOrgInput
+}
+
+export type OrganizationCreateOrConnectWithoutUsersInput = {
+  where: Prisma.OrganizationWhereUniqueInput
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutUsersInput, Prisma.OrganizationUncheckedCreateWithoutUsersInput>
+}
+
+export type OrganizationUpsertWithoutUsersInput = {
+  update: Prisma.XOR<Prisma.OrganizationUpdateWithoutUsersInput, Prisma.OrganizationUncheckedUpdateWithoutUsersInput>
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutUsersInput, Prisma.OrganizationUncheckedCreateWithoutUsersInput>
+  where?: Prisma.OrganizationWhereInput
+}
+
+export type OrganizationUpdateToOneWithWhereWithoutUsersInput = {
+  where?: Prisma.OrganizationWhereInput
+  data: Prisma.XOR<Prisma.OrganizationUpdateWithoutUsersInput, Prisma.OrganizationUncheckedUpdateWithoutUsersInput>
+}
+
+export type OrganizationUpdateWithoutUsersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  regions?: Prisma.RegionUpdateManyWithoutOrgNestedInput
+  subscription?: Prisma.SubscriptionUpdateOneWithoutOrgNestedInput
+  billingInvoices?: Prisma.BillingInvoiceUpdateManyWithoutOrgNestedInput
+  supportConversations?: Prisma.SupportConversationUpdateManyWithoutOrgNestedInput
+}
+
+export type OrganizationUncheckedUpdateWithoutUsersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  regions?: Prisma.RegionUncheckedUpdateManyWithoutOrgNestedInput
+  subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrgNestedInput
+  billingInvoices?: Prisma.BillingInvoiceUncheckedUpdateManyWithoutOrgNestedInput
+  supportConversations?: Prisma.SupportConversationUncheckedUpdateManyWithoutOrgNestedInput
+}
+
+export type OrganizationCreateWithoutSubscriptionInput = {
+  id?: string
+  name: string
+  slug: string
+  status?: $Enums.OrgStatus
+  trialEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  regions?: Prisma.RegionCreateNestedManyWithoutOrgInput
+  users?: Prisma.UserCreateNestedManyWithoutOrgInput
+  billingInvoices?: Prisma.BillingInvoiceCreateNestedManyWithoutOrgInput
+  supportConversations?: Prisma.SupportConversationCreateNestedManyWithoutOrgInput
+}
+
+export type OrganizationUncheckedCreateWithoutSubscriptionInput = {
+  id?: string
+  name: string
+  slug: string
+  status?: $Enums.OrgStatus
+  trialEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  regions?: Prisma.RegionUncheckedCreateNestedManyWithoutOrgInput
+  users?: Prisma.UserUncheckedCreateNestedManyWithoutOrgInput
+  billingInvoices?: Prisma.BillingInvoiceUncheckedCreateNestedManyWithoutOrgInput
+  supportConversations?: Prisma.SupportConversationUncheckedCreateNestedManyWithoutOrgInput
+}
+
+export type OrganizationCreateOrConnectWithoutSubscriptionInput = {
+  where: Prisma.OrganizationWhereUniqueInput
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutSubscriptionInput, Prisma.OrganizationUncheckedCreateWithoutSubscriptionInput>
+}
+
+export type OrganizationUpsertWithoutSubscriptionInput = {
+  update: Prisma.XOR<Prisma.OrganizationUpdateWithoutSubscriptionInput, Prisma.OrganizationUncheckedUpdateWithoutSubscriptionInput>
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutSubscriptionInput, Prisma.OrganizationUncheckedCreateWithoutSubscriptionInput>
+  where?: Prisma.OrganizationWhereInput
+}
+
+export type OrganizationUpdateToOneWithWhereWithoutSubscriptionInput = {
+  where?: Prisma.OrganizationWhereInput
+  data: Prisma.XOR<Prisma.OrganizationUpdateWithoutSubscriptionInput, Prisma.OrganizationUncheckedUpdateWithoutSubscriptionInput>
+}
+
+export type OrganizationUpdateWithoutSubscriptionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  regions?: Prisma.RegionUpdateManyWithoutOrgNestedInput
+  users?: Prisma.UserUpdateManyWithoutOrgNestedInput
+  billingInvoices?: Prisma.BillingInvoiceUpdateManyWithoutOrgNestedInput
+  supportConversations?: Prisma.SupportConversationUpdateManyWithoutOrgNestedInput
+}
+
+export type OrganizationUncheckedUpdateWithoutSubscriptionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  regions?: Prisma.RegionUncheckedUpdateManyWithoutOrgNestedInput
+  users?: Prisma.UserUncheckedUpdateManyWithoutOrgNestedInput
+  billingInvoices?: Prisma.BillingInvoiceUncheckedUpdateManyWithoutOrgNestedInput
+  supportConversations?: Prisma.SupportConversationUncheckedUpdateManyWithoutOrgNestedInput
+}
+
+export type OrganizationCreateWithoutBillingInvoicesInput = {
+  id?: string
+  name: string
+  slug: string
+  status?: $Enums.OrgStatus
+  trialEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  regions?: Prisma.RegionCreateNestedManyWithoutOrgInput
+  users?: Prisma.UserCreateNestedManyWithoutOrgInput
+  subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrgInput
+  supportConversations?: Prisma.SupportConversationCreateNestedManyWithoutOrgInput
+}
+
+export type OrganizationUncheckedCreateWithoutBillingInvoicesInput = {
+  id?: string
+  name: string
+  slug: string
+  status?: $Enums.OrgStatus
+  trialEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  regions?: Prisma.RegionUncheckedCreateNestedManyWithoutOrgInput
+  users?: Prisma.UserUncheckedCreateNestedManyWithoutOrgInput
+  subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrgInput
+  supportConversations?: Prisma.SupportConversationUncheckedCreateNestedManyWithoutOrgInput
+}
+
+export type OrganizationCreateOrConnectWithoutBillingInvoicesInput = {
+  where: Prisma.OrganizationWhereUniqueInput
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutBillingInvoicesInput, Prisma.OrganizationUncheckedCreateWithoutBillingInvoicesInput>
+}
+
+export type OrganizationUpsertWithoutBillingInvoicesInput = {
+  update: Prisma.XOR<Prisma.OrganizationUpdateWithoutBillingInvoicesInput, Prisma.OrganizationUncheckedUpdateWithoutBillingInvoicesInput>
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutBillingInvoicesInput, Prisma.OrganizationUncheckedCreateWithoutBillingInvoicesInput>
+  where?: Prisma.OrganizationWhereInput
+}
+
+export type OrganizationUpdateToOneWithWhereWithoutBillingInvoicesInput = {
+  where?: Prisma.OrganizationWhereInput
+  data: Prisma.XOR<Prisma.OrganizationUpdateWithoutBillingInvoicesInput, Prisma.OrganizationUncheckedUpdateWithoutBillingInvoicesInput>
+}
+
+export type OrganizationUpdateWithoutBillingInvoicesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  regions?: Prisma.RegionUpdateManyWithoutOrgNestedInput
+  users?: Prisma.UserUpdateManyWithoutOrgNestedInput
+  subscription?: Prisma.SubscriptionUpdateOneWithoutOrgNestedInput
+  supportConversations?: Prisma.SupportConversationUpdateManyWithoutOrgNestedInput
+}
+
+export type OrganizationUncheckedUpdateWithoutBillingInvoicesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  regions?: Prisma.RegionUncheckedUpdateManyWithoutOrgNestedInput
+  users?: Prisma.UserUncheckedUpdateManyWithoutOrgNestedInput
+  subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrgNestedInput
+  supportConversations?: Prisma.SupportConversationUncheckedUpdateManyWithoutOrgNestedInput
+}
+
+export type OrganizationCreateWithoutSupportConversationsInput = {
+  id?: string
+  name: string
+  slug: string
+  status?: $Enums.OrgStatus
+  trialEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  regions?: Prisma.RegionCreateNestedManyWithoutOrgInput
+  users?: Prisma.UserCreateNestedManyWithoutOrgInput
+  subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrgInput
+  billingInvoices?: Prisma.BillingInvoiceCreateNestedManyWithoutOrgInput
+}
+
+export type OrganizationUncheckedCreateWithoutSupportConversationsInput = {
+  id?: string
+  name: string
+  slug: string
+  status?: $Enums.OrgStatus
+  trialEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  regions?: Prisma.RegionUncheckedCreateNestedManyWithoutOrgInput
+  users?: Prisma.UserUncheckedCreateNestedManyWithoutOrgInput
+  subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrgInput
+  billingInvoices?: Prisma.BillingInvoiceUncheckedCreateNestedManyWithoutOrgInput
+}
+
+export type OrganizationCreateOrConnectWithoutSupportConversationsInput = {
+  where: Prisma.OrganizationWhereUniqueInput
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutSupportConversationsInput, Prisma.OrganizationUncheckedCreateWithoutSupportConversationsInput>
+}
+
+export type OrganizationUpsertWithoutSupportConversationsInput = {
+  update: Prisma.XOR<Prisma.OrganizationUpdateWithoutSupportConversationsInput, Prisma.OrganizationUncheckedUpdateWithoutSupportConversationsInput>
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutSupportConversationsInput, Prisma.OrganizationUncheckedCreateWithoutSupportConversationsInput>
+  where?: Prisma.OrganizationWhereInput
+}
+
+export type OrganizationUpdateToOneWithWhereWithoutSupportConversationsInput = {
+  where?: Prisma.OrganizationWhereInput
+  data: Prisma.XOR<Prisma.OrganizationUpdateWithoutSupportConversationsInput, Prisma.OrganizationUncheckedUpdateWithoutSupportConversationsInput>
+}
+
+export type OrganizationUpdateWithoutSupportConversationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  regions?: Prisma.RegionUpdateManyWithoutOrgNestedInput
+  users?: Prisma.UserUpdateManyWithoutOrgNestedInput
+  subscription?: Prisma.SubscriptionUpdateOneWithoutOrgNestedInput
+  billingInvoices?: Prisma.BillingInvoiceUpdateManyWithoutOrgNestedInput
+}
+
+export type OrganizationUncheckedUpdateWithoutSupportConversationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrgStatusFieldUpdateOperationsInput | $Enums.OrgStatus
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  regions?: Prisma.RegionUncheckedUpdateManyWithoutOrgNestedInput
+  users?: Prisma.UserUncheckedUpdateManyWithoutOrgNestedInput
+  subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrgNestedInput
+  billingInvoices?: Prisma.BillingInvoiceUncheckedUpdateManyWithoutOrgNestedInput
 }
 
 
@@ -312,10 +849,16 @@ export type OrganizationUncheckedUpdateWithoutRegionsInput = {
 
 export type OrganizationCountOutputType = {
   regions: number
+  users: number
+  billingInvoices: number
+  supportConversations: number
 }
 
 export type OrganizationCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   regions?: boolean | OrganizationCountOutputTypeCountRegionsArgs
+  users?: boolean | OrganizationCountOutputTypeCountUsersArgs
+  billingInvoices?: boolean | OrganizationCountOutputTypeCountBillingInvoicesArgs
+  supportConversations?: boolean | OrganizationCountOutputTypeCountSupportConversationsArgs
 }
 
 /**
@@ -335,32 +878,81 @@ export type OrganizationCountOutputTypeCountRegionsArgs<ExtArgs extends runtime.
   where?: Prisma.RegionWhereInput
 }
 
+/**
+ * OrganizationCountOutputType without action
+ */
+export type OrganizationCountOutputTypeCountUsersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.UserWhereInput
+}
+
+/**
+ * OrganizationCountOutputType without action
+ */
+export type OrganizationCountOutputTypeCountBillingInvoicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.BillingInvoiceWhereInput
+}
+
+/**
+ * OrganizationCountOutputType without action
+ */
+export type OrganizationCountOutputTypeCountSupportConversationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SupportConversationWhereInput
+}
+
 
 export type OrganizationSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  slug?: boolean
+  status?: boolean
+  trialEndsAt?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
   regions?: boolean | Prisma.Organization$regionsArgs<ExtArgs>
+  users?: boolean | Prisma.Organization$usersArgs<ExtArgs>
+  subscription?: boolean | Prisma.Organization$subscriptionArgs<ExtArgs>
+  billingInvoices?: boolean | Prisma.Organization$billingInvoicesArgs<ExtArgs>
+  supportConversations?: boolean | Prisma.Organization$supportConversationsArgs<ExtArgs>
   _count?: boolean | Prisma.OrganizationCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["organization"]>
 
 export type OrganizationSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  slug?: boolean
+  status?: boolean
+  trialEndsAt?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
 }, ExtArgs["result"]["organization"]>
 
 export type OrganizationSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  slug?: boolean
+  status?: boolean
+  trialEndsAt?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
 }, ExtArgs["result"]["organization"]>
 
 export type OrganizationSelectScalar = {
   id?: boolean
   name?: boolean
+  slug?: boolean
+  status?: boolean
+  trialEndsAt?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
 }
 
-export type OrganizationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name", ExtArgs["result"]["organization"]>
+export type OrganizationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "slug" | "status" | "trialEndsAt" | "createdAt" | "updatedAt", ExtArgs["result"]["organization"]>
 export type OrganizationInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   regions?: boolean | Prisma.Organization$regionsArgs<ExtArgs>
+  users?: boolean | Prisma.Organization$usersArgs<ExtArgs>
+  subscription?: boolean | Prisma.Organization$subscriptionArgs<ExtArgs>
+  billingInvoices?: boolean | Prisma.Organization$billingInvoicesArgs<ExtArgs>
+  supportConversations?: boolean | Prisma.Organization$supportConversationsArgs<ExtArgs>
   _count?: boolean | Prisma.OrganizationCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type OrganizationIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -370,10 +962,19 @@ export type $OrganizationPayload<ExtArgs extends runtime.Types.Extensions.Intern
   name: "Organization"
   objects: {
     regions: Prisma.$RegionPayload<ExtArgs>[]
+    users: Prisma.$UserPayload<ExtArgs>[]
+    subscription: Prisma.$SubscriptionPayload<ExtArgs> | null
+    billingInvoices: Prisma.$BillingInvoicePayload<ExtArgs>[]
+    supportConversations: Prisma.$SupportConversationPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     name: string
+    slug: string
+    status: $Enums.OrgStatus
+    trialEndsAt: Date | null
+    createdAt: Date
+    updatedAt: Date
   }, ExtArgs["result"]["organization"]>
   composites: {}
 }
@@ -769,6 +1370,10 @@ readonly fields: OrganizationFieldRefs;
 export interface Prisma__OrganizationClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   regions<T extends Prisma.Organization$regionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$regionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RegionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  users<T extends Prisma.Organization$usersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$usersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  subscription<T extends Prisma.Organization$subscriptionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$subscriptionArgs<ExtArgs>>): Prisma.Prisma__SubscriptionClient<runtime.Types.Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  billingInvoices<T extends Prisma.Organization$billingInvoicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$billingInvoicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BillingInvoicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  supportConversations<T extends Prisma.Organization$supportConversationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$supportConversationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SupportConversationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -800,6 +1405,11 @@ export interface Prisma__OrganizationClient<T, Null = never, ExtArgs extends run
 export interface OrganizationFieldRefs {
   readonly id: Prisma.FieldRef<"Organization", 'String'>
   readonly name: Prisma.FieldRef<"Organization", 'String'>
+  readonly slug: Prisma.FieldRef<"Organization", 'String'>
+  readonly status: Prisma.FieldRef<"Organization", 'OrgStatus'>
+  readonly trialEndsAt: Prisma.FieldRef<"Organization", 'DateTime'>
+  readonly createdAt: Prisma.FieldRef<"Organization", 'DateTime'>
+  readonly updatedAt: Prisma.FieldRef<"Organization", 'DateTime'>
 }
     
 
@@ -1214,6 +1824,97 @@ export type Organization$regionsArgs<ExtArgs extends runtime.Types.Extensions.In
   take?: number
   skip?: number
   distinct?: Prisma.RegionScalarFieldEnum | Prisma.RegionScalarFieldEnum[]
+}
+
+/**
+ * Organization.users
+ */
+export type Organization$usersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
+  orderBy?: Prisma.UserOrderByWithRelationInput | Prisma.UserOrderByWithRelationInput[]
+  cursor?: Prisma.UserWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.UserScalarFieldEnum | Prisma.UserScalarFieldEnum[]
+}
+
+/**
+ * Organization.subscription
+ */
+export type Organization$subscriptionArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Subscription
+   */
+  select?: Prisma.SubscriptionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Subscription
+   */
+  omit?: Prisma.SubscriptionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SubscriptionInclude<ExtArgs> | null
+  where?: Prisma.SubscriptionWhereInput
+}
+
+/**
+ * Organization.billingInvoices
+ */
+export type Organization$billingInvoicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the BillingInvoice
+   */
+  select?: Prisma.BillingInvoiceSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the BillingInvoice
+   */
+  omit?: Prisma.BillingInvoiceOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingInvoiceInclude<ExtArgs> | null
+  where?: Prisma.BillingInvoiceWhereInput
+  orderBy?: Prisma.BillingInvoiceOrderByWithRelationInput | Prisma.BillingInvoiceOrderByWithRelationInput[]
+  cursor?: Prisma.BillingInvoiceWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.BillingInvoiceScalarFieldEnum | Prisma.BillingInvoiceScalarFieldEnum[]
+}
+
+/**
+ * Organization.supportConversations
+ */
+export type Organization$supportConversationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SupportConversation
+   */
+  select?: Prisma.SupportConversationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SupportConversation
+   */
+  omit?: Prisma.SupportConversationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SupportConversationInclude<ExtArgs> | null
+  where?: Prisma.SupportConversationWhereInput
+  orderBy?: Prisma.SupportConversationOrderByWithRelationInput | Prisma.SupportConversationOrderByWithRelationInput[]
+  cursor?: Prisma.SupportConversationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SupportConversationScalarFieldEnum | Prisma.SupportConversationScalarFieldEnum[]
 }
 
 /**

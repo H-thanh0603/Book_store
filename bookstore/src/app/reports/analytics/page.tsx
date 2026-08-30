@@ -47,6 +47,7 @@ export default function AnalyticsPage() {
     finally { setLoading(false); }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-fetch; load() is not memoized, adding it would refetch every render
   useEffect(() => { void load(); }, [tab, from, to]);
 
   function downloadCsv() {

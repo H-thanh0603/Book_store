@@ -44,7 +44,7 @@ export function useKeyboardShortcuts(shortcuts: ShortcutMap, deps: unknown[] = [
         shortcuts[key]();
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/use-memo
     [shortcuts, ...deps]
   );
 

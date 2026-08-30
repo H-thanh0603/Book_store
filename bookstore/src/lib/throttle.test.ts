@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect,} from 'vitest'
 import { withCheckoutSlot, MAX_CONCURRENT_CHECKOUTS } from './throttle'
 
 describe('withCheckoutSlot', () => {

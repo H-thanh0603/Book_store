@@ -8,7 +8,7 @@ import { apiError } from "@/lib/api";
 
 export async function GET() {
   try {
-    const auth = await requirePermission("settings.read");
+    const auth = await requirePermission("settings.read", undefined, { allowSuspended: true });
     if (!auth.orgId) return NextResponse.json([]);
     const rows = await prisma.billingInvoice.findMany({
       where: { orgId: auth.orgId },

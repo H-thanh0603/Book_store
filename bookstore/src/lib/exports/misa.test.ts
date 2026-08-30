@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { inflateRawSync } from "node:zlib";
+import { randomBytes } from 'node:crypto'
+
 
 // Mock prisma before the lib import so it picks up the stub.
 const orders: any[] = [];
@@ -112,7 +114,7 @@ describe("buildZip", () => {
     // crypto.randomBytes gives true random bytes; Buffer.alloc's 2nd arg
     // only accepts string|number|Buffer, so a callback is silently ignored
     // and the buffer would be all zeros (trivially compressible).
-    const noise = require("node:crypto").randomBytes(2048);
+    const noise = randomBytes(2048);
     const zip = buildZip([{ name: "noise.bin", data: noise }]);
     expect(zip.length).toBeGreaterThan(2048); // headers + payload
   });

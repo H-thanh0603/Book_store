@@ -3,6 +3,7 @@
 // rotates the hash, kills sessions, and rejects reuse/expiry/tamper.
 // Run: npx tsx scripts/test-reset-flow.ts  (needs the app running on :3000)
 import "dotenv/config";
+import { verifyPassword } from "../src/lib/auth";
 import { createHash, randomBytes } from "crypto";
 import { prisma } from "../src/lib/db";
 
@@ -64,7 +65,6 @@ async function main() {
   const after = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
   check("password hash rotated & verifies", (() => {
     try {
-      const { verifyPassword } = require("../src/lib/auth");
       return verifyPassword("brand-new-password-1", after.passwordHash);
     } catch { return false; }
   })());

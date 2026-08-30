@@ -213,7 +213,7 @@ export type WebPaymentGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inter
 
 export type WebPaymentGroupByOutputType = {
   id: string
-  orderId: string
+  orderId: string | null
   provider: string
   txnRef: string
   amount: bigint
@@ -250,7 +250,7 @@ export type WebPaymentWhereInput = {
   OR?: Prisma.WebPaymentWhereInput[]
   NOT?: Prisma.WebPaymentWhereInput | Prisma.WebPaymentWhereInput[]
   id?: Prisma.StringFilter<"WebPayment"> | string
-  orderId?: Prisma.StringFilter<"WebPayment"> | string
+  orderId?: Prisma.StringNullableFilter<"WebPayment"> | string | null
   provider?: Prisma.StringFilter<"WebPayment"> | string
   txnRef?: Prisma.StringFilter<"WebPayment"> | string
   amount?: Prisma.BigIntFilter<"WebPayment"> | bigint | number
@@ -260,12 +260,13 @@ export type WebPaymentWhereInput = {
   rawParams?: Prisma.JsonNullableFilter<"WebPayment">
   createdAt?: Prisma.DateTimeFilter<"WebPayment"> | Date | string
   paidAt?: Prisma.DateTimeNullableFilter<"WebPayment"> | Date | string | null
-  order?: Prisma.XOR<Prisma.OrderScalarRelationFilter, Prisma.OrderWhereInput>
+  order?: Prisma.XOR<Prisma.OrderNullableScalarRelationFilter, Prisma.OrderWhereInput> | null
+  billingInvoice?: Prisma.XOR<Prisma.BillingInvoiceNullableScalarRelationFilter, Prisma.BillingInvoiceWhereInput> | null
 }
 
 export type WebPaymentOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  orderId?: Prisma.SortOrder
+  orderId?: Prisma.SortOrderInput | Prisma.SortOrder
   provider?: Prisma.SortOrder
   txnRef?: Prisma.SortOrder
   amount?: Prisma.SortOrder
@@ -276,6 +277,7 @@ export type WebPaymentOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   paidAt?: Prisma.SortOrderInput | Prisma.SortOrder
   order?: Prisma.OrderOrderByWithRelationInput
+  billingInvoice?: Prisma.BillingInvoiceOrderByWithRelationInput
 }
 
 export type WebPaymentWhereUniqueInput = Prisma.AtLeast<{
@@ -293,12 +295,13 @@ export type WebPaymentWhereUniqueInput = Prisma.AtLeast<{
   rawParams?: Prisma.JsonNullableFilter<"WebPayment">
   createdAt?: Prisma.DateTimeFilter<"WebPayment"> | Date | string
   paidAt?: Prisma.DateTimeNullableFilter<"WebPayment"> | Date | string | null
-  order?: Prisma.XOR<Prisma.OrderScalarRelationFilter, Prisma.OrderWhereInput>
+  order?: Prisma.XOR<Prisma.OrderNullableScalarRelationFilter, Prisma.OrderWhereInput> | null
+  billingInvoice?: Prisma.XOR<Prisma.BillingInvoiceNullableScalarRelationFilter, Prisma.BillingInvoiceWhereInput> | null
 }, "id" | "orderId" | "txnRef">
 
 export type WebPaymentOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  orderId?: Prisma.SortOrder
+  orderId?: Prisma.SortOrderInput | Prisma.SortOrder
   provider?: Prisma.SortOrder
   txnRef?: Prisma.SortOrder
   amount?: Prisma.SortOrder
@@ -320,7 +323,7 @@ export type WebPaymentScalarWhereWithAggregatesInput = {
   OR?: Prisma.WebPaymentScalarWhereWithAggregatesInput[]
   NOT?: Prisma.WebPaymentScalarWhereWithAggregatesInput | Prisma.WebPaymentScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"WebPayment"> | string
-  orderId?: Prisma.StringWithAggregatesFilter<"WebPayment"> | string
+  orderId?: Prisma.StringNullableWithAggregatesFilter<"WebPayment"> | string | null
   provider?: Prisma.StringWithAggregatesFilter<"WebPayment"> | string
   txnRef?: Prisma.StringWithAggregatesFilter<"WebPayment"> | string
   amount?: Prisma.BigIntWithAggregatesFilter<"WebPayment"> | bigint | number
@@ -343,12 +346,13 @@ export type WebPaymentCreateInput = {
   rawParams?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   paidAt?: Date | string | null
-  order: Prisma.OrderCreateNestedOneWithoutWebPaymentsInput
+  order?: Prisma.OrderCreateNestedOneWithoutWebPaymentsInput
+  billingInvoice?: Prisma.BillingInvoiceCreateNestedOneWithoutWebPaymentInput
 }
 
 export type WebPaymentUncheckedCreateInput = {
   id?: string
-  orderId: string
+  orderId?: string | null
   provider?: string
   txnRef: string
   amount: bigint | number
@@ -358,6 +362,7 @@ export type WebPaymentUncheckedCreateInput = {
   rawParams?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   paidAt?: Date | string | null
+  billingInvoice?: Prisma.BillingInvoiceUncheckedCreateNestedOneWithoutWebPaymentInput
 }
 
 export type WebPaymentUpdateInput = {
@@ -371,12 +376,13 @@ export type WebPaymentUpdateInput = {
   rawParams?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  order?: Prisma.OrderUpdateOneRequiredWithoutWebPaymentsNestedInput
+  order?: Prisma.OrderUpdateOneWithoutWebPaymentsNestedInput
+  billingInvoice?: Prisma.BillingInvoiceUpdateOneWithoutWebPaymentNestedInput
 }
 
 export type WebPaymentUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  orderId?: Prisma.StringFieldUpdateOperationsInput | string
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provider?: Prisma.StringFieldUpdateOperationsInput | string
   txnRef?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
@@ -386,11 +392,12 @@ export type WebPaymentUncheckedUpdateInput = {
   rawParams?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  billingInvoice?: Prisma.BillingInvoiceUncheckedUpdateOneWithoutWebPaymentNestedInput
 }
 
 export type WebPaymentCreateManyInput = {
   id?: string
-  orderId: string
+  orderId?: string | null
   provider?: string
   txnRef: string
   amount: bigint | number
@@ -417,7 +424,7 @@ export type WebPaymentUpdateManyMutationInput = {
 
 export type WebPaymentUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  orderId?: Prisma.StringFieldUpdateOperationsInput | string
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provider?: Prisma.StringFieldUpdateOperationsInput | string
   txnRef?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
@@ -427,6 +434,11 @@ export type WebPaymentUncheckedUpdateManyInput = {
   rawParams?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type WebPaymentNullableScalarRelationFilter = {
+  is?: Prisma.WebPaymentWhereInput | null
+  isNot?: Prisma.WebPaymentWhereInput | null
 }
 
 export type WebPaymentListRelationFilter = {
@@ -487,6 +499,22 @@ export type WebPaymentSumOrderByAggregateInput = {
   amount?: Prisma.SortOrder
 }
 
+export type WebPaymentCreateNestedOneWithoutBillingInvoiceInput = {
+  create?: Prisma.XOR<Prisma.WebPaymentCreateWithoutBillingInvoiceInput, Prisma.WebPaymentUncheckedCreateWithoutBillingInvoiceInput>
+  connectOrCreate?: Prisma.WebPaymentCreateOrConnectWithoutBillingInvoiceInput
+  connect?: Prisma.WebPaymentWhereUniqueInput
+}
+
+export type WebPaymentUpdateOneWithoutBillingInvoiceNestedInput = {
+  create?: Prisma.XOR<Prisma.WebPaymentCreateWithoutBillingInvoiceInput, Prisma.WebPaymentUncheckedCreateWithoutBillingInvoiceInput>
+  connectOrCreate?: Prisma.WebPaymentCreateOrConnectWithoutBillingInvoiceInput
+  upsert?: Prisma.WebPaymentUpsertWithoutBillingInvoiceInput
+  disconnect?: Prisma.WebPaymentWhereInput | boolean
+  delete?: Prisma.WebPaymentWhereInput | boolean
+  connect?: Prisma.WebPaymentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WebPaymentUpdateToOneWithWhereWithoutBillingInvoiceInput, Prisma.WebPaymentUpdateWithoutBillingInvoiceInput>, Prisma.WebPaymentUncheckedUpdateWithoutBillingInvoiceInput>
+}
+
 export type WebPaymentCreateNestedManyWithoutOrderInput = {
   create?: Prisma.XOR<Prisma.WebPaymentCreateWithoutOrderInput, Prisma.WebPaymentUncheckedCreateWithoutOrderInput> | Prisma.WebPaymentCreateWithoutOrderInput[] | Prisma.WebPaymentUncheckedCreateWithoutOrderInput[]
   connectOrCreate?: Prisma.WebPaymentCreateOrConnectWithoutOrderInput | Prisma.WebPaymentCreateOrConnectWithoutOrderInput[]
@@ -529,6 +557,78 @@ export type WebPaymentUncheckedUpdateManyWithoutOrderNestedInput = {
   deleteMany?: Prisma.WebPaymentScalarWhereInput | Prisma.WebPaymentScalarWhereInput[]
 }
 
+export type WebPaymentCreateWithoutBillingInvoiceInput = {
+  id?: string
+  provider?: string
+  txnRef: string
+  amount: bigint | number
+  status?: string
+  responseCode?: string | null
+  bankCode?: string | null
+  rawParams?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  paidAt?: Date | string | null
+  order?: Prisma.OrderCreateNestedOneWithoutWebPaymentsInput
+}
+
+export type WebPaymentUncheckedCreateWithoutBillingInvoiceInput = {
+  id?: string
+  orderId?: string | null
+  provider?: string
+  txnRef: string
+  amount: bigint | number
+  status?: string
+  responseCode?: string | null
+  bankCode?: string | null
+  rawParams?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  paidAt?: Date | string | null
+}
+
+export type WebPaymentCreateOrConnectWithoutBillingInvoiceInput = {
+  where: Prisma.WebPaymentWhereUniqueInput
+  create: Prisma.XOR<Prisma.WebPaymentCreateWithoutBillingInvoiceInput, Prisma.WebPaymentUncheckedCreateWithoutBillingInvoiceInput>
+}
+
+export type WebPaymentUpsertWithoutBillingInvoiceInput = {
+  update: Prisma.XOR<Prisma.WebPaymentUpdateWithoutBillingInvoiceInput, Prisma.WebPaymentUncheckedUpdateWithoutBillingInvoiceInput>
+  create: Prisma.XOR<Prisma.WebPaymentCreateWithoutBillingInvoiceInput, Prisma.WebPaymentUncheckedCreateWithoutBillingInvoiceInput>
+  where?: Prisma.WebPaymentWhereInput
+}
+
+export type WebPaymentUpdateToOneWithWhereWithoutBillingInvoiceInput = {
+  where?: Prisma.WebPaymentWhereInput
+  data: Prisma.XOR<Prisma.WebPaymentUpdateWithoutBillingInvoiceInput, Prisma.WebPaymentUncheckedUpdateWithoutBillingInvoiceInput>
+}
+
+export type WebPaymentUpdateWithoutBillingInvoiceInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  provider?: Prisma.StringFieldUpdateOperationsInput | string
+  txnRef?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  responseCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bankCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rawParams?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  order?: Prisma.OrderUpdateOneWithoutWebPaymentsNestedInput
+}
+
+export type WebPaymentUncheckedUpdateWithoutBillingInvoiceInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  provider?: Prisma.StringFieldUpdateOperationsInput | string
+  txnRef?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  responseCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bankCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rawParams?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
 export type WebPaymentCreateWithoutOrderInput = {
   id?: string
   provider?: string
@@ -540,6 +640,7 @@ export type WebPaymentCreateWithoutOrderInput = {
   rawParams?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   paidAt?: Date | string | null
+  billingInvoice?: Prisma.BillingInvoiceCreateNestedOneWithoutWebPaymentInput
 }
 
 export type WebPaymentUncheckedCreateWithoutOrderInput = {
@@ -553,6 +654,7 @@ export type WebPaymentUncheckedCreateWithoutOrderInput = {
   rawParams?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   paidAt?: Date | string | null
+  billingInvoice?: Prisma.BillingInvoiceUncheckedCreateNestedOneWithoutWebPaymentInput
 }
 
 export type WebPaymentCreateOrConnectWithoutOrderInput = {
@@ -586,7 +688,7 @@ export type WebPaymentScalarWhereInput = {
   OR?: Prisma.WebPaymentScalarWhereInput[]
   NOT?: Prisma.WebPaymentScalarWhereInput | Prisma.WebPaymentScalarWhereInput[]
   id?: Prisma.StringFilter<"WebPayment"> | string
-  orderId?: Prisma.StringFilter<"WebPayment"> | string
+  orderId?: Prisma.StringNullableFilter<"WebPayment"> | string | null
   provider?: Prisma.StringFilter<"WebPayment"> | string
   txnRef?: Prisma.StringFilter<"WebPayment"> | string
   amount?: Prisma.BigIntFilter<"WebPayment"> | bigint | number
@@ -622,6 +724,7 @@ export type WebPaymentUpdateWithoutOrderInput = {
   rawParams?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  billingInvoice?: Prisma.BillingInvoiceUpdateOneWithoutWebPaymentNestedInput
 }
 
 export type WebPaymentUncheckedUpdateWithoutOrderInput = {
@@ -635,6 +738,7 @@ export type WebPaymentUncheckedUpdateWithoutOrderInput = {
   rawParams?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  billingInvoice?: Prisma.BillingInvoiceUncheckedUpdateOneWithoutWebPaymentNestedInput
 }
 
 export type WebPaymentUncheckedUpdateManyWithoutOrderInput = {
@@ -664,7 +768,8 @@ export type WebPaymentSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   rawParams?: boolean
   createdAt?: boolean
   paidAt?: boolean
-  order?: boolean | Prisma.OrderDefaultArgs<ExtArgs>
+  order?: boolean | Prisma.WebPayment$orderArgs<ExtArgs>
+  billingInvoice?: boolean | Prisma.WebPayment$billingInvoiceArgs<ExtArgs>
 }, ExtArgs["result"]["webPayment"]>
 
 export type WebPaymentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -679,7 +784,7 @@ export type WebPaymentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   rawParams?: boolean
   createdAt?: boolean
   paidAt?: boolean
-  order?: boolean | Prisma.OrderDefaultArgs<ExtArgs>
+  order?: boolean | Prisma.WebPayment$orderArgs<ExtArgs>
 }, ExtArgs["result"]["webPayment"]>
 
 export type WebPaymentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -694,7 +799,7 @@ export type WebPaymentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   rawParams?: boolean
   createdAt?: boolean
   paidAt?: boolean
-  order?: boolean | Prisma.OrderDefaultArgs<ExtArgs>
+  order?: boolean | Prisma.WebPayment$orderArgs<ExtArgs>
 }, ExtArgs["result"]["webPayment"]>
 
 export type WebPaymentSelectScalar = {
@@ -713,23 +818,25 @@ export type WebPaymentSelectScalar = {
 
 export type WebPaymentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "orderId" | "provider" | "txnRef" | "amount" | "status" | "responseCode" | "bankCode" | "rawParams" | "createdAt" | "paidAt", ExtArgs["result"]["webPayment"]>
 export type WebPaymentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  order?: boolean | Prisma.OrderDefaultArgs<ExtArgs>
+  order?: boolean | Prisma.WebPayment$orderArgs<ExtArgs>
+  billingInvoice?: boolean | Prisma.WebPayment$billingInvoiceArgs<ExtArgs>
 }
 export type WebPaymentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  order?: boolean | Prisma.OrderDefaultArgs<ExtArgs>
+  order?: boolean | Prisma.WebPayment$orderArgs<ExtArgs>
 }
 export type WebPaymentIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  order?: boolean | Prisma.OrderDefaultArgs<ExtArgs>
+  order?: boolean | Prisma.WebPayment$orderArgs<ExtArgs>
 }
 
 export type $WebPaymentPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "WebPayment"
   objects: {
-    order: Prisma.$OrderPayload<ExtArgs>
+    order: Prisma.$OrderPayload<ExtArgs> | null
+    billingInvoice: Prisma.$BillingInvoicePayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    orderId: string
+    orderId: string | null
     provider: string
     txnRef: string
     amount: bigint
@@ -1133,7 +1240,8 @@ readonly fields: WebPaymentFieldRefs;
  */
 export interface Prisma__WebPaymentClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  order<T extends Prisma.OrderDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.OrderDefaultArgs<ExtArgs>>): Prisma.Prisma__OrderClient<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  order<T extends Prisma.WebPayment$orderArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WebPayment$orderArgs<ExtArgs>>): Prisma.Prisma__OrderClient<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  billingInvoice<T extends Prisma.WebPayment$billingInvoiceArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WebPayment$billingInvoiceArgs<ExtArgs>>): Prisma.Prisma__BillingInvoiceClient<runtime.Types.Result.GetResult<Prisma.$BillingInvoicePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1572,6 +1680,44 @@ export type WebPaymentDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.In
    * Limit how many WebPayments to delete.
    */
   limit?: number
+}
+
+/**
+ * WebPayment.order
+ */
+export type WebPayment$orderArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Order
+   */
+  select?: Prisma.OrderSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Order
+   */
+  omit?: Prisma.OrderOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OrderInclude<ExtArgs> | null
+  where?: Prisma.OrderWhereInput
+}
+
+/**
+ * WebPayment.billingInvoice
+ */
+export type WebPayment$billingInvoiceArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the BillingInvoice
+   */
+  select?: Prisma.BillingInvoiceSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the BillingInvoice
+   */
+  omit?: Prisma.BillingInvoiceOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingInvoiceInclude<ExtArgs> | null
+  where?: Prisma.BillingInvoiceWhereInput
 }
 
 /**

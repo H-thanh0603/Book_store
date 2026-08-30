@@ -53,7 +53,8 @@ export async function POST(req: NextRequest) {
         eventTypes,
         description: body.description ?? null,
       },
-      select: { id: true, provider: true, url: true, eventTypes: true, active: true, description: true, createdAt: true, secret },
+      // secret is returned exactly once, on creation (write-only afterwards)
+      select: { id: true, provider: true, url: true, eventTypes: true, active: true, description: true, createdAt: true, secret: true },
     });
     return NextResponse.json({ endpoint }, { status: 201 });
   } catch (err) {

@@ -4,12 +4,10 @@ import Nav from "../../nav";
 import {
   ClipboardCheck,
   Plus,
-  Search,
   CheckCircle2,
   XCircle,
   AlertCircle,
   Eye,
-  Package,
 } from "lucide-react";
 
 type CountItem = {
@@ -45,7 +43,8 @@ export default function InventoryCountPage() {
   const [viewCount, setViewCount] = useState<Count | null>(null);
   const [editingItems, setEditingItems] = useState<Map<string, number>>(new Map());
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
-  const [loading, setLoading] = useState(false);
+  // loading value unused in JSX; keep the setter for the fetch guard
+  const [, setLoading] = useState(false);
 
   async function load() {
     setLoading(true);

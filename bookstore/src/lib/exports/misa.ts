@@ -53,7 +53,7 @@ export async function buildSalesInvoiceCsv(opts: { from: Date; to: Date; orgId: 
     where: {
       store: { region: { orgId: opts.orgId } },
       createdAt: { gte: opts.from, lte: opts.to },
-      status: { in: ["CONFIRMED", "COMPLETED", "PAID", "SHIPPED", "DELIVERED"] },
+      status: { in: ["CONFIRMED", "PAID", "SHIPPED", "DELIVERED"] },
     },
     include: {
       customer: true,
@@ -102,7 +102,7 @@ export async function buildGeneralLedgerCsv(opts: { from: Date; to: Date; orgId:
     where: {
       store: { region: { orgId: opts.orgId } },
       createdAt: { gte: opts.from, lte: opts.to },
-      status: { in: ["CONFIRMED", "COMPLETED", "PAID", "SHIPPED", "DELIVERED"] },
+      status: { in: ["CONFIRMED", "PAID", "SHIPPED", "DELIVERED"] },
     },
     select: { id: true, number: true, createdAt: true, total: true, discountTotal: true },
     orderBy: { createdAt: "asc" },

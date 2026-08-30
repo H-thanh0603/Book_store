@@ -61,6 +61,7 @@ export default function SupportWidget() {
     loadMessages();
     msgTimer.current = setInterval(loadMessages, 5_000);
     return () => { if (msgTimer.current) clearInterval(msgTimer.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-fetch; load() is not memoized, adding it would refetch every render
   }, [active?.id]);
 
   const openCount = list.filter((c) => c.status !== "CLOSED").length;

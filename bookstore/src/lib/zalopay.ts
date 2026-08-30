@@ -54,7 +54,7 @@ export async function buildZaloPayUrl(order: { id: string; number: string; total
     process.env.ZALOPAY_KEY1!,
     [process.env.ZALOPAY_APP_ID, appTransId, appUser, amount, appTime, embedData, item].join("|")
   );
-  const body = {
+  const body: Record<string, string | number> = {
     app_id: Number(process.env.ZALOPAY_APP_ID!),
     app_user: appUser,
     app_trans_id: appTransId,
@@ -70,7 +70,9 @@ export async function buildZaloPayUrl(order: { id: string; number: string; total
   const res = await fetch(CREATE_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(body as Record<string, string>).toString(),
+    body: new URLSearchParams(
+      Object.fromEntries(Object.entries(body).map(([k, v]) => [k, String(v)]))
+    ).toString(),
   });
   const data = (await res.json().catch(() => ({}))) as { order_url?: string; order_token?: string; return_message?: string; return_code?: number };
   if (!res.ok || !data.order_url)
@@ -85,7 +87,16 @@ export async function buildZaloPayUrl(order: { id: string; number: string; total
  * AND `mac` separately — we accept either shape, recompute, and
  * compare. amount/data.str is in đồng.
  */
-export async function settleZaloPayResponse(rawBody: string, parsed: { data?: Record<string, unknown>; mac?: string }) {
+export type ZaloSettleResult = {
+  return_code: number;
+  return_message: string;
+  settled?: "PAID" | "FAILED" | "REFUND_REQUIRED" | "ALREADY_SETTLED";
+};
+
+export async function settleZaloPayResponse(
+  rawBody: string,
+  parsed: { data?: Record<string, unknown>; mac?: string },
+): Promise<ZaloSettleResult> {
   if (!process.env.ZALOPAY_KEY2) {
     return { return_code: -1, return_message: "ZaloPay not configured" };
   }
@@ -106,22 +117,33 @@ export async function settleZaloPayResponse(rawBody: string, parsed: { data?: Re
   const orderId = appTransId.includes("_") ? appTransId.split("_").slice(1).join("_") : appTransId;
   const payment = await prisma.webPayment.findUnique({ where: { txnRef: orderId } });
   if (!payment) return { return_code: 2, return_message: "Unknown transaction" };
+  // Amount check — same invariant as VNPay (vnpay.ts) and MoMo (momo.ts):
+  // settle only the signed amount, never a gateway-side anomaly.
+  if (BigInt(dataObj.amount ?? "0") !== payment.amount)
+    return { return_code: 2, return_message: "Amount mismatch" };
   if (payment.status !== "PENDING")
-    return { return_code: 1, return_message: "Confirm Success" };
+    return { return_code: 1, return_message: "Confirm Success", settled: "ALREADY_SETTLED" };
 
   const success = Number(dataObj.status ?? 1) === 1;
-  if (success) {
+  const resultOrderId = payment.orderId ?? undefined;
+  // Real transition CONFIRMED → PAID (see settleVnpayResponse): a captured
+  // payment is invisible to expiry/manual-cancel claims. A lost claim means
+  // the order is gone — record REFUND_REQUIRED, never PAID.
+  let claimed = false;
+  if (success && resultOrderId) {
     const claim = await prisma.order.updateMany({
-      where: { id: payment.orderId, status: "CONFIRMED" },
-      data: { status: "CONFIRMED" },
+      where: { id: resultOrderId, status: "CONFIRMED" },
+      data: { status: "PAID" },
     });
-    if (claim.count !== 1)
-      console.warn(JSON.stringify({ event: "zalopay_paid_after_cancel", orderId: payment.orderId }));
+    claimed = claim.count === 1;
+    if (!claimed)
+      console.warn(JSON.stringify({ event: "zalopay_paid_after_cancel", orderId: resultOrderId }));
   }
+  const captured = success && claimed;
   const settled = await prisma.webPayment.updateMany({
     where: { id: payment.id, status: "PENDING" },
     data: {
-      status: success ? "PAID" : "FAILED",
+      status: !success ? "FAILED" : captured ? "PAID" : "REFUND_REQUIRED",
       responseCode: String(dataObj.status ?? ""),
       rawParams: dataObj,
       paidAt: success ? new Date() : null,
@@ -129,15 +151,17 @@ export async function settleZaloPayResponse(rawBody: string, parsed: { data?: Re
   });
   if (settled.count === 0)
     console.info(JSON.stringify({ event: "zalopay_duplicate_callback", txnRef: payment.txnRef }));
-  if (success && settled.count === 1) {
+  if (success && !captured)
+    console.error(JSON.stringify({ level: "error", event: "zalopay_refund_required", orderId: resultOrderId, txnRef: payment.txnRef }));
+  if (captured && settled.count === 1 && resultOrderId) {
     void import("./einvoice").then(({ enqueueEinvoiceForOrder }) =>
-      enqueueEinvoiceForOrder(payment.orderId).catch((err) => {
-        console.error(JSON.stringify({ level: "error", event: "einvoice_enqueue_failed", orderId: payment.orderId, message: String(err) }));
+      enqueueEinvoiceForOrder(resultOrderId).catch((err) => {
+        console.error(JSON.stringify({ level: "error", event: "einvoice_enqueue_failed", orderId: resultOrderId, message: String(err) }));
       })
     );
   }
   void rawBody; // reserved for a future mac-over-raw-body mode
   return success
-    ? { return_code: 1, return_message: "Confirm Success" }
-    : { return_code: 2, return_message: `ZaloPay failed: ${dataObj.status ?? "?"}` };
+    ? { return_code: 1, return_message: "Confirm Success", settled: captured ? "PAID" : "REFUND_REQUIRED" }
+    : { return_code: 2, return_message: `ZaloPay failed: ${dataObj.status ?? "?"}`, settled: "FAILED" as const };
 }

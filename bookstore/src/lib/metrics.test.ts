@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { observeRequest, observePoolAcquire, snapshot, recordHttpError } from './metrics'
+import { describe, it, expect,} from 'vitest'
+import { observeRequest, observePoolAcquire, snapshot,} from './metrics'
 
 describe('observeRequest', () => {
   it('records request metrics', () => {

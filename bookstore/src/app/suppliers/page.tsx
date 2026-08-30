@@ -6,7 +6,6 @@ import {
   Plus,
   Search,
   Edit2,
-  Eye,
   XCircle,
   CheckCircle2,
   AlertCircle,
@@ -57,6 +56,7 @@ export default function SuppliersPage() {
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-fetch; load() is not memoized, adding it would refetch every render
   useEffect(() => { void load(); }, [q]);
 
   function openCreate() {

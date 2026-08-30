@@ -43,7 +43,9 @@ export async function POST(req: NextRequest) {
       assertStoreAccess(auth, order.storeId, "inventory.adjust");
 
       if (body.action === "cancel") {
-        if (["SHIPPED", "DELIVERED", "CANCELLED"].includes(order.status))
+        // PAID money must go through the Returns/refund flow — cancelling
+        // would release stock the customer already paid for.
+        if (["PAID", "SHIPPED", "DELIVERED", "CANCELLED"].includes(order.status))
           fail(409, "INVALID_STATUS_TRANSITION", `Cannot cancel ${order.status} order`);
         const claimed = await tx.order.updateMany({
           where: { id: order.id, status: order.status }, data: { status: "CANCELLED" },
@@ -74,7 +76,7 @@ export async function POST(req: NextRequest) {
       if (!isPickup && body.action !== "ship") fail(400, "VALIDATION", "Unknown action");
       if ((isPickup && order.type !== "pickup") || (!isPickup && order.type === "pickup"))
         fail(409, "INVALID_STATUS_TRANSITION", "Fulfillment action does not match order type");
-      if (!["CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(order.status))
+      if (!["PAID", "CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(order.status))
         fail(409, "INVALID_STATUS_TRANSITION", `Cannot fulfill ${order.status} order`);
       const nextStatus = isPickup ? "DELIVERED" : "SHIPPED";
       const claimed = await tx.order.updateMany({

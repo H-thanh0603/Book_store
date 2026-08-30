@@ -44,14 +44,14 @@ export async function GET(req: NextRequest) {
         where: {
           store: { region: { orgId } },
           createdAt: { gte: from, lte: to },
-          status: { in: ["CONFIRMED", "COMPLETED", "PAID", "SHIPPED", "DELIVERED"] },
+          status: { in: ["CONFIRMED", "PAID", "SHIPPED", "DELIVERED"] },
         },
       }),
       prisma.order.count({
         where: {
           store: { region: { orgId } },
           createdAt: { gte: from, lte: to },
-          status: { in: ["CONFIRMED", "COMPLETED", "PAID", "SHIPPED", "DELIVERED"] },
+          status: { in: ["CONFIRMED", "PAID", "SHIPPED", "DELIVERED"] },
         },
       }),
     ]);
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     const stamp = `${from.toISOString().slice(0, 10)}_${to.toISOString().slice(0, 10)}`;
-    return new Response(zip, {
+    return new Response(new Uint8Array(zip), {
       status: 200,
       headers: {
         "content-type": "application/zip",

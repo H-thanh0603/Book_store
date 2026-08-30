@@ -476,14 +476,6 @@ export type PriceUncheckedUpdateManyWithoutPriceListNestedInput = {
   deleteMany?: Prisma.PriceScalarWhereInput | Prisma.PriceScalarWhereInput[]
 }
 
-export type BigIntFieldUpdateOperationsInput = {
-  set?: bigint | number
-  increment?: bigint | number
-  decrement?: bigint | number
-  multiply?: bigint | number
-  divide?: bigint | number
-}
-
 export type PriceCreateWithoutVariantInput = {
   id?: string
   amount: bigint | number

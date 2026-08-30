@@ -55,6 +55,7 @@ model Store {
   userRoles      UserRole[]
   promotions     PromotionStore[]
   orders         Order[]
+  eInvoices      EInvoice[] // back-relation for EInvoice.store (schema had drifted while the generated client stayed stale)
 }
 
 model Warehouse {
@@ -762,6 +763,10 @@ model BundleItem {
 enum OrderStatus {
   NEW
   CONFIRMED
+  // Set by gateway settlement (VNPay/MoMo/ZaloPay) when money is captured.
+  // Neither the reservation-expiry job nor manual cancel may touch a PAID
+  // order — captured money must go through the Returns/refund flow instead.
+  PAID
   ALLOCATED
   PICKING
   PACKED
@@ -1346,7 +1351,7 @@ model EInvoice {
   orgId           String   // snapshotted from Store -> Region -> Organization; avoids joins on every query
   storeId         String?
   store           Store?   @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  orderId         String
+  orderId         String   @unique // idempotency: one tax invoice per order, ever (audit EINV-001)
   order           Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
   orderKind       String   // POS | WEB
   invoiceNumber   String?  @unique // provider-assigned, only after ISSUED
@@ -1373,7 +1378,6 @@ model EInvoice {
   attempts        EInvoiceAttempt[]
 
   @@index([orgId, status])
-  @@index([orderId])
   @@index([status, nextPollAt])
 }
 

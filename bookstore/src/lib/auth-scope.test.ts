@@ -1,16 +1,22 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect,} from 'vitest'
 import { resolveStoreScope, type AuthContext } from './auth'
 
 describe('resolveStoreScope', () => {
   const unscopedAuth: AuthContext = {
     userId: 'u1',
     email: 'admin@test.com',
+    orgId: null,
+    orgStatus: 'ACTIVE' as const,
+    trialEndsAt: null,
     roles: [{ role: 'admin', storeId: null, permissions: ['products.view', 'orders.view'] }],
   }
 
   const storeScopedAuth: AuthContext = {
     userId: 'u2',
     email: 'staff@test.com',
+    orgId: null,
+    orgStatus: 'ACTIVE' as const,
+    trialEndsAt: null,
     roles: [
       { role: 'staff', storeId: 'store-1', permissions: ['products.view'] },
       { role: 'staff', storeId: 'store-2', permissions: ['products.view'] },
@@ -20,6 +26,9 @@ describe('resolveStoreScope', () => {
   const noStoreAuth: AuthContext = {
     userId: 'u3',
     email: 'limited@test.com',
+    orgId: null,
+    orgStatus: 'ACTIVE' as const,
+    trialEndsAt: null,
     roles: [{ role: 'limited', storeId: null, permissions: [] }],
   }
 
@@ -56,6 +65,9 @@ describe('resolveStoreScope', () => {
       const auth: AuthContext = {
         userId: 'u4',
         email: 'test@test.com',
+    orgId: null,
+    orgStatus: 'ACTIVE' as const,
+    trialEndsAt: null,
         roles: [
           { role: 'staff', storeId: 'store-1', permissions: ['products.view'] },
           { role: 'manager', storeId: 'store-2', permissions: ['orders.view'] },

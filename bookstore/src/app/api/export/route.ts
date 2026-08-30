@@ -1,8 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any --
+   The column maps are intentionally loosely-typed: each `format` callback
+   projects a different prisma row shape and exportData() only needs
+   key/header/format. Typing every projection precisely adds no safety
+   here because the rows come straight from the fetch fns below. */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { Prisma } from '@/generated/prisma/client'
 import { exportData, exportFilename, type ExportColumn } from '@/lib/export'
-import { requireAuth } from '@/lib/auth'
-import { resolveStoreScope } from '@/lib/auth'
+import { requirePermission, resolveStoreScope } from '@/lib/auth'
 
 const productColumns: ExportColumn<any>[] = [
   { key: 'sku', header: 'SKU' },
@@ -41,7 +46,7 @@ const customerColumns: ExportColumn<any>[] = [
   { key: 'name', header: 'Tên khách hàng' },
   { key: 'phone', header: 'Số điện thoại' },
   { key: 'email', header: 'Email' },
-  { key: 'points', header: 'Điểm tích lũy', format: (r) => r.loyaltyAccount?.points ?? 0 },
+  { key: 'points', header: 'Điểm tích lũy', format: (r) => r.loyalty?.points ?? 0 },
   { key: 'totalOrders', header: 'Số đơn hàng', format: (r) => r._count?.orders ?? 0 },
   { key: 'totalSpent', header: 'Tổng chi tiêu (đ)', format: (r) => Number(r._sum?.orders?.total ?? 0) },
 ]
@@ -53,17 +58,21 @@ const revenueColumns: ExportColumn<any>[] = [
   { key: 'avgOrderValue', header: 'Giá trị TB/đơn (đ)' },
 ]
 
+// Every export type requires the permission that would normally grant
+// read access to the same data in the UI (audit 2026-08-30 SEC-002: the
+// route previously accepted ANY authenticated account, so a cashier-tier
+// user could walk out with the full cross-org customer PII base).
 const EXPORT_TYPES = {
-  products: { columns: () => productColumns, fetch: fetchProducts },
-  orders: { columns: () => orderColumns, fetch: fetchOrders },
-  inventory: { columns: () => inventoryColumns, fetch: fetchInventory },
-  customers: { columns: () => customerColumns, fetch: fetchCustomers },
-  revenue: { columns: () => revenueColumns, fetch: fetchRevenue },
+  products: { permission: 'product.view', columns: () => productColumns, fetch: fetchProducts },
+  orders: { permission: 'reports.store.view', columns: () => orderColumns, fetch: fetchOrders },
+  inventory: { permission: 'inventory.view', columns: () => inventoryColumns, fetch: fetchInventory },
+  customers: { permission: 'customer.view', columns: () => customerColumns, fetch: fetchCustomers },
+  revenue: { permission: 'reports.financial.view', columns: () => revenueColumns, fetch: fetchRevenue },
 } as const
 
 async function fetchProducts(storeScope: string[] | null) {
   const products = await prisma.product.findMany({
-    where: { status: 'active', ...(storeScope ? { variants: { some: { balances: { some: { location: { storeId: { in: storeScope } } } } } } : {}) },
+    where: { status: 'active', ...(storeScope ? { variants: { some: { balances: { some: { location: { storeId: { in: storeScope } } } } } } } : {}) },
     include: {
       category: { select: { name: true } },
       brand: { select: { name: true } },
@@ -115,24 +124,45 @@ async function fetchInventory(storeScope: string[] | null) {
   })
 }
 
-async function fetchCustomers(storeScope: string[] | null) {
-  return prisma.customer.findMany({
-    include: {
-      loyaltyAccount: { select: { points: true } },
-      _count: { select: { orders: true } },
-      orders: { select: { total: true }, take: 1000 },
+async function fetchCustomers() {
+  // ponytail: Customer has no orgId column yet (shared global catalog), so
+  // this export is org-gated by the customer.view permission only. The old
+  // shape loaded up to 1000 orders PER customer in one query — replaced with
+  // a single grouped aggregation over the same take:10000 customer page.
+  const customers = await prisma.customer.findMany({
+    select: {
+      id: true, code: true, name: true, phone: true, email: true,
+      loyalty: { select: { points: true } },
     },
-    orderBy: { createdAt: 'desc' },
+    // Customer has no createdAt column — order by code (CUS-xxxxx) instead.
+    orderBy: { code: 'asc' },
     take: 10000,
+  })
+  const agg = await prisma.order.groupBy({
+    by: ['customerId'],
+    where: { customerId: { in: customers.map((c) => c.id) } },
+    _count: { _all: true },
+    _sum: { total: true },
+  })
+  const byCustomer = new Map(agg.map((a) => [a.customerId, a]))
+  return customers.map((c) => {
+    const a = byCustomer.get(c.id)
+    return {
+      ...c,
+      _count: { orders: a?._count._all ?? 0 },
+      _sum: { orders: { total: a?._sum.total ?? 0n } },
+    }
   })
 }
 
-async function fetchRevenue(_storeScope: string[] | null) {
+async function fetchRevenue(storeScope: string[] | null) {
   const since = new Date(Date.now() - 30 * 86_400_000)
+  // Store-scope clamp mirrors fetchOrders — an unscoped caller still sees all.
+  const storeFilter = storeScope ? Prisma.sql`AND "storeId" IN (${Prisma.join(storeScope)})` : Prisma.empty
   const rows = await prisma.$queryRaw<{ date: string; orders: number; revenue: number }[]>`
     SELECT DATE("createdAt") AS date, COUNT(*)::int AS orders, COALESCE(SUM(total), 0)::int AS revenue
     FROM "Order"
-    WHERE "createdAt" >= ${since} AND status NOT IN ('CANCELLED')
+    WHERE "createdAt" >= ${since} AND status NOT IN ('CANCELLED')${storeFilter}
     GROUP BY DATE("createdAt")
     ORDER BY date DESC
   `
@@ -144,7 +174,6 @@ async function fetchRevenue(_storeScope: string[] | null) {
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth()
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') as keyof typeof EXPORT_TYPES
     const format = (searchParams.get('format') ?? 'csv') as 'csv' | 'xlsx'
@@ -157,6 +186,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ code: 'VALIDATION', message: 'Invalid format' }, { status: 400 })
     }
 
+    const auth = await requirePermission(EXPORT_TYPES[type].permission)
+
     const scope = resolveStoreScope(auth)
     const storeScope = scope === null ? null : scope
 
@@ -164,10 +195,10 @@ export async function GET(request: NextRequest) {
     const data = await fetch(storeScope)
     const result = exportData(data, columns(), type, format)
 
-    return new NextResponse(result.buffer, {
+    return new NextResponse(new Uint8Array(result.buffer), {
       headers: {
         'Content-Type': result.contentType,
-        'Content-Disposition': `attachment; filename="${exportFilename(type, result.extension)}"`,
+        'Content-Disposition': `attachment; filename="${exportFilename(type, format)}"`,
       },
     })
   } catch (error: any) {

@@ -13,7 +13,7 @@
 // scoped queries still need a separate requirePermission(..., storeId)
 // check; the helpers only enforce the org boundary.
 
-import type { Prisma } from "./db";
+import type { Prisma } from "../generated/prisma/client";
 import type { AuthContext } from "./auth";
 
 type OrgFilter = { orgId: string };

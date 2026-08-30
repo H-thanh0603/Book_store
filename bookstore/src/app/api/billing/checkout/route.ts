@@ -10,7 +10,9 @@ import { clientIp } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requirePermission("settings.write");
+    // allowSuspended: an org suspended for non-payment must still reach the
+    // checkout that lets it pay the overdue invoice.
+    const auth = await requirePermission("settings.write", undefined, { allowSuspended: true });
     if (!auth.orgId) return ok({ code: "VALIDATION", message: "caller has no org" }, 400);
     const result = await issueCycleInvoice(auth.orgId, clientIp(req.headers), req.nextUrl.origin);
     return NextResponse.json(result);

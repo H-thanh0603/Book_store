@@ -63,6 +63,12 @@ export const ModelName = {
   UserRole: 'UserRole',
   RolePermission: 'RolePermission',
   Session: 'Session',
+  Plan: 'Plan',
+  Subscription: 'Subscription',
+  BillingInvoice: 'BillingInvoice',
+  SupportConversation: 'SupportConversation',
+  SupportMessage: 'SupportMessage',
+  CustomerSession: 'CustomerSession',
   RateLimitBucket: 'RateLimitBucket',
   Category: 'Category',
   AttributeDefinition: 'AttributeDefinition',
@@ -122,7 +128,12 @@ export const ModelName = {
   WarehouseTask: 'WarehouseTask',
   WarehouseTaskItem: 'WarehouseTaskItem',
   JobRun: 'JobRun',
-  LossAlert: 'LossAlert'
+  LossAlert: 'LossAlert',
+  LossPreventionRule: 'LossPreventionRule',
+  EInvoice: 'EInvoice',
+  EInvoiceAttempt: 'EInvoiceAttempt',
+  WebhookEndpoint: 'WebhookEndpoint',
+  WebhookDelivery: 'WebhookDelivery'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -143,7 +154,12 @@ export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof
 
 export const OrganizationScalarFieldEnum = {
   id: 'id',
-  name: 'name'
+  name: 'name',
+  slug: 'slug',
+  status: 'status',
+  trialEndsAt: 'trialEndsAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type OrganizationScalarFieldEnum = (typeof OrganizationScalarFieldEnum)[keyof typeof OrganizationScalarFieldEnum]
@@ -195,7 +211,9 @@ export const UserScalarFieldEnum = {
   id: 'id',
   email: 'email',
   passwordHash: 'passwordHash',
-  active: 'active'
+  orgId: 'orgId',
+  active: 'active',
+  createdAt: 'createdAt'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
@@ -257,6 +275,89 @@ export const SessionScalarFieldEnum = {
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
+
+
+export const PlanScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  name: 'name',
+  monthlyPriceCents: 'monthlyPriceCents',
+  maxStores: 'maxStores',
+  maxUsers: 'maxUsers',
+  features: 'features',
+  active: 'active'
+} as const
+
+export type PlanScalarFieldEnum = (typeof PlanScalarFieldEnum)[keyof typeof PlanScalarFieldEnum]
+
+
+export const SubscriptionScalarFieldEnum = {
+  id: 'id',
+  orgId: 'orgId',
+  planId: 'planId',
+  status: 'status',
+  currentPeriodStart: 'currentPeriodStart',
+  currentPeriodEnd: 'currentPeriodEnd',
+  cancelAtPeriodEnd: 'cancelAtPeriodEnd',
+  cancelledAt: 'cancelledAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SubscriptionScalarFieldEnum = (typeof SubscriptionScalarFieldEnum)[keyof typeof SubscriptionScalarFieldEnum]
+
+
+export const BillingInvoiceScalarFieldEnum = {
+  id: 'id',
+  orgId: 'orgId',
+  subscriptionId: 'subscriptionId',
+  planId: 'planId',
+  periodStart: 'periodStart',
+  periodEnd: 'periodEnd',
+  amount: 'amount',
+  status: 'status',
+  webPaymentId: 'webPaymentId',
+  issuedAt: 'issuedAt',
+  paidAt: 'paidAt'
+} as const
+
+export type BillingInvoiceScalarFieldEnum = (typeof BillingInvoiceScalarFieldEnum)[keyof typeof BillingInvoiceScalarFieldEnum]
+
+
+export const SupportConversationScalarFieldEnum = {
+  id: 'id',
+  orgId: 'orgId',
+  customerId: 'customerId',
+  subject: 'subject',
+  status: 'status',
+  lastMessageAt: 'lastMessageAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SupportConversationScalarFieldEnum = (typeof SupportConversationScalarFieldEnum)[keyof typeof SupportConversationScalarFieldEnum]
+
+
+export const SupportMessageScalarFieldEnum = {
+  id: 'id',
+  conversationId: 'conversationId',
+  kind: 'kind',
+  body: 'body',
+  createdAt: 'createdAt'
+} as const
+
+export type SupportMessageScalarFieldEnum = (typeof SupportMessageScalarFieldEnum)[keyof typeof SupportMessageScalarFieldEnum]
+
+
+export const CustomerSessionScalarFieldEnum = {
+  id: 'id',
+  customerId: 'customerId',
+  token: 'token',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+} as const
+
+export type CustomerSessionScalarFieldEnum = (typeof CustomerSessionScalarFieldEnum)[keyof typeof CustomerSessionScalarFieldEnum]
 
 
 export const RateLimitBucketScalarFieldEnum = {
@@ -557,7 +658,11 @@ export const CustomerScalarFieldEnum = {
   phone: 'phone',
   email: 'email',
   birthday: 'birthday',
-  address: 'address'
+  address: 'address',
+  passwordHash: 'passwordHash',
+  emailVerifiedAt: 'emailVerifiedAt',
+  emailVerifyTokenHash: 'emailVerifyTokenHash',
+  emailVerifyExpiresAt: 'emailVerifyExpiresAt'
 } as const
 
 export type CustomerScalarFieldEnum = (typeof CustomerScalarFieldEnum)[keyof typeof CustomerScalarFieldEnum]
@@ -1052,6 +1157,100 @@ export const LossAlertScalarFieldEnum = {
 export type LossAlertScalarFieldEnum = (typeof LossAlertScalarFieldEnum)[keyof typeof LossAlertScalarFieldEnum]
 
 
+export const LossPreventionRuleScalarFieldEnum = {
+  id: 'id',
+  orgId: 'orgId',
+  kind: 'kind',
+  threshold: 'threshold',
+  active: 'active',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LossPreventionRuleScalarFieldEnum = (typeof LossPreventionRuleScalarFieldEnum)[keyof typeof LossPreventionRuleScalarFieldEnum]
+
+
+export const EInvoiceScalarFieldEnum = {
+  id: 'id',
+  orgId: 'orgId',
+  storeId: 'storeId',
+  orderId: 'orderId',
+  orderKind: 'orderKind',
+  invoiceNumber: 'invoiceNumber',
+  templateCode: 'templateCode',
+  provider: 'provider',
+  status: 'status',
+  customerName: 'customerName',
+  customerTaxCode: 'customerTaxCode',
+  customerEmail: 'customerEmail',
+  customerAddress: 'customerAddress',
+  subtotal: 'subtotal',
+  tax: 'tax',
+  total: 'total',
+  signedXmlUrl: 'signedXmlUrl',
+  pdfUrl: 'pdfUrl',
+  rawResponse: 'rawResponse',
+  errorMessage: 'errorMessage',
+  nextPollAt: 'nextPollAt',
+  pollAttempts: 'pollAttempts',
+  issuedAt: 'issuedAt',
+  canceledAt: 'canceledAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EInvoiceScalarFieldEnum = (typeof EInvoiceScalarFieldEnum)[keyof typeof EInvoiceScalarFieldEnum]
+
+
+export const EInvoiceAttemptScalarFieldEnum = {
+  id: 'id',
+  einvoiceId: 'einvoiceId',
+  phase: 'phase',
+  status: 'status',
+  requestPayload: 'requestPayload',
+  responsePayload: 'responsePayload',
+  errorMessage: 'errorMessage',
+  startedAt: 'startedAt',
+  finishedAt: 'finishedAt'
+} as const
+
+export type EInvoiceAttemptScalarFieldEnum = (typeof EInvoiceAttemptScalarFieldEnum)[keyof typeof EInvoiceAttemptScalarFieldEnum]
+
+
+export const WebhookEndpointScalarFieldEnum = {
+  id: 'id',
+  orgId: 'orgId',
+  provider: 'provider',
+  url: 'url',
+  secret: 'secret',
+  eventTypes: 'eventTypes',
+  active: 'active',
+  description: 'description',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type WebhookEndpointScalarFieldEnum = (typeof WebhookEndpointScalarFieldEnum)[keyof typeof WebhookEndpointScalarFieldEnum]
+
+
+export const WebhookDeliveryScalarFieldEnum = {
+  id: 'id',
+  endpointId: 'endpointId',
+  eventId: 'eventId',
+  eventType: 'eventType',
+  payload: 'payload',
+  attempts: 'attempts',
+  lastStatus: 'lastStatus',
+  lastError: 'lastError',
+  nextRetryAt: 'nextRetryAt',
+  deliveredAt: 'deliveredAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type WebhookDeliveryScalarFieldEnum = (typeof WebhookDeliveryScalarFieldEnum)[keyof typeof WebhookDeliveryScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -1060,19 +1259,19 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
 export const NullableJsonNullValueInput = {
   DbNull: DbNull,
   JsonNull: JsonNull
 } as const
 
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
-
-
-export const JsonNullValueInput = {
-  JsonNull: JsonNull
-} as const
-
-export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {

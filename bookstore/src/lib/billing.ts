@@ -106,6 +106,12 @@ export async function settleBillingPayment(txnRef: string): Promise<boolean> {
   const wp = await prisma.webPayment.findUnique({ where: { txnRef }, include: { billingInvoice: true } });
   if (!wp?.billingInvoice) return false;
   if (wp.billingInvoice.status === "PAID") return true;
+  // Gate on the payment itself, not just the caller's belief: a FAILED
+  // gateway response must never flip the invoice to PAID (audit MONEY-002).
+  if (wp.status !== "PAID") {
+    console.warn(JSON.stringify({ event: "billing_settle_rejected_unpaid", txnRef, wpStatus: wp.status }));
+    return false;
+  }
   await prisma.billingInvoice.update({
     where: { id: wp.billingInvoice.id },
     data: { status: "PAID", paidAt: new Date() },

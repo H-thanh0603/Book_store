@@ -15,7 +15,10 @@
 import { prisma } from "./db";
 import { cacheGet, cacheSet, cacheFlush } from "./redis";
 
-const REVENUE_STATUSES = ["CONFIRMED", "COMPLETED", "PAID", "SHIPPED", "DELIVERED"] as const;
+// "COMPLETED" is a PosTransaction status, not an OrderStatus — Order revenue
+// states are CONFIRMED/PAID/SHIPPED/DELIVERED. (The stray "COMPLETED" here
+// broke Prisma's args inference for every builder in this file.)
+const REVENUE_STATUSES = ["CONFIRMED", "PAID", "SHIPPED", "DELIVERED"] as const;
 
 export type ReportParams = {
   from: Date;
@@ -153,14 +156,29 @@ export async function topSku(p: ReportParams): Promise<ReportResult> {
 
 export async function stockOnHand(p: ReportParams): Promise<ReportResult> {
   return cached("stock-on-hand", p, async () => {
+    // Rewrite per audit 2026-08-30 DATA-002: the old select referenced
+    // `quantity` and `variant.price` — neither column exists — so this report
+    // threw a Prisma validation error on every call. Value now uses the
+    // current retail price row.
+    const now = new Date();
     const balances = await prisma.inventoryBalance.findMany({
       where: {
         ...(p.storeId ? { location: { storeId: p.storeId } } : { location: { store: { region: { orgId: p.orgId } } } }),
       },
       select: {
-        quantity: true,
+        onHand: true,
         location: { select: { name: true, store: { select: { name: true, code: true } } } },
-        variant: { select: { sku: true, product: { select: { name: true } }, price: true } },
+        variant: {
+          select: {
+            sku: true,
+            product: { select: { name: true } },
+            prices: {
+              where: { priceList: { kind: "retail" }, validFrom: { lte: now }, OR: [{ validTo: null }, { validTo: { gt: now } }] },
+              orderBy: { validFrom: "desc" },
+              take: 1,
+            },
+          },
+        },
       },
     });
     type Row = { sku: string; name: string; store: string; loc: string; qty: number; value: bigint };
@@ -172,13 +190,13 @@ export async function stockOnHand(p: ReportParams): Promise<ReportResult> {
         store: b.location.store?.name ?? "—", loc: b.location.name,
         qty: 0, value: 0n,
       };
-      cur.qty += b.quantity;
-      cur.value += b.variant.price * BigInt(b.quantity);
+      cur.qty += b.onHand;
+      cur.value += (b.variant.prices[0]?.amount ?? 0n) * BigInt(b.onHand);
       map.set(key, cur);
     }
     const rows = [...map.values()].sort((a, b) => Number(b.value - a.value))
       .map((r) => [r.sku, r.name, r.store, r.loc, r.qty, Number(r.value)]);
-    const totalValue = balances.reduce((s, b) => s + b.variant.price * BigInt(b.quantity), 0n);
+    const totalValue = balances.reduce((s, b) => s + (b.variant.prices[0]?.amount ?? 0n) * BigInt(b.onHand), 0n);
     return {
       columns: ["SKU", "Sản phẩm", "Cửa hàng", "Vị trí", "Tồn", "Giá trị (đ)"],
       rows,

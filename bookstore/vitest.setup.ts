@@ -39,11 +39,11 @@ vi.mock('@/lib/db', () => ({
       findUnique: vi.fn(),
       upsert: vi.fn(),
     },
-    $transaction: vi.fn((fns: any[]) => {
+    $transaction: vi.fn((fns: unknown) => {
       if (Array.isArray(fns)) {
         return Promise.all(fns)
       }
-      return fns()
+      return (fns as () => unknown)()
     }),
   },
 }))

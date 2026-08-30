@@ -21,7 +21,7 @@ async function recordAlert(alert: AlertInput) {
 
 export type RuleKind = "LARGE_REFUND" | "EXCESSIVE_DISCOUNT" | "CASH_VARIANCE" | "STOCK_SHRINKAGE";
 
-const RULE_TO_CONFIG: Record<RuleKind, { key: string; defaultThreshold: number | bigint }> = {
+export const RULE_TO_CONFIG: Record<RuleKind, { key: string; defaultThreshold: number | bigint }> = {
   LARGE_REFUND: { key: "loss.maxRefund", defaultThreshold: 500_000 },
   EXCESSIVE_DISCOUNT: { key: "loss.maxDiscountPercent", defaultThreshold: 30 },
   CASH_VARIANCE: { key: "loss.maxCashVariance", defaultThreshold: 100_000 },

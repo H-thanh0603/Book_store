@@ -188,6 +188,7 @@ export type StoreWhereInput = {
   userRoles?: Prisma.UserRoleListRelationFilter
   promotions?: Prisma.PromotionStoreListRelationFilter
   orders?: Prisma.OrderListRelationFilter
+  eInvoices?: Prisma.EInvoiceListRelationFilter
 }
 
 export type StoreOrderByWithRelationInput = {
@@ -202,6 +203,7 @@ export type StoreOrderByWithRelationInput = {
   userRoles?: Prisma.UserRoleOrderByRelationAggregateInput
   promotions?: Prisma.PromotionStoreOrderByRelationAggregateInput
   orders?: Prisma.OrderOrderByRelationAggregateInput
+  eInvoices?: Prisma.EInvoiceOrderByRelationAggregateInput
 }
 
 export type StoreWhereUniqueInput = Prisma.AtLeast<{
@@ -219,6 +221,7 @@ export type StoreWhereUniqueInput = Prisma.AtLeast<{
   userRoles?: Prisma.UserRoleListRelationFilter
   promotions?: Prisma.PromotionStoreListRelationFilter
   orders?: Prisma.OrderListRelationFilter
+  eInvoices?: Prisma.EInvoiceListRelationFilter
 }, "id" | "code">
 
 export type StoreOrderByWithAggregationInput = {
@@ -254,6 +257,7 @@ export type StoreCreateInput = {
   userRoles?: Prisma.UserRoleCreateNestedManyWithoutStoreInput
   promotions?: Prisma.PromotionStoreCreateNestedManyWithoutStoreInput
   orders?: Prisma.OrderCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceCreateNestedManyWithoutStoreInput
 }
 
 export type StoreUncheckedCreateInput = {
@@ -267,6 +271,7 @@ export type StoreUncheckedCreateInput = {
   userRoles?: Prisma.UserRoleUncheckedCreateNestedManyWithoutStoreInput
   promotions?: Prisma.PromotionStoreUncheckedCreateNestedManyWithoutStoreInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceUncheckedCreateNestedManyWithoutStoreInput
 }
 
 export type StoreUpdateInput = {
@@ -280,6 +285,7 @@ export type StoreUpdateInput = {
   userRoles?: Prisma.UserRoleUpdateManyWithoutStoreNestedInput
   promotions?: Prisma.PromotionStoreUpdateManyWithoutStoreNestedInput
   orders?: Prisma.OrderUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreUncheckedUpdateInput = {
@@ -293,6 +299,7 @@ export type StoreUncheckedUpdateInput = {
   userRoles?: Prisma.UserRoleUncheckedUpdateManyWithoutStoreNestedInput
   promotions?: Prisma.PromotionStoreUncheckedUpdateManyWithoutStoreNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUncheckedUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreCreateManyInput = {
@@ -484,6 +491,22 @@ export type StoreUpdateOneRequiredWithoutPosTerminalsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.StoreUpdateToOneWithWhereWithoutPosTerminalsInput, Prisma.StoreUpdateWithoutPosTerminalsInput>, Prisma.StoreUncheckedUpdateWithoutPosTerminalsInput>
 }
 
+export type StoreCreateNestedOneWithoutEInvoicesInput = {
+  create?: Prisma.XOR<Prisma.StoreCreateWithoutEInvoicesInput, Prisma.StoreUncheckedCreateWithoutEInvoicesInput>
+  connectOrCreate?: Prisma.StoreCreateOrConnectWithoutEInvoicesInput
+  connect?: Prisma.StoreWhereUniqueInput
+}
+
+export type StoreUpdateOneWithoutEInvoicesNestedInput = {
+  create?: Prisma.XOR<Prisma.StoreCreateWithoutEInvoicesInput, Prisma.StoreUncheckedCreateWithoutEInvoicesInput>
+  connectOrCreate?: Prisma.StoreCreateOrConnectWithoutEInvoicesInput
+  upsert?: Prisma.StoreUpsertWithoutEInvoicesInput
+  disconnect?: Prisma.StoreWhereInput | boolean
+  delete?: Prisma.StoreWhereInput | boolean
+  connect?: Prisma.StoreWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StoreUpdateToOneWithWhereWithoutEInvoicesInput, Prisma.StoreUpdateWithoutEInvoicesInput>, Prisma.StoreUncheckedUpdateWithoutEInvoicesInput>
+}
+
 export type StoreCreateWithoutRegionInput = {
   id?: string
   code: string
@@ -494,6 +517,7 @@ export type StoreCreateWithoutRegionInput = {
   userRoles?: Prisma.UserRoleCreateNestedManyWithoutStoreInput
   promotions?: Prisma.PromotionStoreCreateNestedManyWithoutStoreInput
   orders?: Prisma.OrderCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceCreateNestedManyWithoutStoreInput
 }
 
 export type StoreUncheckedCreateWithoutRegionInput = {
@@ -506,6 +530,7 @@ export type StoreUncheckedCreateWithoutRegionInput = {
   userRoles?: Prisma.UserRoleUncheckedCreateNestedManyWithoutStoreInput
   promotions?: Prisma.PromotionStoreUncheckedCreateNestedManyWithoutStoreInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceUncheckedCreateNestedManyWithoutStoreInput
 }
 
 export type StoreCreateOrConnectWithoutRegionInput = {
@@ -555,6 +580,7 @@ export type StoreCreateWithoutStockLocationsInput = {
   userRoles?: Prisma.UserRoleCreateNestedManyWithoutStoreInput
   promotions?: Prisma.PromotionStoreCreateNestedManyWithoutStoreInput
   orders?: Prisma.OrderCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceCreateNestedManyWithoutStoreInput
 }
 
 export type StoreUncheckedCreateWithoutStockLocationsInput = {
@@ -567,6 +593,7 @@ export type StoreUncheckedCreateWithoutStockLocationsInput = {
   userRoles?: Prisma.UserRoleUncheckedCreateNestedManyWithoutStoreInput
   promotions?: Prisma.PromotionStoreUncheckedCreateNestedManyWithoutStoreInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceUncheckedCreateNestedManyWithoutStoreInput
 }
 
 export type StoreCreateOrConnectWithoutStockLocationsInput = {
@@ -595,6 +622,7 @@ export type StoreUpdateWithoutStockLocationsInput = {
   userRoles?: Prisma.UserRoleUpdateManyWithoutStoreNestedInput
   promotions?: Prisma.PromotionStoreUpdateManyWithoutStoreNestedInput
   orders?: Prisma.OrderUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreUncheckedUpdateWithoutStockLocationsInput = {
@@ -607,6 +635,7 @@ export type StoreUncheckedUpdateWithoutStockLocationsInput = {
   userRoles?: Prisma.UserRoleUncheckedUpdateManyWithoutStoreNestedInput
   promotions?: Prisma.PromotionStoreUncheckedUpdateManyWithoutStoreNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUncheckedUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreCreateWithoutUserRolesInput = {
@@ -619,6 +648,7 @@ export type StoreCreateWithoutUserRolesInput = {
   posTerminals?: Prisma.PosTerminalCreateNestedManyWithoutStoreInput
   promotions?: Prisma.PromotionStoreCreateNestedManyWithoutStoreInput
   orders?: Prisma.OrderCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceCreateNestedManyWithoutStoreInput
 }
 
 export type StoreUncheckedCreateWithoutUserRolesInput = {
@@ -631,6 +661,7 @@ export type StoreUncheckedCreateWithoutUserRolesInput = {
   posTerminals?: Prisma.PosTerminalUncheckedCreateNestedManyWithoutStoreInput
   promotions?: Prisma.PromotionStoreUncheckedCreateNestedManyWithoutStoreInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceUncheckedCreateNestedManyWithoutStoreInput
 }
 
 export type StoreCreateOrConnectWithoutUserRolesInput = {
@@ -659,6 +690,7 @@ export type StoreUpdateWithoutUserRolesInput = {
   posTerminals?: Prisma.PosTerminalUpdateManyWithoutStoreNestedInput
   promotions?: Prisma.PromotionStoreUpdateManyWithoutStoreNestedInput
   orders?: Prisma.OrderUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreUncheckedUpdateWithoutUserRolesInput = {
@@ -671,6 +703,7 @@ export type StoreUncheckedUpdateWithoutUserRolesInput = {
   posTerminals?: Prisma.PosTerminalUncheckedUpdateManyWithoutStoreNestedInput
   promotions?: Prisma.PromotionStoreUncheckedUpdateManyWithoutStoreNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUncheckedUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreCreateWithoutPromotionsInput = {
@@ -683,6 +716,7 @@ export type StoreCreateWithoutPromotionsInput = {
   posTerminals?: Prisma.PosTerminalCreateNestedManyWithoutStoreInput
   userRoles?: Prisma.UserRoleCreateNestedManyWithoutStoreInput
   orders?: Prisma.OrderCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceCreateNestedManyWithoutStoreInput
 }
 
 export type StoreUncheckedCreateWithoutPromotionsInput = {
@@ -695,6 +729,7 @@ export type StoreUncheckedCreateWithoutPromotionsInput = {
   posTerminals?: Prisma.PosTerminalUncheckedCreateNestedManyWithoutStoreInput
   userRoles?: Prisma.UserRoleUncheckedCreateNestedManyWithoutStoreInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceUncheckedCreateNestedManyWithoutStoreInput
 }
 
 export type StoreCreateOrConnectWithoutPromotionsInput = {
@@ -723,6 +758,7 @@ export type StoreUpdateWithoutPromotionsInput = {
   posTerminals?: Prisma.PosTerminalUpdateManyWithoutStoreNestedInput
   userRoles?: Prisma.UserRoleUpdateManyWithoutStoreNestedInput
   orders?: Prisma.OrderUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreUncheckedUpdateWithoutPromotionsInput = {
@@ -735,6 +771,7 @@ export type StoreUncheckedUpdateWithoutPromotionsInput = {
   posTerminals?: Prisma.PosTerminalUncheckedUpdateManyWithoutStoreNestedInput
   userRoles?: Prisma.UserRoleUncheckedUpdateManyWithoutStoreNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUncheckedUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreCreateWithoutOrdersInput = {
@@ -747,6 +784,7 @@ export type StoreCreateWithoutOrdersInput = {
   posTerminals?: Prisma.PosTerminalCreateNestedManyWithoutStoreInput
   userRoles?: Prisma.UserRoleCreateNestedManyWithoutStoreInput
   promotions?: Prisma.PromotionStoreCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceCreateNestedManyWithoutStoreInput
 }
 
 export type StoreUncheckedCreateWithoutOrdersInput = {
@@ -759,6 +797,7 @@ export type StoreUncheckedCreateWithoutOrdersInput = {
   posTerminals?: Prisma.PosTerminalUncheckedCreateNestedManyWithoutStoreInput
   userRoles?: Prisma.UserRoleUncheckedCreateNestedManyWithoutStoreInput
   promotions?: Prisma.PromotionStoreUncheckedCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceUncheckedCreateNestedManyWithoutStoreInput
 }
 
 export type StoreCreateOrConnectWithoutOrdersInput = {
@@ -787,6 +826,7 @@ export type StoreUpdateWithoutOrdersInput = {
   posTerminals?: Prisma.PosTerminalUpdateManyWithoutStoreNestedInput
   userRoles?: Prisma.UserRoleUpdateManyWithoutStoreNestedInput
   promotions?: Prisma.PromotionStoreUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreUncheckedUpdateWithoutOrdersInput = {
@@ -799,6 +839,7 @@ export type StoreUncheckedUpdateWithoutOrdersInput = {
   posTerminals?: Prisma.PosTerminalUncheckedUpdateManyWithoutStoreNestedInput
   userRoles?: Prisma.UserRoleUncheckedUpdateManyWithoutStoreNestedInput
   promotions?: Prisma.PromotionStoreUncheckedUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUncheckedUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreCreateWithoutPosTerminalsInput = {
@@ -811,6 +852,7 @@ export type StoreCreateWithoutPosTerminalsInput = {
   userRoles?: Prisma.UserRoleCreateNestedManyWithoutStoreInput
   promotions?: Prisma.PromotionStoreCreateNestedManyWithoutStoreInput
   orders?: Prisma.OrderCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceCreateNestedManyWithoutStoreInput
 }
 
 export type StoreUncheckedCreateWithoutPosTerminalsInput = {
@@ -823,6 +865,7 @@ export type StoreUncheckedCreateWithoutPosTerminalsInput = {
   userRoles?: Prisma.UserRoleUncheckedCreateNestedManyWithoutStoreInput
   promotions?: Prisma.PromotionStoreUncheckedCreateNestedManyWithoutStoreInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutStoreInput
+  eInvoices?: Prisma.EInvoiceUncheckedCreateNestedManyWithoutStoreInput
 }
 
 export type StoreCreateOrConnectWithoutPosTerminalsInput = {
@@ -851,6 +894,7 @@ export type StoreUpdateWithoutPosTerminalsInput = {
   userRoles?: Prisma.UserRoleUpdateManyWithoutStoreNestedInput
   promotions?: Prisma.PromotionStoreUpdateManyWithoutStoreNestedInput
   orders?: Prisma.OrderUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreUncheckedUpdateWithoutPosTerminalsInput = {
@@ -860,6 +904,75 @@ export type StoreUncheckedUpdateWithoutPosTerminalsInput = {
   regionId?: Prisma.StringFieldUpdateOperationsInput | string
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   stockLocations?: Prisma.StockLocationUncheckedUpdateManyWithoutStoreNestedInput
+  userRoles?: Prisma.UserRoleUncheckedUpdateManyWithoutStoreNestedInput
+  promotions?: Prisma.PromotionStoreUncheckedUpdateManyWithoutStoreNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUncheckedUpdateManyWithoutStoreNestedInput
+}
+
+export type StoreCreateWithoutEInvoicesInput = {
+  id?: string
+  code: string
+  name: string
+  active?: boolean
+  region: Prisma.RegionCreateNestedOneWithoutStoresInput
+  stockLocations?: Prisma.StockLocationCreateNestedManyWithoutStoreInput
+  posTerminals?: Prisma.PosTerminalCreateNestedManyWithoutStoreInput
+  userRoles?: Prisma.UserRoleCreateNestedManyWithoutStoreInput
+  promotions?: Prisma.PromotionStoreCreateNestedManyWithoutStoreInput
+  orders?: Prisma.OrderCreateNestedManyWithoutStoreInput
+}
+
+export type StoreUncheckedCreateWithoutEInvoicesInput = {
+  id?: string
+  code: string
+  name: string
+  regionId: string
+  active?: boolean
+  stockLocations?: Prisma.StockLocationUncheckedCreateNestedManyWithoutStoreInput
+  posTerminals?: Prisma.PosTerminalUncheckedCreateNestedManyWithoutStoreInput
+  userRoles?: Prisma.UserRoleUncheckedCreateNestedManyWithoutStoreInput
+  promotions?: Prisma.PromotionStoreUncheckedCreateNestedManyWithoutStoreInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutStoreInput
+}
+
+export type StoreCreateOrConnectWithoutEInvoicesInput = {
+  where: Prisma.StoreWhereUniqueInput
+  create: Prisma.XOR<Prisma.StoreCreateWithoutEInvoicesInput, Prisma.StoreUncheckedCreateWithoutEInvoicesInput>
+}
+
+export type StoreUpsertWithoutEInvoicesInput = {
+  update: Prisma.XOR<Prisma.StoreUpdateWithoutEInvoicesInput, Prisma.StoreUncheckedUpdateWithoutEInvoicesInput>
+  create: Prisma.XOR<Prisma.StoreCreateWithoutEInvoicesInput, Prisma.StoreUncheckedCreateWithoutEInvoicesInput>
+  where?: Prisma.StoreWhereInput
+}
+
+export type StoreUpdateToOneWithWhereWithoutEInvoicesInput = {
+  where?: Prisma.StoreWhereInput
+  data: Prisma.XOR<Prisma.StoreUpdateWithoutEInvoicesInput, Prisma.StoreUncheckedUpdateWithoutEInvoicesInput>
+}
+
+export type StoreUpdateWithoutEInvoicesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  region?: Prisma.RegionUpdateOneRequiredWithoutStoresNestedInput
+  stockLocations?: Prisma.StockLocationUpdateManyWithoutStoreNestedInput
+  posTerminals?: Prisma.PosTerminalUpdateManyWithoutStoreNestedInput
+  userRoles?: Prisma.UserRoleUpdateManyWithoutStoreNestedInput
+  promotions?: Prisma.PromotionStoreUpdateManyWithoutStoreNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutStoreNestedInput
+}
+
+export type StoreUncheckedUpdateWithoutEInvoicesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  regionId?: Prisma.StringFieldUpdateOperationsInput | string
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  stockLocations?: Prisma.StockLocationUncheckedUpdateManyWithoutStoreNestedInput
+  posTerminals?: Prisma.PosTerminalUncheckedUpdateManyWithoutStoreNestedInput
   userRoles?: Prisma.UserRoleUncheckedUpdateManyWithoutStoreNestedInput
   promotions?: Prisma.PromotionStoreUncheckedUpdateManyWithoutStoreNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutStoreNestedInput
@@ -882,6 +995,7 @@ export type StoreUpdateWithoutRegionInput = {
   userRoles?: Prisma.UserRoleUpdateManyWithoutStoreNestedInput
   promotions?: Prisma.PromotionStoreUpdateManyWithoutStoreNestedInput
   orders?: Prisma.OrderUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreUncheckedUpdateWithoutRegionInput = {
@@ -894,6 +1008,7 @@ export type StoreUncheckedUpdateWithoutRegionInput = {
   userRoles?: Prisma.UserRoleUncheckedUpdateManyWithoutStoreNestedInput
   promotions?: Prisma.PromotionStoreUncheckedUpdateManyWithoutStoreNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutStoreNestedInput
+  eInvoices?: Prisma.EInvoiceUncheckedUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreUncheckedUpdateManyWithoutRegionInput = {
@@ -914,6 +1029,7 @@ export type StoreCountOutputType = {
   userRoles: number
   promotions: number
   orders: number
+  eInvoices: number
 }
 
 export type StoreCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -922,6 +1038,7 @@ export type StoreCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.
   userRoles?: boolean | StoreCountOutputTypeCountUserRolesArgs
   promotions?: boolean | StoreCountOutputTypeCountPromotionsArgs
   orders?: boolean | StoreCountOutputTypeCountOrdersArgs
+  eInvoices?: boolean | StoreCountOutputTypeCountEInvoicesArgs
 }
 
 /**
@@ -969,6 +1086,13 @@ export type StoreCountOutputTypeCountOrdersArgs<ExtArgs extends runtime.Types.Ex
   where?: Prisma.OrderWhereInput
 }
 
+/**
+ * StoreCountOutputType without action
+ */
+export type StoreCountOutputTypeCountEInvoicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EInvoiceWhereInput
+}
+
 
 export type StoreSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -982,6 +1106,7 @@ export type StoreSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   userRoles?: boolean | Prisma.Store$userRolesArgs<ExtArgs>
   promotions?: boolean | Prisma.Store$promotionsArgs<ExtArgs>
   orders?: boolean | Prisma.Store$ordersArgs<ExtArgs>
+  eInvoices?: boolean | Prisma.Store$eInvoicesArgs<ExtArgs>
   _count?: boolean | Prisma.StoreCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["store"]>
 
@@ -1019,6 +1144,7 @@ export type StoreInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   userRoles?: boolean | Prisma.Store$userRolesArgs<ExtArgs>
   promotions?: boolean | Prisma.Store$promotionsArgs<ExtArgs>
   orders?: boolean | Prisma.Store$ordersArgs<ExtArgs>
+  eInvoices?: boolean | Prisma.Store$eInvoicesArgs<ExtArgs>
   _count?: boolean | Prisma.StoreCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type StoreIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1037,6 +1163,7 @@ export type $StorePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     userRoles: Prisma.$UserRolePayload<ExtArgs>[]
     promotions: Prisma.$PromotionStorePayload<ExtArgs>[]
     orders: Prisma.$OrderPayload<ExtArgs>[]
+    eInvoices: Prisma.$EInvoicePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1444,6 +1571,7 @@ export interface Prisma__StoreClient<T, Null = never, ExtArgs extends runtime.Ty
   userRoles<T extends Prisma.Store$userRolesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Store$userRolesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserRolePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   promotions<T extends Prisma.Store$promotionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Store$promotionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PromotionStorePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   orders<T extends Prisma.Store$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Store$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  eInvoices<T extends Prisma.Store$eInvoicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Store$eInvoicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EInvoicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1996,6 +2124,30 @@ export type Store$ordersArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
   take?: number
   skip?: number
   distinct?: Prisma.OrderScalarFieldEnum | Prisma.OrderScalarFieldEnum[]
+}
+
+/**
+ * Store.eInvoices
+ */
+export type Store$eInvoicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the EInvoice
+   */
+  select?: Prisma.EInvoiceSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the EInvoice
+   */
+  omit?: Prisma.EInvoiceOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EInvoiceInclude<ExtArgs> | null
+  where?: Prisma.EInvoiceWhereInput
+  orderBy?: Prisma.EInvoiceOrderByWithRelationInput | Prisma.EInvoiceOrderByWithRelationInput[]
+  cursor?: Prisma.EInvoiceWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.EInvoiceScalarFieldEnum | Prisma.EInvoiceScalarFieldEnum[]
 }
 
 /**

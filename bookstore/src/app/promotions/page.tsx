@@ -5,7 +5,6 @@ import {
   Tag,
   Plus,
   Edit2,
-  Eye,
   XCircle,
   CheckCircle2,
   AlertCircle,
@@ -43,7 +42,7 @@ type Store = { id: string; name: string };
 export default function PromotionsPage() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
+  const [, setStores] = useState<Store[]>([]);
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);

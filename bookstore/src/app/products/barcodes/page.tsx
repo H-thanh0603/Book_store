@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../../nav";
-import { Barcode, Printer, Search, CheckSquare, Square, X } from "lucide-react";
-import { printLabels, type LabelData } from "@/components/BarcodeLabel";
+import { Barcode, Printer, Search, CheckSquare, Square, } from "lucide-react";
+import { printLabels } from "@/components/BarcodeLabel";
 
 type Product = {
   id: string;

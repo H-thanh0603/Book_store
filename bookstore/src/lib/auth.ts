@@ -123,10 +123,27 @@ export async function getAuth(): Promise<AuthContext | null> {
   };
 }
 
-/** Backend authorization check. Throws 401/403-shaped Error. */
-export async function requirePermission(code: string, storeId?: string | null) {
+/** Org-status gate shared by requirePermission and requireOrgActive. */
+function assertOrgUsable(auth: AuthContext) {
+  if (!auth.orgId) return; // legacy user — bypass
+  if (auth.orgStatus === "ACTIVE") return;
+  if (auth.orgStatus === "TRIAL" && auth.trialEndsAt && auth.trialEndsAt > new Date()) return;
+  throw Object.assign(new Error(`Forbidden: org ${auth.orgStatus}`), { status: 403 });
+}
+
+/** Backend authorization check. Throws 401/403-shaped Error. Suspended or
+ *  expired-trial orgs are rejected centrally (audit 2026-08-30 BILL-001 —
+ *  requireOrgActive existed but had zero call sites). Routes a suspended
+ *  owner must still reach to PAY the overdue invoice opt out explicitly via
+ *  { allowSuspended: true }. */
+export async function requirePermission(
+  code: string,
+  storeId?: string | null,
+  opts?: { allowSuspended?: boolean }
+) {
   const auth = await getAuth();
   if (!auth) throw Object.assign(new Error("Unauthorized"), { status: 401 });
+  if (!opts?.allowSuspended) assertOrgUsable(auth);
   const allowed = auth.roles.some(
     (r) =>
       r.permissions.includes(code) &&
@@ -217,10 +234,8 @@ export async function requireAuth(): Promise<AuthContext> {
  */
 export async function requireOrgActive(): Promise<AuthContext> {
   const auth = await requireAuth();
-  if (!auth.orgId) return auth; // legacy user — bypass
-  if (auth.orgStatus === "ACTIVE") return auth;
-  if (auth.orgStatus === "TRIAL" && auth.trialEndsAt && auth.trialEndsAt > new Date()) return auth;
-  throw Object.assign(new Error(`Forbidden: org ${auth.orgStatus}`), { status: 403 });
+  assertOrgUsable(auth);
+  return auth;
 }
 
 export async function pruneExpiredSessions() {

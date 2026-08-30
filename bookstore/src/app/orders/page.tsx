@@ -60,7 +60,7 @@ export default function OrdersPage() {
       catch { /* fresh cart */ }
       void loadOrders();
     }, 0);
-    fetch("/api/products").then(async (r) => {
+    fetch("/api/products?take=200").then(async (r) => {
       if (r.ok) setProducts((await r.json()).products);
     });
     fetch("/api/customers").then(async (r) => {
@@ -232,7 +232,7 @@ export default function OrdersPage() {
       o.customer?.name?.toLowerCase().includes(searchFilter.toLowerCase());
     const matchesStatus =
       statusFilter === "ALL" ||
-      (statusFilter === "PROCESSING" && ["CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(o.status)) ||
+      (statusFilter === "PROCESSING" && ["PAID", "CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(o.status)) ||
       (statusFilter === "SHIPPED" && o.status === "SHIPPED") ||
       (statusFilter === "DELIVERED" && o.status === "DELIVERED") ||
       (statusFilter === "CANCELLED" && o.status === "CANCELLED");
@@ -547,7 +547,7 @@ export default function OrdersPage() {
                           {Number(o.total).toLocaleString("vi-VN")} ₫
                         </td>
                         <td className="p-4 text-right whitespace-nowrap space-x-1.5">
-                          {["CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(o.status) && o.type === "pickup" && (
+                          {["PAID", "CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(o.status) && o.type === "pickup" && (
                             <button
                               onClick={() => fulfill(o, "collect")}
                               className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
@@ -555,7 +555,7 @@ export default function OrdersPage() {
                               Thu khách
                             </button>
                           )}
-                          {["CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(o.status) && o.type !== "pickup" && (
+                          {["PAID", "CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(o.status) && o.type !== "pickup" && (
                             <>
                               <button
                                 onClick={() => fulfill(o, "ship")}

@@ -21,8 +21,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pro
     if (!body.orderId) return ok({ error: "VALIDATION", message: "orderId required" }, 400);
     const order = await prisma.order.findUniqueOrThrow({
       where: { id: body.orderId },
-      select: { id: true, number: true, total: true },
+      select: { id: true, number: true, total: true, status: true },
     });
+    // Money may only be requested for an order still awaiting payment — a
+    // CANCELLED/PAID order must never get a fresh payment URL (paid-after-cancel).
+    if (order.status !== "CONFIRMED")
+      return ok({ error: "INVALID_STATUS_TRANSITION", message: `Cannot pay a ${order.status} order` }, 409);
     const base = req.nextUrl.origin;
     let url: string;
     switch (provider) {

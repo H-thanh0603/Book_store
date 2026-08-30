@@ -4,7 +4,6 @@ import Nav from "../nav";
 import {
   Store,
   Search,
-  ShoppingCart,
   Plus,
   Minus,
   QrCode,
@@ -80,7 +79,10 @@ export default function PosPage() {
         if (d.stores[0]) setStoreId(d.stores[0].id);
       }
     });
-    fetch("/api/products").then(async (r) => {
+    // take=200 (clamped server-side): the default 25-product page made the
+    // grid, search AND barcode matching silently blind past product #26
+    // (audit FE-001).
+    fetch("/api/products?take=200").then(async (r) => {
       if (r.ok) setProducts((await r.json()).products);
     });
     fetch("/api/customers").then(async (r) => {
@@ -237,6 +239,9 @@ export default function PosPage() {
       const offlineSale = {
         id: paymentAttemptRef.current.key,
         requestBody,
+        // Event-path only (runs when the fetch throws), never during render —
+        // the purity rule can't see that through the closure.
+        // eslint-disable-next-line react-hooks/purity
         timestamp: Date.now(),
         storeId,
         items: lines.map((l) => ({ ...l })),
@@ -335,12 +340,26 @@ export default function PosPage() {
   function handleBarcodeScan(barcode: string) {
     setScannerOpen(false);
     setQ(barcode);
-    // Auto-add if exact barcode match
+    // Auto-add if exact barcode match in the loaded page...
     const match = products.find((p) =>
       p.variants.some((v) => v.barcodes.some((bc) => bc.barcode === barcode))
     );
-    if (match) addLine(match);
-    else searchRef.current?.focus();
+    if (match) { addLine(match); return; }
+    // ...otherwise ask the server — a scan must not depend on which page of
+    // the catalog happens to be loaded (audit FE-001).
+    fetch(`/api/products?barcode=${encodeURIComponent(barcode)}`).then(async (r) => {
+      if (!r.ok) { searchRef.current?.focus(); return; }
+      const d = await r.json();
+      const remote = (d.products as typeof products).find((p) =>
+        p.variants.some((v) => v.barcodes.some((bc) => bc.barcode === barcode))
+      );
+      if (remote) {
+        setProducts((prev) => (prev.some((p) => p.id === remote.id) ? prev : [...prev, remote]));
+        addLine(remote);
+      } else {
+        searchRef.current?.focus();
+      }
+    }).catch(() => searchRef.current?.focus());
   }
 
   return (

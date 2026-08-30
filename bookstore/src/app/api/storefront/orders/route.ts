@@ -30,7 +30,7 @@ export async function GET(_req: NextRequest) {
         id: it.id,
         name: it.variant.product.name,
         quantity: it.quantity,
-        price: it.price.toString(),
+        price: it.unitPrice.toString(),
       })),
     })));
   } catch (err) {

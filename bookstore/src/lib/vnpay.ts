@@ -67,6 +67,10 @@ export type SettleResult = {
   rspCode: string; // '00' confirmed; '01' unknown/failed; '04' amount; '97' signature
   message: string;
   orderId?: string; // surfaced so the route can fan out side-effects (e-invoice, loyalty)
+  /** How the WebPayment row ended up. REFUND_REQUIRED = money captured but
+   *  the order is no longer CONFIRMED (expired/cancelled) — flagged for a
+   *  manual refund, never recorded as PAID. */
+  settled?: "PAID" | "FAILED" | "REFUND_REQUIRED" | "ALREADY_SETTLED";
 };
 
 /**
@@ -93,30 +97,36 @@ export async function settleVnpayResponse(searchParams: URLSearchParams): Promis
 
   // Duplicate callback (IPN + return both land): already-settled → confirm only.
   if (payment.status !== "PENDING")
-    return { ok: true, rspCode: "00", message: "Confirm Success" };
+    return { ok: true, rspCode: "00", message: "Confirm Success", orderId: payment.orderId ?? undefined, settled: "ALREADY_SETTLED" };
 
   const success = params.vnp_ResponseCode === "00" && params.vnp_TransactionStatus === "00";
   const rawParams: Record<string, string> = params;
+  const orderId = payment.orderId ?? undefined;
 
-  // Paid money must not revive a CANCELLED order — claim it while CONFIRMED.
+  // Money may only land on an order still awaiting confirmation. The claim is
+  // a REAL transition (CONFIRMED → PAID) so the reservation-expiry job and
+  // manual cancel — which both claim `CONFIRMED` rows — can never touch an
+  // order whose money was captured. If the claim fails (order already
+  // CANCELLED/expired) the capture is recorded as REFUND_REQUIRED instead.
   // Billing-cycle WebPayments have no orderId; skip the claim step entirely.
   let claimed = false;
-  if (success && payment.orderId) {
+  if (success && orderId) {
     const claim = await prisma.order.updateMany({
-      where: { id: payment.orderId, status: "CONFIRMED" },
-      data: { status: "CONFIRMED" },
+      where: { id: orderId, status: "CONFIRMED" },
+      data: { status: "PAID" },
     });
     claimed = claim.count === 1;
     if (!claimed)
-      console.warn(JSON.stringify({ event: "vnpay_paid_after_cancel", orderId: payment.orderId }));
+      console.warn(JSON.stringify({ event: "vnpay_paid_after_cancel", orderId }));
   }
+  const captured = success && (claimed || !orderId);
   // Idempotency guard against racing callbacks: IPN and browser return may
   // arrive near-simultaneously. updateMany (NOT update) — a lost race must be
   // a duplicate-safe no-op, whereas extended-where update throws P2025.
   const settled = await prisma.webPayment.updateMany({
     where: { id: payment.id, status: "PENDING" },
     data: {
-      status: success ? "PAID" : "FAILED",
+      status: !success ? "FAILED" : captured ? "PAID" : "REFUND_REQUIRED",
       responseCode: params.vnp_ResponseCode ?? null,
       bankCode: params.vnp_BankCode ?? null,
       rawParams,
@@ -125,18 +135,21 @@ export async function settleVnpayResponse(searchParams: URLSearchParams): Promis
   });
   if (settled.count === 0)
     console.info(JSON.stringify({ event: "vnpay_duplicate_callback", txnRef: payment.txnRef }));
+  if (success && !captured)
+    console.error(JSON.stringify({ level: "error", event: "vnpay_refund_required", orderId, txnRef: payment.txnRef }));
 
-  // Fire-and-forget e-invoice. T-VAN outage must not block IPN; the job
-  // worker retries via the standard backoff in lib/einvoice-jobs.ts.
-  if (success && settled.count === 1) {
+  // Fire-and-forget e-invoice — only for a capture that actually landed on a
+  // PAID order. T-VAN outage must not block IPN; the job worker retries.
+  if (captured && settled.count === 1 && orderId) {
     void import("./einvoice").then(({ enqueueEinvoiceForOrder }) =>
-      enqueueEinvoiceForOrder(payment.orderId).catch((err) => {
-        console.error(JSON.stringify({ level: "error", event: "einvoice_enqueue_failed", orderId: payment.orderId, message: String(err) }));
+      enqueueEinvoiceForOrder(orderId).catch((err) => {
+        console.error(JSON.stringify({ level: "error", event: "einvoice_enqueue_failed", orderId, message: String(err) }));
       })
     );
   }
 
   return success
-    ? { ok: true, rspCode: "00", message: "Confirm Success", orderId: payment.orderId }
-    : { ok: true, rspCode: "01", message: "Payment failed at gateway", orderId: payment.orderId };
+    ? { ok: true, rspCode: "00", message: "Confirm Success", orderId,
+        settled: captured ? "PAID" : "REFUND_REQUIRED" }
+    : { ok: true, rspCode: "01", message: "Payment failed at gateway", orderId, settled: "FAILED" };
 }

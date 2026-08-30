@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest'
+import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { embeddingConfigured } from './embeddings'
 
 describe('embeddingConfigured', () => {

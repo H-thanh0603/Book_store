@@ -85,8 +85,10 @@ describe("topSku", () => {
 
 describe("stockOnHand", () => {
   it("rolls up by SKU+store+location and computes value", async () => {
-    store.set("b1", { quantity: 10, variant: { sku: "S1", product: { name: "A" }, price: 1000n }, location: { name: "Shelf", store: { name: "Q1", code: "Q1" } } });
-    store.set("b2", { quantity: 5, variant: { sku: "S1", product: { name: "A" }, price: 1000n }, location: { name: "Stock", store: { name: "Q1", code: "Q1" } } });
+    // Mock matches the fixed stockOnHand select: onHand + current retail
+    // price row (the old `quantity`/`variant.price` columns never existed).
+    store.set("b1", { onHand: 10, variant: { sku: "S1", product: { name: "A" }, prices: [{ amount: 1000n }] }, location: { name: "Shelf", store: { name: "Q1", code: "Q1" } } });
+    store.set("b2", { onHand: 5, variant: { sku: "S1", product: { name: "A" }, prices: [{ amount: 1000n }] }, location: { name: "Stock", store: { name: "Q1", code: "Q1" } } });
     const r = await stockOnHand(P);
     expect(r.rows[0]).toEqual(["S1", "A", "Q1", "Shelf", 10, 10000]);
     expect(r.rows[1]).toEqual(["S1", "A", "Q1", "Stock", 5, 5000]);

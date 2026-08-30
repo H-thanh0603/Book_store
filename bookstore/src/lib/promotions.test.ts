@@ -11,7 +11,7 @@ vi.mock('./db', () => ({
   prisma: mockPrisma,
 }))
 
-import { prisma } from './db'
+import {} from './db'
 
 describe('evaluatePromotions', () => {
   beforeEach(() => { vi.clearAllMocks() })

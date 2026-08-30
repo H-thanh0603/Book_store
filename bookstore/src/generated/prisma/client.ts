@@ -102,6 +102,36 @@ export type RolePermission = Prisma.RolePermissionModel
  */
 export type Session = Prisma.SessionModel
 /**
+ * Model Plan
+ * 
+ */
+export type Plan = Prisma.PlanModel
+/**
+ * Model Subscription
+ * 
+ */
+export type Subscription = Prisma.SubscriptionModel
+/**
+ * Model BillingInvoice
+ * 
+ */
+export type BillingInvoice = Prisma.BillingInvoiceModel
+/**
+ * Model SupportConversation
+ * 
+ */
+export type SupportConversation = Prisma.SupportConversationModel
+/**
+ * Model SupportMessage
+ * 
+ */
+export type SupportMessage = Prisma.SupportMessageModel
+/**
+ * Model CustomerSession
+ * 
+ */
+export type CustomerSession = Prisma.CustomerSessionModel
+/**
  * Model RateLimitBucket
  * 
  */
@@ -401,3 +431,28 @@ export type JobRun = Prisma.JobRunModel
  * 
  */
 export type LossAlert = Prisma.LossAlertModel
+/**
+ * Model LossPreventionRule
+ * 
+ */
+export type LossPreventionRule = Prisma.LossPreventionRuleModel
+/**
+ * Model EInvoice
+ * 
+ */
+export type EInvoice = Prisma.EInvoiceModel
+/**
+ * Model EInvoiceAttempt
+ * 
+ */
+export type EInvoiceAttempt = Prisma.EInvoiceAttemptModel
+/**
+ * Model WebhookEndpoint
+ * 
+ */
+export type WebhookEndpoint = Prisma.WebhookEndpointModel
+/**
+ * Model WebhookDelivery
+ * 
+ */
+export type WebhookDelivery = Prisma.WebhookDeliveryModel

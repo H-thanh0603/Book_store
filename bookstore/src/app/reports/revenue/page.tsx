@@ -3,13 +3,11 @@ import { useEffect, useState } from "react";
 import Nav from "../../nav";
 import {
   TrendingUp,
-  TrendingDown,
   DollarSign,
   ShoppingCart,
   BarChart3,
   Store,
   Download,
-  Calendar,
 } from "lucide-react";
 
 type RevenueData = {
@@ -64,6 +62,7 @@ export default function RevenueReportPage() {
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-fetch; load() is not memoized, adding it would refetch every render
   useEffect(() => { void load(); }, []);
 
   function exportCSV() {

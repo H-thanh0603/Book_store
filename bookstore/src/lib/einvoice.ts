@@ -16,10 +16,10 @@
 // upstream.
 
 import { prisma } from "./db";
+import { Prisma } from "../generated/prisma/client";
 import { fail } from "./api";
 import { sealSecret, openSecret, isSealed } from "./secret-box";
 import { createHmac, randomUUID } from "node:crypto";
-import type { Prisma } from "../generated/prisma/client";
 
 export type EInvoiceInput = {
   id: string;             // our EInvoice.id
@@ -231,7 +231,8 @@ export async function enqueueEinvoice(input: {
   if (existing) return existing;
   const provider = await resolveProvider();
   const cfg = await loadProviderConfig(provider);
-  return db.eInvoice.create({
+  try {
+    return await db.eInvoice.create({
     data: {
       orgId: input.orgId,
       storeId: input.storeId,
@@ -248,7 +249,17 @@ export async function enqueueEinvoice(input: {
       tax: TAX,
       total: input.total,
     },
-  });
+    });
+  } catch (error) {
+    // Two concurrent enqueues for the same order: the unique(orderId) index
+    // (migration 20260831010000) makes the loser a refetch, not a second
+    // tax invoice.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const row = await db.eInvoice.findFirst({ where: { orderId: input.orderId } });
+      if (row) return row;
+    }
+    throw error;
+  }
 }
 
 /** Mark a row PENDING and stamp the next poll time. Worker holds the row while in flight. */
@@ -288,23 +299,30 @@ export async function recordAttempt(args: {
 // Fire-and-forget: a T-VAN outage must not block a paid sale.
 
 export async function enqueueEinvoiceForPosTransaction(txnId: string) {
+  // PosTransaction has no `store` relation (storeId only) — look it up
+  // separately for the org snapshot.
   const txn = await prisma.posTransaction.findUnique({
     where: { id: txnId },
     include: {
-      store: { include: { region: { include: { org: true } } } },
       customer: true,
       items: { include: { variant: { include: { product: true } } } },
     },
   });
   if (!txn) return null;
+  const store = await prisma.store.findUnique({
+    where: { id: txn.storeId },
+    include: { region: { include: { org: true } } },
+  });
   const subtotal = txn.subtotal + txn.discountTotal; // gross before discount for tax line
   return enqueueEinvoice({
     orderId: `POS:${txnId}`,
     orderKind: "POS",
-    orgId: txn.store?.region?.org?.id ?? "",
+    orgId: store?.region?.org?.id ?? "",
     storeId: txn.storeId,
     customerName: txn.customer?.name || "Khách lẻ",
-    customerTaxCode: txn.customer?.taxCode ?? null,
+    // Customer has no taxCode column in this schema — the field is reserved
+    // for when business buyers become first-class customers.
+    customerTaxCode: null,
     customerEmail: txn.customer?.email ?? null,
     customerAddress: txn.customer?.address ?? null,
     subtotal,

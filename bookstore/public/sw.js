@@ -143,14 +143,14 @@ function openDB() {
 self.addEventListener("message", (event) => {
   if (event.data?.type === "CACHE_PRODUCTS") {
     // Pre-cache product list for offline
-    fetch("/api/products?limit=500")
+    fetch("/api/products?take=200")
       .then((r) => r.json())
       .then((data) => {
         const response = new Response(JSON.stringify(data), {
           headers: { "Content-Type": "application/json" },
         });
         caches.open(PRODUCT_CACHE).then((cache) => {
-          cache.put("/api/products?limit=500", response);
+          cache.put("/api/products?take=200", response);
         });
       })
       .catch(() => {});

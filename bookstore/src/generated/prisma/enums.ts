@@ -9,6 +9,17 @@
 * 🟢 You can import this file directly.
 */
 
+export const OrgStatus = {
+  TRIAL: 'TRIAL',
+  ACTIVE: 'ACTIVE',
+  PAST_DUE: 'PAST_DUE',
+  SUSPENDED: 'SUSPENDED',
+  CANCELLED: 'CANCELLED'
+} as const
+
+export type OrgStatus = (typeof OrgStatus)[keyof typeof OrgStatus]
+
+
 export const ProductStatus = {
   draft: 'draft',
   active: 'active',
@@ -98,6 +109,7 @@ export type PromoChannel = (typeof PromoChannel)[keyof typeof PromoChannel]
 export const OrderStatus = {
   NEW: 'NEW',
   CONFIRMED: 'CONFIRMED',
+  PAID: 'PAID',
   ALLOCATED: 'ALLOCATED',
   PICKING: 'PICKING',
   PACKED: 'PACKED',
@@ -243,3 +255,25 @@ export const LossAlertStatus = {
 } as const
 
 export type LossAlertStatus = (typeof LossAlertStatus)[keyof typeof LossAlertStatus]
+
+
+export const EInvoiceProvider = {
+  VNPT: 'VNPT',
+  VIETTEL: 'VIETTEL',
+  MISA: 'MISA',
+  VN_EINVOICE: 'VN_EINVOICE'
+} as const
+
+export type EInvoiceProvider = (typeof EInvoiceProvider)[keyof typeof EInvoiceProvider]
+
+
+export const EInvoiceStatus = {
+  DRAFT: 'DRAFT',
+  PENDING: 'PENDING',
+  SENDING: 'SENDING',
+  ISSUED: 'ISSUED',
+  CANCELED: 'CANCELED',
+  ERROR: 'ERROR'
+} as const
+
+export type EInvoiceStatus = (typeof EInvoiceStatus)[keyof typeof EInvoiceStatus]

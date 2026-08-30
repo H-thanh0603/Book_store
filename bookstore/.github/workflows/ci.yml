@@ -1,0 +1,40 @@
+# CI gate (audit 2026-08-30 OPS-001): the repo had 38 unit-test files and
+# coverage thresholds configured but nothing ever ran them.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      # db.ts throws at import when DATABASE_URL is absent; unit tests never
+      # connect, but Next build imports every route module.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      INTEGRATION_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: bookstore/package-lock.json
+      - name: Install
+        working-directory: bookstore
+        run: npm ci
+      - name: Generate Prisma client
+        working-directory: bookstore
+        run: npx prisma generate
+      - name: Lint
+        working-directory: bookstore
+        run: npm run lint
+
+      - name: Unit tests (coverage thresholds enforced)
+        working-directory: bookstore
+        run: npm test
+      - name: Build
+        working-directory: bookstore
+        run: npm run build

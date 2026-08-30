@@ -41,7 +41,7 @@ const ROLE_PERMS: Record<string, string[]> = {
 
 async function getOrCreateOrg() {
   let org = await prisma.organization.findFirst({ where: { name: "Nhà Sách Melio" } });
-  if (!org) org = await prisma.organization.create({ data: { name: "Nhà Sách Melio" } });
+  if (!org) org = await prisma.organization.create({ data: { name: "Nhà Sách Melio", slug: "melio" } });
   let region = await prisma.region.findFirst({ where: { name: "Miền Nam", orgId: org.id } });
   if (!region) region = await prisma.region.create({ data: { name: "Miền Nam", orgId: org.id } });
   return { org, region };

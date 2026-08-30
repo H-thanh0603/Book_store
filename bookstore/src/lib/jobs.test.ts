@@ -24,7 +24,7 @@ describe('JOB_KINDS', () => {
   })
 
   it('each value is a function', () => {
-    for (const [key, fn] of Object.entries(JOB_KINDS)) {
+    for (const [, fn] of Object.entries(JOB_KINDS)) {
       expect(typeof fn).toBe('function')
     }
   })

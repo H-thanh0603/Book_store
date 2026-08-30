@@ -16,9 +16,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   if (provider === "vnpay") {
     const result = await settleVnpayResponse(req.nextUrl.searchParams);
     const txnRef = req.nextUrl.searchParams.get("vnp_TxnRef") ?? "unknown";
+    const completed = result.settled === "PAID";
     emit({
-      eventId: `vnpay:${result.ok ? "completed" : "failed"}:${txnRef}`,
-      eventType: result.ok ? "payment.completed" : "payment.failed",
+      eventId: `vnpay:${completed ? "completed" : "failed"}:${txnRef}`,
+      eventType: completed ? "payment.completed" : "payment.failed",
       orgId: "default",
       payload: { provider: "vnpay", orderId: result.orderId ?? null, rspCode: result.rspCode, message: result.message },
     }).catch((err) =>
@@ -35,9 +36,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pro
   if (provider === "momo") {
     const result = await settleMomoResponse(req.nextUrl.searchParams);
     const txnRef = req.nextUrl.searchParams.get("orderId") ?? "unknown";
+    const completed = result.settled === "PAID";
     emit({
-      eventId: `momo:${result.ok ? "completed" : "failed"}:${txnRef}`,
-      eventType: result.ok ? "payment.completed" : "payment.failed",
+      eventId: `momo:${completed ? "completed" : "failed"}:${txnRef}`,
+      eventType: completed ? "payment.completed" : "payment.failed",
       orgId: "default",
       payload: { provider: "momo", orderId: result.orderId ?? null, rspCode: result.rspCode, message: result.message },
     }).catch((err) =>
@@ -50,9 +52,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pro
     const parsed = (() => { try { return JSON.parse(raw); } catch { return {}; } })() as { data?: Record<string, unknown>; mac?: string };
     const result = await settleZaloPayResponse(raw, parsed);
     const appTransId = String((parsed.data as { app_trans_id?: string } | undefined)?.app_trans_id ?? "unknown");
+    const completed = result.settled === "PAID";
     emit({
-      eventId: `zalopay:${result.return_code === 1 ? "completed" : "failed"}:${appTransId}`,
-      eventType: result.return_code === 1 ? "payment.completed" : "payment.failed",
+      eventId: `zalopay:${completed ? "completed" : "failed"}:${appTransId}`,
+      eventType: completed ? "payment.completed" : "payment.failed",
       orgId: "default",
       payload: { provider: "zalopay", appTransId, returnCode: result.return_code, message: result.return_message },
     }).catch((err) =>

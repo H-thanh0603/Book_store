@@ -5,7 +5,6 @@ import {
   Gift,
   Plus,
   Search,
-  Eye,
   XCircle,
   CheckCircle2,
   AlertCircle,
@@ -46,6 +45,7 @@ export default function GiftCardsPage() {
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-fetch; load() is not memoized, adding it would refetch every render
   useEffect(() => { void load(); }, [q]);
 
   async function issueCard() {

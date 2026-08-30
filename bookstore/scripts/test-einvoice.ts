@@ -11,7 +11,8 @@
 import assert from "node:assert/strict";
 import "dotenv/config";
 import { prisma } from "../src/lib/db";
-import { sealConfig, sealSecret } from "../src/lib/einvoice";
+import { sealConfig } from "../src/lib/einvoice";
+import { sealSecret } from "../src/lib/secret-box";
 import { issuePendingInvoices, pollPendingInvoices } from "../src/lib/einvoice-jobs";
 
 const RUN_ID = `einvoice-smoke-${Date.now()}`;
@@ -25,7 +26,7 @@ async function setup() {
   const customer = await prisma.customer.upsert({
     where: { phone: "0900000999" },
     update: {},
-    create: { phone: "0900000999", name: "E-Invoice Test Buyer" },
+    create: { code: `EINV-${Date.now()}`, phone: "0900000999", name: "E-Invoice Test Buyer" },
   });
 
   const number = `ORD-EINV-${Date.now()}`;
@@ -33,7 +34,7 @@ async function setup() {
     data: {
       number,
       channel: "WEB",
-      type: "DELIVERY",
+      type: "delivery",
       storeId: null,
       customerId: customer.id,
       status: "CONFIRMED",

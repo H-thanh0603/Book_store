@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { applyMovement, getAvailable, getAvailableForStore } from './inventory'
+import { getAvailable, getAvailableForStore } from './inventory'
 
 vi.mock('./db', () => ({
   prisma: {

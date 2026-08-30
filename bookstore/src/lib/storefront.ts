@@ -305,6 +305,10 @@ async function withPayment(
   opts: { ip?: string; baseUrl?: string },
 ): Promise<{ id: string; number: string; total: bigint; status?: unknown; paymentUrl?: string }> {
   if (method !== "VNPAY") return order;
+  // A retry on an already-settled or expired/cancelled order must not mint a
+  // fresh payment URL — that is the paid-after-cancel path (audit MONEY-001).
+  if (order.status && order.status !== "CONFIRMED")
+    fail(409, "INVALID_STATUS_TRANSITION", `Order is ${order.status} and can no longer be paid online`);
   const paymentUrl = await buildVnpayUrl(
     { id: order.id, number: order.number, total: order.total },
     opts.ip ?? "", opts.baseUrl ?? "",

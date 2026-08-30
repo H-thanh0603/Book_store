@@ -31,9 +31,16 @@ export async function expireStaleReservations() {
   const actorId = await systemActorId();
 
   // Only orders still waiting for confirmation qualify; anything further along
-  // (ALLOCATED/PICKING/…) has staff actively working it.
+  // (ALLOCATED/PICKING/…) has staff actively working it. The webPayments
+  // exclusion is belt-and-braces: settlement claims CONFIRMED → PAID before
+  // flipping the WebPayment, so this should be redundant — but legacy rows
+  // written before the PAID state existed (money captured, order still
+  // CONFIRMED) must not be cancelled with their reservation.
   const candidates = await prisma.order.findMany({
-    where: { channel: { in: ["WEB", "APP"] }, status: "CONFIRMED", createdAt: { lt: cutoff } },
+    where: {
+      channel: { in: ["WEB", "APP"] }, status: "CONFIRMED", createdAt: { lt: cutoff },
+      webPayments: { none: { status: "PAID" } },
+    },
     include: { items: true },
     orderBy: { createdAt: "asc" },
     take: BATCH,

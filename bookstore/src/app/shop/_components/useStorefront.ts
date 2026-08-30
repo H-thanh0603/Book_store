@@ -10,7 +10,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { money, readingAtmospheres } from "./data";
 import type {
   Catalog,
-  CartLine,
   Fulfillment,
   GiftWrapping,
   PaymentMethodChoice,

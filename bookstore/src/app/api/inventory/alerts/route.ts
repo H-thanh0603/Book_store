@@ -3,7 +3,6 @@ import { prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { sendMail } from "@/lib/mail";
-import { lowStockAlertEmail } from "@/lib/email-templates";
 
 // POST /api/inventory/alerts — Check for low stock items and send email alerts
 // Called by cron job or manually triggered. Items with onHand <= threshold

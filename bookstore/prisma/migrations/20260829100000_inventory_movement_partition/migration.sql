@@ -23,6 +23,16 @@ BEGIN;
 -- 1. Preserve data.
 ALTER TABLE "InventoryMovement" RENAME TO "InventoryMovement_legacy";
 
+-- Free the index/constraint names the recreated table needs below — the
+-- renamed legacy table keeps them, and step 6 drops it with the _legacy
+-- names still attached. (The original version collided here: creating an
+-- index with a name still owned by the legacy table aborts the migration.)
+ALTER INDEX "InventoryMovement_pkey" RENAME TO "InventoryMovement_legacy_pkey";
+ALTER INDEX "InventoryMovement_variantId_locationId_idx" RENAME TO "InventoryMovement_legacy_variantId_locationId_idx";
+ALTER INDEX "InventoryMovement_createdAt_idx" RENAME TO "InventoryMovement_legacy_createdAt_idx";
+ALTER INDEX "InventoryMovement_refType_refId_idx" RENAME TO "InventoryMovement_legacy_refType_refId_idx";
+ALTER INDEX "InventoryMovement_sale_createdAt_variant_location_idx" RENAME TO "InventoryMovement_legacy_sale_createdAt_variant_location_idx";
+
 -- 2. Recreate as partitioned. The column set + indexes are unchanged so
 -- application code (Prisma + raw SQL) keeps working.
 CREATE TABLE "InventoryMovement" (
@@ -82,12 +92,12 @@ BEGIN
 END $$;
 
 -- 5. Copy legacy data. createdAt is preserved so each row lands in the
--- correct partition. We disable triggers during the copy to keep the
--- audit ledger quiet; the move is internal.
-SET session_replication_role = replica;
+-- correct partition. (A previous version SET session_replication_role =
+-- replica around the copy to quiet triggers, but that requires superuser —
+-- most managed/dev roles fail the whole migration here. InventoryMovement
+-- has no user triggers, so the plain copy is equivalent.)
 INSERT INTO "InventoryMovement"
   SELECT * FROM "InventoryMovement_legacy";
-SET session_replication_role = origin;
 
 -- 6. Drop legacy. Wrapped in a savepoint so the transaction stays
 -- usable if the operator wants to keep the legacy table for a rollback

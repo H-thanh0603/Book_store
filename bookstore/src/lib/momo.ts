@@ -62,7 +62,8 @@ export async function buildMomoUrl(order: { id: string; number: string; total: b
     requestId,
     requestType: "captureWallet",
   });
-  const signature = hmac(process.env.MOMO_SECRET_KEY!, raw);
+  // (hmac → momoHmac: buildMomoUrl referenced a name that didn't exist — pre-existing runtime crash)
+  const signature = momoHmac(process.env.MOMO_SECRET_KEY!, raw);
   const res = await fetch(CREATE_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -95,7 +96,15 @@ export async function buildMomoUrl(order: { id: string; number: string; total: b
  * warnings the VNPay path emits, then fire e-invoice on first
  * success.
  */
-export async function settleMomoResponse(searchParams: URLSearchParams) {
+export type MomoSettleResult = {
+  ok: boolean;
+  rspCode: string;
+  message: string;
+  orderId?: string;
+  settled?: "PAID" | "FAILED" | "REFUND_REQUIRED" | "ALREADY_SETTLED";
+};
+
+export async function settleMomoResponse(searchParams: URLSearchParams): Promise<MomoSettleResult> {
   if (!process.env.MOMO_SECRET_KEY || !process.env.MOMO_ACCESS_KEY
       || !process.env.MOMO_IPN_URL || !process.env.MOMO_RETURN_URL) {
     return { ok: false, rspCode: "97", message: "MoMo not configured" };
@@ -127,21 +136,28 @@ export async function settleMomoResponse(searchParams: URLSearchParams) {
   if (BigInt(params.amount ?? "0") !== payment.amount)
     return { ok: false, rspCode: "04", message: "Amount mismatch" };
   if (payment.status !== "PENDING")
-    return { ok: true, rspCode: "00", message: "Confirm Success" };
+    return { ok: true, rspCode: "00", message: "Confirm Success", orderId: payment.orderId ?? undefined, settled: "ALREADY_SETTLED" };
 
   const success = Number(params.resultCode ?? "1") === 0;
-  if (success) {
+  const orderId = payment.orderId ?? undefined;
+  // Real transition CONFIRMED → PAID (see settleVnpayResponse): expiry and
+  // manual cancel claim CONFIRMED rows, so a captured payment is safe. A lost
+  // claim means the order is gone — record REFUND_REQUIRED, never PAID.
+  let claimed = false;
+  if (success && orderId) {
     const claim = await prisma.order.updateMany({
-      where: { id: payment.orderId, status: "CONFIRMED" },
-      data: { status: "CONFIRMED" },
+      where: { id: orderId, status: "CONFIRMED" },
+      data: { status: "PAID" },
     });
-    if (claim.count !== 1)
-      console.warn(JSON.stringify({ event: "momo_paid_after_cancel", orderId: payment.orderId }));
+    claimed = claim.count === 1;
+    if (!claimed)
+      console.warn(JSON.stringify({ event: "momo_paid_after_cancel", orderId }));
   }
+  const captured = success && claimed;
   const settled = await prisma.webPayment.updateMany({
     where: { id: payment.id, status: "PENDING" },
     data: {
-      status: success ? "PAID" : "FAILED",
+      status: !success ? "FAILED" : captured ? "PAID" : "REFUND_REQUIRED",
       responseCode: params.resultCode ?? null,
       rawParams: params,
       paidAt: success ? new Date() : null,
@@ -149,14 +165,17 @@ export async function settleMomoResponse(searchParams: URLSearchParams) {
   });
   if (settled.count === 0)
     console.info(JSON.stringify({ event: "momo_duplicate_callback", txnRef: payment.txnRef }));
-  if (success && settled.count === 1) {
+  if (success && !captured)
+    console.error(JSON.stringify({ level: "error", event: "momo_refund_required", orderId, txnRef: payment.txnRef }));
+  if (captured && settled.count === 1 && orderId) {
     void import("./einvoice").then(({ enqueueEinvoiceForOrder }) =>
-      enqueueEinvoiceForOrder(payment.orderId).catch((err) => {
-        console.error(JSON.stringify({ level: "error", event: "einvoice_enqueue_failed", orderId: payment.orderId, message: String(err) }));
+      enqueueEinvoiceForOrder(orderId).catch((err) => {
+        console.error(JSON.stringify({ level: "error", event: "einvoice_enqueue_failed", orderId, message: String(err) }));
       })
     );
   }
   return success
-    ? { ok: true, rspCode: "00", message: "Confirm Success", orderId: payment.orderId }
-    : { ok: true, rspCode: "01", message: `MoMo failed: ${params.message ?? params.resultCode}`, orderId: payment.orderId };
+    ? { ok: true, rspCode: "00", message: "Confirm Success", orderId,
+        settled: captured ? "PAID" : "REFUND_REQUIRED" }
+    : { ok: true, rspCode: "01", message: `MoMo failed: ${params.message ?? params.resultCode}`, orderId, settled: "FAILED" };
 }

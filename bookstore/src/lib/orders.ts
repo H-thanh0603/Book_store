@@ -44,7 +44,13 @@ export async function createReservedOrder(
     include: {
       product: true,
       prices: {
-        where: { priceList: { kind: { in: ["online", "retail"] } }, OR: [{ validTo: null }, { validTo: { gt: new Date() } }] },
+        // validFrom lte now (audit PRICE-001) — same fix as the POS path;
+        // without it a future-dated price row wins `orderBy validFrom desc`.
+        where: {
+          priceList: { kind: { in: ["online", "retail"] } },
+          validFrom: { lte: new Date() },
+          OR: [{ validTo: null }, { validTo: { gt: new Date() } }],
+        },
         include: { priceList: true }, orderBy: { validFrom: "desc" },
       },
     },
