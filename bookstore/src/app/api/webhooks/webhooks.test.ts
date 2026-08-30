@@ -13,9 +13,19 @@ const auth = { orgId: "org-A", userId: "u1", permissions: new Set(["settings.wri
 vi.mock("@/lib/db", () => ({
   prisma: {
     webhookEndpoint: {
-      findMany: vi.fn(async ({ where }: any) => {
+      findMany: vi.fn(async ({ where, select }: any) => {
         const list = [...endpoints.values()].filter((e) => !where || (where.orgId ? e.orgId === where.orgId : true));
-        return list;
+        if (!select) return list;
+        // Prisma `select` is an explicit allow-list: only keys present in
+        // the select object are returned. `select: { secret: true }` is
+        // allowed alongside other true keys.
+        return list.map((e) => {
+          const out: any = {};
+          for (const k of Object.keys(select)) {
+            if (select[k]) out[k] = e[k];
+          }
+          return out;
+        });
       }),
       create: vi.fn(async ({ data, select }: any) => {
         const id = `ep-${endpoints.size + 1}`;

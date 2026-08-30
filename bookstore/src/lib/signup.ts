@@ -20,6 +20,7 @@ const TRIAL_DAYS = 14;
 function slugify(name: string) {
   return name
     .toLowerCase()
+    .replace(/đ/g, "d") // Đ/đ don't decompose under NFD; map before normalize
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, "-")

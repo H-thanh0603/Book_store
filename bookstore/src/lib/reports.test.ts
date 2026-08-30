@@ -4,27 +4,32 @@
 // prisma call, CSV adds a BOM and escapes commas/quotes.
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const store = new Map<string, any>();
-const findMany = vi.fn(async ({ where }: any) => {
-  return [...store.values()].filter((row: any) => {
-    if (where?.status?.in && !where.status.in.includes(row.status)) return false;
-    if (where?.createdAt?.gte && row.createdAt < where.createdAt.gte) return false;
-    if (where?.createdAt?.lte && row.createdAt > where.createdAt.lte) return false;
-    if (where?.store?.region?.orgId && row._orgId !== where.store.region.orgId) return false;
-    if (where?.store?.id && row.storeId !== where.store.id) return false;
-    if (where?.order) {
-      if (where.order.createdAt?.gte && row._orderCreatedAt < where.order.createdAt.gte) return false;
-      if (where.order.createdAt?.lte && row._orderCreatedAt > where.order.createdAt.lte) return false;
-      if (where.order.status?.in && !where.order.status.in.includes(row._orderStatus)) return false;
-      if (where.order.store?.region?.orgId && row._orderOrgId !== where.order.store.region.orgId) return false;
-    }
-    return true;
+const hoisted = vi.hoisted(() => {
+  const store = new Map<string, any>();
+  const findMany = vi.fn(async ({ where }: any) => {
+    return [...store.values()].filter((row: any) => {
+      if (where?.status?.in && !where.status.in.includes(row.status)) return false;
+      if (where?.createdAt?.gte && row.createdAt < where.createdAt.gte) return false;
+      if (where?.createdAt?.lte && row.createdAt > where.createdAt.lte) return false;
+      if (where?.store?.region?.orgId && row._orgId !== where.store.region.orgId) return false;
+      if (where?.store?.id && row.storeId !== where.store.id) return false;
+      if (where?.order) {
+        if (where.order.createdAt?.gte && row._orderCreatedAt < where.order.createdAt.gte) return false;
+        if (where.order.createdAt?.lte && row._orderCreatedAt > where.order.createdAt.lte) return false;
+        if (where.order.status?.in && !where.order.status.in.includes(row._orderStatus)) return false;
+        if (where.order.store?.region?.orgId && row._orderOrgId !== where.order.store.region.orgId) return false;
+      }
+      return true;
+    });
   });
+  return { store, findMany };
 });
 
-vi.mock("./db", () => ({ prisma: { order: { findMany }, orderItem: { findMany: findMany }, inventoryBalance: { findMany: findMany } } }));
+const { store, findMany } = hoisted;
 
-const memCache = new Map<string, any>();
+vi.mock("./db", () => ({ prisma: { order: { findMany: hoisted.findMany }, orderItem: { findMany: hoisted.findMany }, inventoryBalance: { findMany: hoisted.findMany } } }));
+
+const memCache = vi.hoisted(() => new Map<string, any>());
 vi.mock("./redis", () => ({
   cacheGet: vi.fn(async (k: string) => memCache.get(k) ?? null),
   cacheSet: vi.fn(async (k: string, v: any) => { memCache.set(k, v); }),
@@ -104,7 +109,7 @@ describe("cache + CSV", () => {
       rows: [["x,y", 'q"uote'], ["ok", 1]],
     });
     expect(csv.charCodeAt(0)).toBe(0xfeff);
-    expect(csv.split("\r\n")[0]).toBe("A,B");
+    expect(csv.split("\r\n")[0]).toBe("﻿A,B");
     expect(csv).toContain('"x,y"');
     expect(csv).toContain('"q""uote"');
   });

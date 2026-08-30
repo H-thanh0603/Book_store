@@ -6,18 +6,17 @@ import { embedText } from "./embeddings";
 import { buildVnpayUrl, vnpayConfigured } from "./vnpay";
 import { sendMail } from "./mail";
 import { orderConfirmationEmail, type OrderEmailData } from "./email-templates";
+import { cacheGet, cacheSet } from "./redis";
 
-// ponytail: tiny in-process cache for the public catalog (30s TTL, LRU-capped).
-// Absorbs burst traffic and scrapes; a CDN in front makes this redundant.
-const CATALOG_TTL_MS = 30_000;
-const CATALOG_CACHE_MAX = 100;
+// Cache layer: Redis (shared across instances) with in-process fallback.
+const CATALOG_TTL_SEC = 30;
 type CatalogResult = {
   products: { id: string; name: string; description: string | null; createdAt: Date; variants: unknown[] }[];
   categories: { id: string; name: string }[];
   stores: { id: string; name: string; code: string }[];
   storeId: string;
 };
-const catalogCache = new Map<string, { value: CatalogResult; expiresAt: number }>();
+const inProcessCatalog = new Map<string, { value: CatalogResult; expiresAt: number }>();
 
 export async function listStorefrontProducts(input: {
   q?: string | null;
@@ -25,15 +24,23 @@ export async function listStorefrontProducts(input: {
   storeId?: string | null;
 }) {
   const cacheKey = JSON.stringify([input.q ?? "", input.categoryId ?? "", input.storeId ?? ""]);
-  const cached = catalogCache.get(cacheKey);
+  const redisKey = `catalog:${cacheKey}`;
+
+  // 1. Try Redis
+  const redisVal = await cacheGet<CatalogResult>(redisKey);
+  if (redisVal) return redisVal;
+
+  // 2. Try in-process cache
+  const cached = inProcessCatalog.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
 
+  // 3. Fetch from DB
   const result = await listStorefrontProductsUncached(input);
-  if (catalogCache.size >= CATALOG_CACHE_MAX) {
-    const oldest = catalogCache.keys().next().value;
-    if (oldest !== undefined) catalogCache.delete(oldest);
-  }
-  catalogCache.set(cacheKey, { value: result, expiresAt: Date.now() + CATALOG_TTL_MS });
+
+  // 4. Populate both caches
+  inProcessCatalog.set(cacheKey, { value: result, expiresAt: Date.now() + CATALOG_TTL_SEC * 1000 });
+  await cacheSet(redisKey, result, CATALOG_TTL_SEC);
+
   return result;
 }
 

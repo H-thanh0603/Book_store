@@ -124,20 +124,35 @@ export async function nextBusinessNumber(prefix: string): Promise<string> {
   return `${prefix}-${year}-${String(next).padStart(6, "0")}`;
 }
 
-// ponytail: in-memory cache, refresh only on miss. No TTL — config changes are rare;
-// restart server to pick up a changed value. Swap for DB-listen/period refresh if needed.
-const configCache = new Map<string, { value: unknown; expiresAt: number }>();
-const CONFIG_TTL_MS = 30_000;
+// Cache layer: Redis (when configured) with in-memory fallback.
+// Config changes are rare; 30s TTL absorbs burst reads without stale data.
+import { cacheGet, cacheSet } from "./redis";
+
+const CONFIG_TTL_SEC = 30;
+const inProcessCache = new Map<string, { value: unknown; expiresAt: number }>();
 
 /**
  * Read a SystemConfig JSON value (spec §101). Falls back to `fallback` when the
  * row is missing so callers never crash on an un-seeded key.
+ * Uses Redis cache for multi-instance share; falls back to in-process cache.
  */
 export async function getSystemConfig<T>(key: string, fallback: T): Promise<T> {
-  const cached = configCache.get(key);
+  // 1. Try Redis
+  const redisKey = `syscfg:${key}`;
+  const redisVal = await cacheGet<T>(redisKey);
+  if (redisVal !== null) return redisVal;
+
+  // 2. Try in-process cache
+  const cached = inProcessCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.value as T;
+
+  // 3. Fallback to DB
   const row = await prisma.systemConfig.findUnique({ where: { key } });
   const value = (row?.value as T) ?? fallback;
-  configCache.set(key, { value, expiresAt: Date.now() + CONFIG_TTL_MS });
+
+  // 4. Populate both caches
+  inProcessCache.set(key, { value, expiresAt: Date.now() + CONFIG_TTL_SEC * 1000 });
+  await cacheSet(redisKey, value, CONFIG_TTL_SEC);
+
   return value;
 }

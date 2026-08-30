@@ -23,14 +23,14 @@ export function momoConfigured() {
 }
 
 /** Sort-by-key, encodeURIComponent-on-both-sides, ampersand-joined. */
-function canonical(o: Record<string, string | number>): string {
+export function canonical(o: Record<string, string | number>): string {
   return Object.keys(o)
     .sort()
     .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(String(o[k]))}`)
     .join("&");
 }
 
-function hmac(secret: string, raw: string) {
+export function momoHmac(secret: string, raw: string) {
   return createHmac("sha256", secret).update(raw).digest("hex");
 }
 
@@ -117,7 +117,7 @@ export async function settleMomoResponse(searchParams: URLSearchParams) {
     requestId: params.requestId ?? "",
     requestType: params.requestType ?? "",
   });
-  const expected = hmac(process.env.MOMO_SECRET_KEY, raw);
+  const expected = momoHmac(process.env.MOMO_SECRET_KEY, raw);
   const a = Buffer.from(expected), b = Buffer.from(provided);
   if (!provided || a.length !== b.length || !timingSafeEqual(a, b))
     return { ok: false, rspCode: "97", message: "Invalid signature" };

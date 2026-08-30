@@ -5,7 +5,7 @@ import { createHmac } from "node:crypto";
 
 const payments: any[] = [];
 const orders: any[] = [];
-const enqueue = vi.fn();
+const enqueue = vi.fn(async () => {});
 
 vi.mock("./db", () => ({
   prisma: {
@@ -67,6 +67,9 @@ describe("settleZaloPayResponse", () => {
     const mac = sign(data, "key2");
     const a = await settleZaloPayResponse(data, { data: { data }, mac });
     const b = await settleZaloPayResponse(data, { data: { data }, mac });
+    // settlement fires the einvoice enqueue via a fire-and-forget
+    // dynamic import; flush microtasks before asserting.
+    await new Promise((r) => setTimeout(r, 20));
     expect(a.return_code).toBe(1);
     expect(b.return_code).toBe(1);
     expect(enqueue).toHaveBeenCalledTimes(1);

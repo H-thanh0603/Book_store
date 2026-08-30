@@ -6,7 +6,28 @@ on:
   pull_request:
 
 jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bookstore
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: bookstore/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run test:unit
+      - run: npm run test:coverage
+
   build-test:
+    name: Build & Integration Tests
+    needs: unit-tests
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://bookstore:bookstore@localhost:5432/bookstore
@@ -58,10 +79,6 @@ jobs:
           fi
       - run: npx prisma migrate deploy
       - run: npx prisma db seed
-      - run: npm run lint
-      - run: npx tsc --noEmit
-      - run: npm run test:phase3
-      - run: npm run test:promotions
       - run: npm run build
       - name: Start application
         run: npm run start > /tmp/bookstore.log 2>&1 &
@@ -72,3 +89,15 @@ jobs:
       - run: npm run test:hardening
       - run: npm run test:reset
       - run: npm run test:pos
+      - run: npm run test:phase3
+      - run: npm run test:promotions
+
+  deploy:
+    name: Deploy
+    needs: [unit-tests, build-test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy notification
+        run: echo "✅ All tests passed. Ready for deployment."

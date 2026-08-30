@@ -4,20 +4,33 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // exercised by scripts/test-webhooks.ts; here we only verify the bus
 // control flow (dedup, fan-out filter, retry scheduling, dead-letter).
 
-const prismaMock = {
-  webhookEndpoint: {
-    findMany: vi.fn(),
-  },
-  webhookDelivery: {
-    createMany: vi.fn(),
-    findMany: vi.fn(),
-    findUniqueOrThrow: vi.fn(),
-    update: vi.fn(),
-  },
-};
+const hoisted = vi.hoisted(() => {
+  // Side-table so findUniqueOrThrow can re-fetch what findMany last returned.
+  const lastFindMany: { rows: any[] } = { rows: [] };
+  return {
+    prismaMock: {
+      webhookEndpoint: {
+        findMany: vi.fn(),
+      },
+      webhookDelivery: {
+        createMany: vi.fn(),
+        findMany: vi.fn(async () => lastFindMany.rows),
+        findUniqueOrThrow: vi.fn(async ({ where, include }: any) => {
+          const row = lastFindMany.rows.find((r: any) => r.id === where.id);
+          if (!row) throw new Error("not found");
+          return include?.endpoint ? row : { id: row.id };
+        }),
+        update: vi.fn(),
+      },
+    },
+    setDueRows: (rows: any[]) => { lastFindMany.rows = rows; },
+  };
+});
 
-vi.mock("./db", () => ({ prisma: prismaMock }));
+vi.mock("./db", () => ({ prisma: hoisted.prismaMock }));
 vi.mock("./einvoice", () => ({ hmacSign: (s: string, b: string) => `sig-${s.length}-${b.length}` }));
+
+const prismaMock = hoisted.prismaMock;
 
 import { emit, processPendingDeliveries, rearmDelivery } from "./webhook-bus";
 
@@ -70,7 +83,7 @@ describe("emit", () => {
 
 describe("processPendingDeliveries", () => {
   it("marks delivered on 2xx and increments attempts", async () => {
-    prismaMock.webhookDelivery.findMany.mockResolvedValue([{
+    hoisted.setDueRows([{
       id: "d1",
       eventId: "evt-1",
       eventType: "order.paid",
@@ -88,7 +101,7 @@ describe("processPendingDeliveries", () => {
   });
 
   it("reschedules with backoff on non-2xx", async () => {
-    prismaMock.webhookDelivery.findMany.mockResolvedValue([{
+    hoisted.setDueRows([{
       id: "d1",
       eventId: "evt-1",
       eventType: "x",
@@ -107,7 +120,7 @@ describe("processPendingDeliveries", () => {
   });
 
   it("dead-letters after MAX_ATTEMPTS", async () => {
-    prismaMock.webhookDelivery.findMany.mockResolvedValue([{
+    hoisted.setDueRows([{
       id: "d1",
       eventId: "evt-1",
       eventType: "x",
@@ -125,7 +138,7 @@ describe("processPendingDeliveries", () => {
   });
 
   it("skips inactive endpoints and marks them delivered with a note", async () => {
-    prismaMock.webhookDelivery.findMany.mockResolvedValue([{
+    hoisted.setDueRows([{
       id: "d1",
       eventId: "evt-1",
       eventType: "x",
@@ -142,7 +155,7 @@ describe("processPendingDeliveries", () => {
   });
 
   it("sends an HMAC signature header on the outgoing POST", async () => {
-    prismaMock.webhookDelivery.findMany.mockResolvedValue([{
+    hoisted.setDueRows([{
       id: "d1",
       eventId: "evt-sig",
       eventType: "x",
@@ -157,7 +170,7 @@ describe("processPendingDeliveries", () => {
     const [, init] = fetchMock.mock.calls[0];
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers["x-melio-event-id"]).toBe("evt-sig");
-    expect(headers["x-melio-signature"]).toMatch(/^t=\d+,v1=sig-8-\d+$/);
+    expect(headers["x-melio-signature"]).toMatch(/^t=\d+,v1=sig-9-\d+$/);
   });
 });
 

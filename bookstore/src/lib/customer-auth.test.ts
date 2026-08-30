@@ -23,7 +23,14 @@ vi.mock("./db", () => ({
         sessionStore.rows.push(row);
         return row;
       }),
-      findUnique: vi.fn(async ({ where }) => sessionStore.rows.find((r) => r.token === where.token) ?? null),
+      findUnique: vi.fn(async ({ where, include }) => {
+        const row = sessionStore.rows.find((r) => r.token === where.token) ?? null;
+        if (!row) return null;
+        if (include?.customer) {
+          return { ...row, customer: customerStore[row.customerId] ?? null };
+        }
+        return row;
+      }),
       deleteMany: vi.fn(async ({ where }) => {
         const before = sessionStore.rows.length;
         sessionStore.rows = sessionStore.rows.filter((r) => {

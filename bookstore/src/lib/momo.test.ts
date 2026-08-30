@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const payments: any[] = [];
 const orders: any[] = [];
-const enqueue = vi.fn();
+const enqueue = vi.fn(async () => {});
 
 vi.mock("./db", () => ({
   prisma: {
@@ -57,22 +57,42 @@ describe("settleMomoResponse", () => {
   });
 
   it("rejects unknown orderId", async () => {
-    const { settleMomoResponse } = await import("./momo");
-    const sp = new URLSearchParams({ orderId: "missing", amount: "0", resultCode: "0" });
+    const { settleMomoResponse, canonical, momoHmac } = await import("./momo");
+    const body = {
+      accessKey: "AK", amount: "0", extraData: "",
+      orderId: "missing", orderInfo: "", partnerCode: "MOMO",
+      requestId: "r1", requestType: "captureWallet",
+    };
+    const sig = momoHmac("SK", canonical({
+      ...body,
+      ipnUrl: "https://app.test/momo/ipn",
+      redirectUrl: "https://app.test/momo/return",
+    }));
+    const sp = new URLSearchParams({ ...body, signature: sig });
     const result = await settleMomoResponse(sp);
     expect(result.rspCode).toBe("01");
   });
 
   it("is idempotent on duplicate callbacks (PENDING → PAID only once)", async () => {
+    const { settleMomoResponse, canonical, momoHmac } = await import("./momo");
     payments.push({ id: "p1", orderId: "o1", txnRef: "o1", amount: 100n, status: "PENDING" });
     orders.push({ id: "o1", status: "CONFIRMED" });
-    const { settleMomoResponse } = await import("./momo");
-    const sp = new URLSearchParams({
-      orderId: "o1", amount: "100", resultCode: "0", requestId: "r1",
-      partnerCode: "MOMO", accessKey: "AK", orderInfo: "x", requestType: "captureWallet", extraData: "",
-    });
+    const body = {
+      accessKey: "AK", amount: "100", extraData: "",
+      orderId: "o1", orderInfo: "x", partnerCode: "MOMO",
+      requestId: "r1", requestType: "captureWallet",
+    };
+    const sig = momoHmac("SK", canonical({
+      ...body,
+      ipnUrl: "https://app.test/momo/ipn",
+      redirectUrl: "https://app.test/momo/return",
+    }));
+    const sp = new URLSearchParams({ ...body, signature: sig, resultCode: "0" });
     const a = await settleMomoResponse(sp);
     const b = await settleMomoResponse(sp);
+    // settlement fires the einvoice enqueue via a fire-and-forget
+    // dynamic import; flush microtasks before asserting.
+    await new Promise((r) => setTimeout(r, 20));
     expect(a.ok).toBe(true);
     expect(b.ok).toBe(true);
     expect(enqueue).toHaveBeenCalledTimes(1);
