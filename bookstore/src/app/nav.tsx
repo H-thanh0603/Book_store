@@ -23,6 +23,7 @@ import {
   ClipboardCheck,
   Building2,
   ChevronDown,
+  Library,
 } from "lucide-react";
 import SupportWidget from "./support-widget";
 
@@ -83,6 +84,13 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/reports", label: "Báo cáo", icon: Activity },
       { href: "/audit-logs", label: "Audit log", icon: ShieldCheck },
+    ],
+  },
+  {
+    label: "Showcase",
+    icon: Library,
+    items: [
+      { href: "/bookshelf", label: "Bookshelf 3D", icon: Library, highlight: true },
     ],
   },
 ];

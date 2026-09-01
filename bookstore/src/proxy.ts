@@ -17,6 +17,7 @@ const PUBLIC_PAGE_PREFIXES = [
   "/login",
   "/shop",
   "/track",
+  "/bookshelf",
   "/api/health",
 ];
 

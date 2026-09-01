@@ -1,7 +1,7 @@
 // Section 2: REFINED EDITORIAL HEADER (logo, mega-search, hubs, store switcher, cart)
 // Mirrors the original shop/page.tsx header + department sub-navigation.
 import Link from "next/link";
-import { BookOpen, BookMarked, Gift, Search, Store, ShoppingBag, Trophy, X } from "lucide-react";
+import { BookOpen, BookMarked, Gift, Search, Store, ShoppingBag, Trophy, User, X } from "lucide-react";
 import type { ComponentType } from "react";
 import type { Product } from "./types";
 import { departments, hotSearchKeywords } from "./data";
