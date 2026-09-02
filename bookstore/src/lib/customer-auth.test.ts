@@ -127,7 +127,7 @@ describe("destroyCustomerSession", () => {
 });
 
 describe("password roundtrip", () => {
-  it("checkCustomerPassword returns true after setCustomerPassword", async () => {
+  it("checkCustomerPassword returns true after setCustomerPassword", { timeout: 30_000 }, async () => {
     customerStore["c1"] = { id: "c1", email: null, phone: "0901", name: "A" };
     await setCustomerPassword("c1", "verysecret123");
     expect(await checkCustomerPassword("c1", "verysecret123")).toBe(true);

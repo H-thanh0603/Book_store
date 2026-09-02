@@ -8,7 +8,8 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // camera=(self): POS barcode scanner needs getUserMedia on same origin (audit FE).
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
           { key: "X-Frame-Options", value: "DENY" },
           {
             // Fonts are self-hosted via next/font, so nothing outside 'self' is needed.

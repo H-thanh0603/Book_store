@@ -9,6 +9,7 @@
 import { prisma } from "./db";
 import {
   adapterFor, loadProviderConfig, recordAttempt, transitionToPending,
+  enqueueEinvoiceForOrder,
   type EInvoiceInput, type ProviderConfig,
 } from "./einvoice";
 
@@ -17,6 +18,34 @@ const POLL_BACKOFF_MS = [5_000, 15_000, 60_000, 300_000, 900_000, 3_600_000];
 const MAX_POLL_ATTEMPTS = POLL_BACKOFF_MS.length;
 
 const BATCH_SIZE = 20;
+
+// A crash between the SENDING flip and the PENDING transition strands the row:
+// issue only picks DRAFT, poll only picks PENDING. Rows stuck in SENDING past
+// this grace window go back to DRAFT for the next issue pass. Must exceed the
+// slowest single provider call (timeout is 30s), hence 5 minutes.
+const SENDING_STALE_MS = 5 * 60_000;
+
+async function requeueStaleSending() {
+  const cutoff = new Date(Date.now() - SENDING_STALE_MS);
+  const r = await prisma.eInvoice.updateMany({
+    where: { status: "SENDING", updatedAt: { lt: cutoff } },
+    data: { status: "DRAFT", errorMessage: "requeued: stuck in SENDING" },
+  });
+  return r.count;
+}
+
+// Safety net: if the IPN enqueue crashed before creating the row, nothing
+// else retries it (the fire-and-forget in vnpay.ts only logs). Sweep paid
+// orders that still lack an EInvoice row and re-enqueue. enqueueEinvoice is
+// idempotent on orderId, so concurrent IPN + sweep is safe.
+async function backfillMissedInvoices() {
+  const paid = await prisma.order.findMany({
+    where: { status: "PAID", eInvoices: { none: {} }, createdAt: { gte: new Date(Date.now() - 7 * 86_400_000) } },
+    select: { id: true }, take: BATCH_SIZE, orderBy: { createdAt: "asc" },
+  });
+  for (const o of paid) await enqueueEinvoiceForOrder(o.id);
+  return paid.length;
+}
 
 async function buildInput(einvoiceId: string, orderKind: "POS" | "WEB", templateCode: string): Promise<EInvoiceInput> {
   const row = await prisma.eInvoice.findUniqueOrThrow({ where: { id: einvoiceId } });
@@ -56,6 +85,8 @@ async function buildInput(einvoiceId: string, orderKind: "POS" | "WEB", template
 
 /** Send a DRAFT row to the provider. Mark SENDING → record attempt → leave row in PENDING for poll. */
 export async function issuePendingInvoices() {
+  await requeueStaleSending(); // crash-window recovery before claiming DRAFT rows
+  await backfillMissedInvoices(); // IPN enqueue crash left no row to retry
   const batch = await prisma.eInvoice.findMany({
     where: { status: "DRAFT" }, take: BATCH_SIZE, orderBy: { createdAt: "asc" },
   });

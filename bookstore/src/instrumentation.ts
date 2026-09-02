@@ -17,6 +17,20 @@ export function schedulerEnabled(): boolean {
 
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  // OPS-003: server-side global handlers so an unawaited promise can't die
+  // silently. PM2 restarts on exit; these handlers log-and-continue instead —
+  // a crash-looping process that loses no data is worse than a degraded one.
+  if (process.env.__UNHANDLED_WIRED__ !== "1") {
+    process.env.__UNHANDLED_WIRED__ = "1"; // register() can run per runtime
+    process.on("unhandledRejection", (reason) => {
+      console.error(JSON.stringify({ level: "error", event: "unhandled_rejection", message: reason instanceof Error ? reason.stack || reason.message : String(reason) }));
+    });
+    process.on("uncaughtException", (err) => {
+      console.error(JSON.stringify({ level: "error", event: "uncaught_exception", message: err.stack || err.message }));
+    });
+  }
+
   if (!schedulerEnabled()) {
     console.log(JSON.stringify({ level: "info", event: "scheduler_disabled", instance: process.env.NODE_APP_INSTANCE ?? null }));
     return;

@@ -2,13 +2,17 @@ import { scryptSync, randomBytes } from 'crypto'
 import { describe, it, expect,} from 'vitest'
 import { hashPassword, verifyPassword, passwordNeedsRehash } from './auth'
 
+// scrypt N=2^17 costs ~1-2s of CPU per call; under full-suite parallelism the
+// default 5s times out. 30s ceiling, normal runs finish far below it.
+const SLOW = 30_000
+
 describe('hashPassword', () => {
-  it('returns a scrypt envelope string', () => {
+  it('returns a scrypt envelope string', { timeout: SLOW }, ()  => {
     const hash = hashPassword('mypassword')
     expect(hash).toMatch(/^scrypt\$\d+\$\d+\$\d+\$/)
   })
 
-  it('produces different hashes for same input (random salt)', () => {
+  it('produces different hashes for same input (random salt)', { timeout: SLOW }, ()  => {
     const h1 = hashPassword('test')
     const h2 = hashPassword('test')
     expect(h1).not.toBe(h2)
@@ -16,28 +20,28 @@ describe('hashPassword', () => {
 })
 
 describe('verifyPassword', () => {
-  it('returns true for correct password', () => {
+  it('returns true for correct password', { timeout: SLOW }, ()  => {
     const hash = hashPassword('correct123')
     expect(verifyPassword('correct123', hash)).toBe(true)
   })
 
-  it('returns false for wrong password', () => {
+  it('returns false for wrong password', { timeout: SLOW }, ()  => {
     const hash = hashPassword('correct123')
     expect(verifyPassword('wrong', hash)).toBe(false)
   })
 
-  it('returns false for malformed string', () => {
+  it('returns false for malformed string', ()  => {
     expect(verifyPassword('test', 'not-a-hash')).toBe(false)
     expect(verifyPassword('test', 'scrypt$')).toBe(false)
     expect(verifyPassword('test', 'salt:')).toBe(false)
     expect(verifyPassword('test', 'scrypt$abc$8$1$salt:hash')).toBe(false)
   })
 
-  it('returns false when hash length is wrong', () => {
+  it('returns false when hash length is wrong', ()  => {
     expect(verifyPassword('test', 'scrypt$16384$8$1$abc:short')).toBe(false)
   })
 
-  it('handles legacy format without version prefix', () => {
+  it('handles legacy format without version prefix', ()  => {
     // Manually construct a legacy hash using the old parameters
     const LEGACY_SCRYPT = { N: 16384, r: 8, p: 1, maxmem: 128 * 1024 * 1024 }
     const salt = randomBytes(16).toString('hex')
@@ -48,12 +52,12 @@ describe('verifyPassword', () => {
 })
 
 describe('passwordNeedsRehash', () => {
-  it('returns true for legacy (non-versioned) hashes', () => {
+  it('returns true for legacy (non-versioned) hashes', ()  => {
     const legacy = 'abc123:hashvalue'
     expect(passwordNeedsRehash(legacy)).toBe(true)
   })
 
-  it('returns false for current versioned hashes', () => {
+  it('returns false for current versioned hashes', { timeout: SLOW }, ()  => {
     const current = hashPassword('test')
     expect(passwordNeedsRehash(current)).toBe(false)
   })
