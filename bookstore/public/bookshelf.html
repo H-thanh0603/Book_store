@@ -1752,7 +1752,7 @@
     import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
     import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-    import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
+    
 
     const BOOKS = [
       {
@@ -2204,27 +2204,21 @@
     const shared = {
       box: new THREE.BoxGeometry(1, 1, 1),
       plane: new THREE.PlaneGeometry(1, 1),
-      page: new THREE.MeshPhysicalMaterial({
+      page: new THREE.MeshStandardMaterial({
         color: 0xe7dfcf,
         roughness: 0.95,
         metalness: 0,
-        sheen: 0.025,
-        sheenRoughness: 1
       }),
-      pageSheet: new THREE.MeshPhysicalMaterial({
+      pageSheet: new THREE.MeshStandardMaterial({
         color: 0xeee6d7,
         roughness: 0.955,
         metalness: 0,
-        sheen: 0.02,
-        sheenRoughness: 1,
         side: THREE.DoubleSide
       }),
-      headband: new THREE.MeshPhysicalMaterial({
+      headband: new THREE.MeshStandardMaterial({
         color: 0xc6a66d,
         roughness: 0.58,
         metalness: 0.16,
-        sheen: 0.14,
-        sheenRoughness: 0.76
       }),
       walnut: new THREE.MeshStandardMaterial({
         color: 0x4a2b1d,
@@ -3344,7 +3338,7 @@
       const foilEmbossTexture = makeEmbossMap(foilTexture, `${book.id}-front-foil-emboss`);
       const spineEmbossTexture = makeEmbossMap(spineFoilTexture, `${book.id}-spine-foil-emboss`);
       const backEmbossTexture = makeEmbossMap(backFoilTexture, `${book.id}-back-foil-emboss`);
-      const cloth = new THREE.MeshPhysicalMaterial({
+      const cloth = new THREE.MeshStandardMaterial({
         color: book.color,
         normalMap: clothSurfaceMaps.normal,
         normalScale: new THREE.Vector2(0.34, 0.34),
@@ -3353,12 +3347,9 @@
         metalness: 0.02,
         bumpMap: clothBumpTexture,
         bumpScale: 0.0045,
-        sheen: 0.34,
-        sheenRoughness: 0.76,
-        sheenColor: new THREE.Color(book.foil),
         transparent: true
       });
-      const coverArt = new THREE.MeshPhysicalMaterial({
+      const coverArt = new THREE.MeshStandardMaterial({
         map: coverTexture,
         normalMap: clothSurfaceMaps.normal,
         normalScale: new THREE.Vector2(0.28, 0.28),
@@ -3367,13 +3358,9 @@
         bumpScale: 0.0035,
         roughness: 0.92,
         metalness: 0.035,
-        clearcoat: 0.06,
-        clearcoatRoughness: 0.72,
-        sheen: 0.26,
-        sheenRoughness: 0.78,
         transparent: true
       });
-      const foilArt = new THREE.MeshPhysicalMaterial({
+      const foilArt = new THREE.MeshStandardMaterial({
         color: book.foil,
         map: foilTexture,
         alphaMap: foilTexture,
@@ -3381,14 +3368,12 @@
         bumpScale: 0.016,
         roughness: book.id === "cursor" ? 0.22 : 0.2,
         metalness: book.id === "cursor" ? 0.34 : 0.94,
-        clearcoat: 0.18,
-        clearcoatRoughness: 0.12,
         transparent: true,
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -2
       });
-      const spineArt = new THREE.MeshPhysicalMaterial({
+      const spineArt = new THREE.MeshStandardMaterial({
         map: spineTexture,
         normalMap: clothSurfaceMaps.normal,
         normalScale: new THREE.Vector2(0.3, 0.3),
@@ -3397,12 +3382,10 @@
         bumpScale: 0.004,
         roughness: 0.95,
         metalness: 0.025,
-        sheen: 0.27,
-        sheenRoughness: 0.78,
         transparent: true,
         side: THREE.DoubleSide
       });
-      const spineFoilArt = new THREE.MeshPhysicalMaterial({
+      const spineFoilArt = new THREE.MeshStandardMaterial({
         color: book.foil,
         map: spineFoilTexture,
         alphaMap: spineFoilTexture,
@@ -3410,15 +3393,13 @@
         bumpScale: 0.017,
         roughness: 0.19,
         metalness: 0.92,
-        clearcoat: 0.16,
-        clearcoatRoughness: 0.13,
         transparent: true,
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -2,
         side: THREE.DoubleSide
       });
-      const backArt = new THREE.MeshPhysicalMaterial({
+      const backArt = new THREE.MeshStandardMaterial({
         map: backCoverTexture,
         normalMap: clothSurfaceMaps.normal,
         normalScale: new THREE.Vector2(0.28, 0.28),
@@ -3427,12 +3408,10 @@
         bumpScale: 0.0035,
         roughness: 0.96,
         metalness: 0.025,
-        sheen: 0.25,
-        sheenRoughness: 0.8,
         transparent: true,
         side: THREE.DoubleSide
       });
-      const backFoilArt = new THREE.MeshPhysicalMaterial({
+      const backFoilArt = new THREE.MeshStandardMaterial({
         color: book.foil,
         map: backFoilTexture,
         alphaMap: backFoilTexture,
@@ -3440,51 +3419,43 @@
         bumpScale: 0.016,
         roughness: 0.21,
         metalness: 0.9,
-        clearcoat: 0.14,
-        clearcoatRoughness: 0.14,
         transparent: true,
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -2,
         side: THREE.DoubleSide
       });
-      const endpaperMaterial = new THREE.MeshPhysicalMaterial({
+      const endpaperMaterial = new THREE.MeshStandardMaterial({
         color: new THREE.Color(book.palette.paperPale).lerp(new THREE.Color(0xf2ead8), 0.5),
         map: endpaperTexture,
         bumpMap: paperFaceTexture,
         bumpScale: 0.0018,
         roughness: 0.94,
         metalness: 0,
-        sheen: 0.025,
-        sheenRoughness: 1,
         side: THREE.DoubleSide,
         transparent: true
       });
-      const foreEdgeMaterial = new THREE.MeshPhysicalMaterial({
+      const foreEdgeMaterial = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         map: pageEdgeTextures.fore,
         bumpMap: pageEdgeTextures.fore,
         bumpScale: 0.0022,
         roughness: 0.93,
         metalness: 0,
-        sheen: 0.018,
-        sheenRoughness: 1,
         side: THREE.DoubleSide,
         transparent: true
       });
-      const headTailEdgeMaterial = new THREE.MeshPhysicalMaterial({
+      const headTailEdgeMaterial = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         map: pageEdgeTextures.headTail,
         bumpMap: pageEdgeTextures.headTail,
         bumpScale: 0.0015,
         roughness: 0.94,
         metalness: 0,
-        sheen: 0.014,
-        sheenRoughness: 1,
         side: THREE.DoubleSide,
         transparent: true
       });
-      const grooveMaterial = new THREE.MeshPhysicalMaterial({
+      const grooveMaterial = new THREE.MeshStandardMaterial({
         color: new THREE.Color(book.color).multiplyScalar(0.42),
         roughness: 0.9,
         metalness: 0,
@@ -3512,18 +3483,16 @@
       blankPageMaterial.roughness = 0.96;
       blankPageMaterial.side = THREE.FrontSide;
       blankPageMaterial.needsUpdate = true;
-      const signatureMaterial = new THREE.MeshPhysicalMaterial({
+      const signatureMaterial = new THREE.MeshStandardMaterial({
         color: new THREE.Color(0x8d816f).lerp(new THREE.Color(book.palette.paperPale), 0.34),
         roughness: 0.98,
         metalness: 0,
         transparent: true
       });
-      const ribbonMaterial = new THREE.MeshPhysicalMaterial({
+      const ribbonMaterial = new THREE.MeshStandardMaterial({
         color: new THREE.Color(book.foil).lerp(new THREE.Color(book.color), 0.28),
         roughness: 0.62,
         metalness: 0.08,
-        sheen: 0.36,
-        sheenRoughness: 0.68,
         side: THREE.DoubleSide,
         transparent: true
       });
@@ -3782,6 +3751,7 @@
           ]
         };
         motion.add(pagePivot);
+        pagePivot.visible = false;
         pagePivots.push(pagePivot);
       }
 
@@ -4173,11 +4143,11 @@
       roomLights.hemisphere = new THREE.HemisphereLight(0xfff8e8, 0x5b4030, 0.56);
       scene.add(roomLights.hemisphere);
 
-      const key = new THREE.DirectionalLight(0xffe8c2, 1.42);
+      const key = new THREE.DirectionalLight(0xffe8c2, 1.9);
       key.name = "shadow-key";
       key.position.set(-4.6, 7.4, 5.8);
       key.castShadow = true;
-      key.shadow.mapSize.set(2048, 2048);
+      key.shadow.mapSize.set(1024, 1024);
       key.shadow.camera.left = -6;
       key.shadow.camera.right = 6;
       key.shadow.camera.top = 6;
@@ -4190,46 +4160,17 @@
       scene.add(key);
       roomLights.key = key;
 
-      const softKey = new THREE.RectAreaLight(0xffe8c2, 5.4, 4.8, 5.6);
-      softKey.name = "cloth-softbox";
-      softKey.position.set(-3.2, 5.5, 4.6);
-      softKey.lookAt(0, 1.45, 0);
-      scene.add(softKey);
-      roomLights.softKey = softKey;
-
       const fill = new THREE.DirectionalLight(0xd8e3e7, 0.3);
       fill.name = "cool-fill";
       fill.position.set(5.5, 3.6, 4.2);
       scene.add(fill);
       roomLights.fill = fill;
 
-      const rim = new THREE.RectAreaLight(0xd5a45e, 3.45, 1.6, 4.8);
+      const rim = new THREE.DirectionalLight(0xd5a45e, 0.55);
       rim.name = "foil-rake";
       rim.position.set(3.8, 3.6, -2.1);
-      rim.lookAt(-0.2, 1.5, 0);
       scene.add(rim);
       roomLights.rim = rim;
-
-      const backFill = new THREE.RectAreaLight(0xd8e3e7, 2.7, 3.8, 4.8);
-      backFill.name = "back-cover-softbox";
-      backFill.position.set(-1.8, 2.9, -4.5);
-      backFill.lookAt(-0.1, 1.45, 0);
-      scene.add(backFill);
-      roomLights.backFill = backFill;
-
-      const spineRake = new THREE.RectAreaLight(0xffe8c2, 1.9, 0.9, 4.6);
-      spineRake.name = "spine-rake";
-      spineRake.position.set(-4.6, 3.2, 1.1);
-      spineRake.lookAt(-0.55, 1.5, 0);
-      scene.add(spineRake);
-      roomLights.spineRake = spineRake;
-
-      const pageRake = new THREE.RectAreaLight(0xfff7e7, 2.15, 1.15, 3.8);
-      pageRake.name = "page-edge-rake";
-      pageRake.position.set(4.2, 4.8, 3.1);
-      pageRake.lookAt(0.65, 1.55, 0);
-      scene.add(pageRake);
-      roomLights.pageRake = pageRake;
     }
 
     function addDust() {
@@ -5208,8 +5149,8 @@
       if (mode !== "hero") return;
       event.preventDefault();
       const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-      targetPosition += clamp(delta * 0.0022, -0.72, 0.72);
-      wheelIdle = 0.14;
+      targetPosition += clamp(delta * 0.004, -1.6, 1.6);
+      wheelIdle = 0.1;
       requestFrame();
     }
 
@@ -5227,6 +5168,7 @@
           ? origin
           : inspectButton;
       activeBook = bookRigs[selectedIndex];
+      activeBook.pagePivots.forEach((pivot) => { pivot.visible = true; });
       activeBook.contactShadow.visible = false;
       populateDetail(activeBook.data);
       updatePageControls(false);
@@ -5425,6 +5367,7 @@
       applyClosingPose(1);
       shelfStage.attach(activeBook.root);
       snapRigToShelfSlot(activeBook, selectedIndex);
+      activeBook.pagePivots.forEach((pivot) => { pivot.visible = false; });
       activeBook.contactShadow.visible = true;
       controls.target.copy(shelfCameraTarget);
       browseUi.inert = false;
@@ -5496,10 +5439,11 @@
         rig.opacity = reducedMotion
           ? targetOpacity
           : damp(rig.opacity, targetOpacity, 18, delta);
+        rig.root.visible = rig.opacity > 0.01;
         rig.fadeMaterials.forEach((material) => {
           material.opacity = rig.opacity;
         });
-        rig.contactShadow.visible = true;
+        rig.contactShadow.visible = rig.opacity > 0.01;
         rig.contactShadow.material.opacity = rig.opacity * 0.24;
         rig.hit.visible = rig.opacity > 0.12;
 
@@ -5513,6 +5457,7 @@
           delta
         );
         rig.pagePivots.forEach((pagePivot) => {
+          if (!pagePivot.visible) return;
           pagePivot.rotation.y = damp(
             pagePivot.rotation.y,
             0,
@@ -5629,11 +5574,16 @@
       renderer.render(scene, camera);
 
       const shelfMoving = Math.abs(position - targetPosition) > 0.0005 || wheelIdle > 0;
-      const shouldContinue = !reducedMotion
-        || mode === "opening"
+      const detailAnimating = mode === "detail" && activeBook && (
+        getDetailOpenAmount() > 0
+        || pageDrag.active
+        || Math.abs(pageDrag.progressVelocity) > 0.0001
+      );
+      const shouldContinue = mode === "opening"
         || mode === "closing"
         || shelfMoving
-        || themeIsMoving;
+        || themeIsMoving
+        || detailAnimating;
       if (shouldContinue && !suspended) requestFrame();
     }
 
@@ -5829,8 +5779,8 @@
       try {
         renderer = new THREE.WebGLRenderer({
           canvas,
-          antialias: true,
-          alpha: true,
+          antialias: false,
+          alpha: false,
           powerPreference: "high-performance"
         });
       } catch (error) {
@@ -5841,9 +5791,9 @@
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 0.9;
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      renderer.setClearColor(0x000000, 0);
+      renderer.shadowMap.enabled = false;
+      renderer.shadowMap.type = THREE.PCFShadowMap;
+      renderer.setClearColor(0x171a24, 1);
 
       scene = new THREE.Scene();
       scene.fog = new THREE.FogExp2(0xe9dfcb, 0.027);
@@ -5875,7 +5825,6 @@
       controls.target.copy(shelfCameraTarget);
       controls.addEventListener("change", requestFrame);
 
-      RectAreaLightUniformsLib.init();
       addRoom();
       addLights();
       buildMarkers();

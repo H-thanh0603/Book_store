@@ -1,2 +1,5 @@
 node_modules/
 .impeccable/
+
+# runtime-generated exports (MISA zips etc.)
+bookstore/var/
