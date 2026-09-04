@@ -6,8 +6,9 @@ import { Prisma } from "@/generated/prisma/client";
 
 // GET /api/inventory/counts — List inventory counts
 export async function GET(req: NextRequest) {
+  let auth;
   try {
-    await requirePermission("inventory:read");
+    auth = await requirePermission("inventory:read");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -18,6 +19,7 @@ export async function GET(req: NextRequest) {
   const locationId = url.searchParams.get("locationId");
 
   const where: Prisma.InventoryCountWhereInput = {};
+  if (auth.orgId) where.location = { store: { region: { orgId: auth.orgId } } };
   if (statusFilter && ["DRAFT", "POSTED", "CANCELLED"].includes(statusFilter)) {
     where.status = statusFilter as "DRAFT" | "POSTED" | "CANCELLED";
   }
@@ -44,8 +46,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/inventory/counts — Create a new inventory count
 export async function POST(req: NextRequest) {
+  let auth;
   try {
-    await requirePermission("inventory:manage");
+    auth = await requirePermission("inventory:manage");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -57,9 +60,14 @@ export async function POST(req: NextRequest) {
     return apiError({ status: 400, code: "VALIDATION", message: "locationId is required" });
   }
 
-  // Verify location exists
-  const location = await prismaRead.stockLocation.findUnique({ where: { id: locationId } });
+  // Verify location exists and belongs to the caller's org (audit SEC-005)
+  const location = await prismaRead.stockLocation.findUnique({
+    where: { id: locationId },
+    include: { store: { include: { region: { select: { orgId: true } } } } },
+  });
   if (!location) return apiError({ status: 404, code: "NOT_FOUND", message: "Location not found" });
+  if (auth.orgId && location.store?.region?.orgId !== auth.orgId)
+    return apiError({ status: 404, code: "NOT_FOUND", message: "Location not found" });
 
   // Get all variants with stock at this location
   const balances = await prismaRead.inventoryBalance.findMany({

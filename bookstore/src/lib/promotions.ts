@@ -29,8 +29,27 @@ export async function evaluatePromotions(args: {
   couponCode?: string | null;
 }, client: Prisma.TransactionClient | typeof prisma = prisma): Promise<AppliedPromo[]> {
   const now = new Date();
+
+  // Audit 2026-08-30 SEC-005: promotions are org-scoped now. Resolve the org
+  // from the cart's store (or customer) so org A's coupon never discounts
+  // org B's cart. Null org = legacy superadmin/cart without org context.
+  let orgId: string | null = null;
+  if (args.storeId) {
+    orgId = (await client.store.findUnique({
+      where: { id: args.storeId },
+      select: { region: { select: { orgId: true } } },
+    }))?.region.orgId ?? null;
+  }
+  if (!orgId && args.customerId) {
+    orgId = (await client.customer.findUnique({
+      where: { id: args.customerId },
+      select: { orgId: true },
+    }))?.orgId ?? null;
+  }
+
   const promos = await client.promotion.findMany({
     where: {
+      ...(orgId ? { orgId } : {}),
       active: true,
       startAt: { lte: now },
       OR: [{ endAt: null }, { endAt: { gte: now } }],

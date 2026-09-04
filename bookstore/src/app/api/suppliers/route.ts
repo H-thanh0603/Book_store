@@ -2,12 +2,14 @@ import { NextRequest } from "next/server";
 import { prisma, prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok, nextBusinessNumber } from "@/lib/api";
+import { withOrg } from "@/lib/org-scope";
 import { Prisma } from "@/generated/prisma/client";
 
 // GET /api/suppliers — List suppliers
 export async function GET(req: NextRequest) {
+  let auth;
   try {
-    await requirePermission("purchasing:read");
+    auth = await requirePermission("purchasing:read");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -17,7 +19,7 @@ export async function GET(req: NextRequest) {
   const q = url.searchParams.get("q")?.trim();
   const activeOnly = url.searchParams.get("active") !== "false";
 
-  const where: Prisma.SupplierWhereInput = {};
+  const where: Prisma.SupplierWhereInput = withOrg(auth, {});
   if (activeOnly) where.active = true;
   if (q) {
     where.OR = [
@@ -39,8 +41,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/suppliers — Create supplier
 export async function POST(req: NextRequest) {
+  let auth;
   try {
-    await requirePermission("purchasing:manage");
+    auth = await requirePermission("purchasing:manage");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -61,6 +64,7 @@ export async function POST(req: NextRequest) {
   const supplier = await prisma.supplier.create({
     data: {
       code,
+      orgId: auth.orgId ?? (await prisma.organization.findFirstOrThrow({ orderBy: { createdAt: "asc" } })).id,
       name: name.trim(),
       taxCode: taxCode?.trim() || null,
       contactName: contactName?.trim() || null,

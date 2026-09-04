@@ -27,6 +27,7 @@ async function main() {
     ["SUP-MONTOY", "Montoy Toys"], ["SUP-GIFTBOX", "Giftbox Studio"],
   ];
   const terms = ["NET15", "NET30", "NET45"];
+  const org = await prisma.organization.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
   const suppliers: string[] = [];
   for (const [code, name] of supplierNames) {
     const sup = await prisma.supplier.upsert({
@@ -35,6 +36,7 @@ async function main() {
         code, name, taxCode: `03${String(Math.floor(rand() * 1e8)).padStart(8, "0")}`,
         paymentTerms: pick(terms), leadTimeDays: 3 + Math.floor(rand() * 18),
         email: `sales@${code.toLowerCase().replace("sup-", "")}.vn`,
+        orgId: org.id,
       },
       update: {},
     });
@@ -43,7 +45,6 @@ async function main() {
 
   // ── Customers: upsert to 100 ─────────────────────────────
   // SEC-004: Customer.orgId is required — Phase-1 seed owns the org.
-  const org = await prisma.organization.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
   for (let i = 31; i <= 100; i++) {
     const code = `CUS-${String(i).padStart(6, "0")}`;
     const existing = await prisma.customer.findUnique({ where: { code } });

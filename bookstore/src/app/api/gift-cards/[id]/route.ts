@@ -2,14 +2,16 @@ import { NextRequest } from "next/server";
 import { prisma, prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
+import { withOrg } from "@/lib/org-scope";
 
 // PUT /api/gift-cards/[id] — Update gift card
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let auth;
   try {
-    await requirePermission("gift_cards:manage");
+    auth = await requirePermission("gift_cards:manage");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -19,7 +21,7 @@ export async function PUT(
   const body = await req.json().catch(() => ({}));
   const { action, amount, reason } = body;
 
-  const existing = await prismaRead.giftCard.findUnique({ where: { id } });
+  const existing = await prismaRead.giftCard.findUnique({ where: withOrg(auth, { id }) });
   if (!existing) return apiError({ status: 404, code: "NOT_FOUND", message: "Gift card not found" });
 
   if (action === "adjust") {
@@ -68,8 +70,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let auth;
   try {
-    await requirePermission("gift_cards:read");
+    auth = await requirePermission("gift_cards:read");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -77,7 +80,7 @@ export async function GET(
 
   const { id } = await params;
   const giftCard = await prismaRead.giftCard.findUnique({
-    where: { id },
+    where: withOrg(auth, { id }),
     include: { transactions: { orderBy: { createdAt: "desc" } } },
   });
 

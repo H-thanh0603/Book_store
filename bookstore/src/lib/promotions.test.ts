@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { evaluatePromotions, mergeLineDiscounts, type CartLine } from './promotions'
 
 const mockPrisma = vi.hoisted(() => ({
+  store: {
+    findUnique: vi.fn().mockResolvedValue({ region: { orgId: 'org-1' } }),
+  },
+  customer: {
+    findUnique: vi.fn().mockResolvedValue(null),
+  },
   promotion: {
     findMany: vi.fn(),
   },

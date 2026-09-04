@@ -9,8 +9,9 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let auth;
   try {
-    await requirePermission("inventory:manage");
+    auth = await requirePermission("inventory:manage");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -20,9 +21,15 @@ export async function PUT(
   const body = await req.json().catch(() => ({}));
   const { action, items } = body;
 
-  // Verify count exists and is draft
-  const existing = await prismaRead.inventoryCount.findUnique({ where: { id } });
+  // Verify count exists, is draft, and its location belongs to the caller's
+  // org (audit SEC-005 — counts link to org only via the location chain).
+  const existing = await prismaRead.inventoryCount.findUnique({
+    where: { id },
+    include: { location: { include: { store: { include: { region: { select: { orgId: true } } } } } } },
+  });
   if (!existing) return apiError({ status: 404, code: "NOT_FOUND", message: "Inventory count not found" });
+  if (auth.orgId && existing.location.store?.region?.orgId !== auth.orgId)
+    return apiError({ status: 404, code: "NOT_FOUND", message: "Inventory count not found" });
   if (existing.status !== "DRAFT") {
     return apiError({ status: 400, code: "VALIDATION", message: "Only DRAFT counts can be updated" });
   }
@@ -119,8 +126,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let auth;
   try {
-    await requirePermission("inventory:read");
+    auth = await requirePermission("inventory:read");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -130,7 +138,7 @@ export async function GET(
   const count = await prismaRead.inventoryCount.findUnique({
     where: { id },
     include: {
-      location: { select: { id: true, name: true } },
+      location: { select: { id: true, name: true, store: { select: { region: { select: { orgId: true } } } } } },
       items: {
         include: {
           variant: {
@@ -145,5 +153,7 @@ export async function GET(
   });
 
   if (!count) return apiError({ status: 404, code: "NOT_FOUND", message: "Not found" });
+  if (auth.orgId && count.location.store?.region?.orgId !== auth.orgId)
+    return apiError({ status: 404, code: "NOT_FOUND", message: "Not found" });
   return ok({ count });
 }

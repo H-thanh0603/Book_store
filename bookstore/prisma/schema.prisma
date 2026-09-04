@@ -23,6 +23,9 @@ model Organization {
   regions   Region[]
   users     User[]
   customers Customer[]
+  suppliers Supplier[]
+  promotions Promotion[]
+  giftCards GiftCard[]
   subscription Subscription?
   billingInvoices BillingInvoice[]
   supportConversations SupportConversation[]
@@ -513,6 +516,10 @@ model Supplier {
   id           String @id @default(uuid())
   code         String @unique
   name         String
+  // Audit 2026-08-30 SEC-005: suppliers had no org link, so the [id] route
+  // accepted any supplier id from any tenant. Suppliers are now org-scoped.
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id])
   taxCode      String?
   contactName  String?
   phone        String?
@@ -525,6 +532,7 @@ model Supplier {
   purchaseOrders PurchaseOrder[]
   supplierReturns SupplierReturn[]
   productPrices SupplierProductPrice[]
+  @@index([orgId])
 }
 
 // Agent 2: supplier-product price history (one row per recorded cost)
@@ -719,6 +727,11 @@ enum PromoChannel {
 model Promotion {
   id          String @id @default(uuid())
   name        String
+  // Audit 2026-08-30 SEC-005: promotions were only org-linked via the
+  // PromotionStore m2m, and could be created with no store link at all —
+  // the [id] route then accepted any promotion id from any tenant.
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
   code        String? @unique // coupon/voucher code; null means automatic promotion
   type        PromoType
   value       BigInt // percent (0-100) or fixed minor units
@@ -737,6 +750,7 @@ model Promotion {
   startAt     DateTime @default(now())
   endAt       DateTime?
   stores      PromotionStore[]
+  @@index([orgId])
 }
 
 model PromotionStore {
@@ -1039,6 +1053,10 @@ model ReturnItem {
 model GiftCard {
   id         String @id @default(uuid())
   code       String @unique
+  // Audit 2026-08-30 SEC-005: gift cards had no org link, so the [id] route
+  // accepted any card id from any tenant. Cards are now org-scoped.
+  orgId      String
+  org        Organization @relation(fields: [orgId], references: [id])
   initialValue BigInt
   balance    BigInt
   active     Boolean @default(true)
@@ -1046,6 +1064,7 @@ model GiftCard {
   transactions GiftCardTransaction[]
   payments   Payment[]
   createdAt  DateTime @default(now())
+  @@index([orgId])
 }
 
 model GiftCardTransaction {

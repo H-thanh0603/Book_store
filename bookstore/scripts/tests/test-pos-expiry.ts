@@ -21,7 +21,7 @@ function expectFail(name: string, status: number) {
 }
 
 async function main() {
-  const store = await prisma.store.findFirstOrThrow({ orderBy: { code: "asc" } });
+  const store = await prisma.store.findFirstOrThrow({ orderBy: { code: "asc" }, include: { region: { select: { orgId: true } } } });
   const terminal = await prisma.posTerminal.findFirstOrThrow({ where: { storeId: store.id } });
   const user = await prisma.user.findFirstOrThrow({ where: { active: true }, orderBy: { email: "asc" } });
   const variant = await prisma.productVariant.findFirstOrThrow({
@@ -57,7 +57,7 @@ async function main() {
   const gcCode = `TESTGC-${Date.now()}`;
   const gcTopUp = 500_000n;
   await prisma.giftCard.create({
-    data: { code: gcCode, initialValue: gcTopUp, balance: gcTopUp },
+    data: { code: gcCode, initialValue: gcTopUp, balance: gcTopUp, orgId: store.region.orgId },
   });
   const customer = await prisma.customer.findFirstOrThrow();
   const itemPrice = 200_000n;

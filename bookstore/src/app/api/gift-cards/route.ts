@@ -2,13 +2,15 @@ import { NextRequest } from "next/server";
 import { prisma, prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
+import { withOrg } from "@/lib/org-scope";
 import { Prisma } from "@/generated/prisma/client";
 import { randomBytes } from "crypto";
 
 // GET /api/gift-cards — List gift cards
 export async function GET(req: NextRequest) {
+  let auth;
   try {
-    await requirePermission("gift_cards:read");
+    auth = await requirePermission("gift_cards:read");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -18,7 +20,7 @@ export async function GET(req: NextRequest) {
   const q = url.searchParams.get("q")?.trim();
   const activeOnly = url.searchParams.get("active") !== "false";
 
-  const where: Prisma.GiftCardWhereInput = {};
+  const where: Prisma.GiftCardWhereInput = withOrg(auth, {});
   if (activeOnly) where.active = true;
   if (q) where.code = { contains: q, mode: "insensitive" };
 
@@ -36,8 +38,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/gift-cards — Issue new gift card
 export async function POST(req: NextRequest) {
+  let auth;
   try {
-    await requirePermission("gift_cards:manage");
+    auth = await requirePermission("gift_cards:manage");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -55,6 +58,7 @@ export async function POST(req: NextRequest) {
   const giftCard = await prisma.giftCard.create({
     data: {
       code,
+      orgId: auth.orgId ?? (await prisma.organization.findFirstOrThrow({ orderBy: { createdAt: "asc" } })).id,
       initialValue: BigInt(Math.round(initialValue)),
       balance: BigInt(Math.round(initialValue)),
       expiresAt: expiresAt ? new Date(expiresAt) : null,

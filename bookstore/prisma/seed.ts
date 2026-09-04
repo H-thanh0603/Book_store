@@ -386,7 +386,7 @@ async function main() {
   for (const [code, name, taxCode, terms, lead] of supplierData) {
     const s = await prisma.supplier.upsert({
       where: { code },
-      create: { code, name, taxCode, paymentTerms: terms, leadTimeDays: lead, email: `sales@${code.toLowerCase()}.vn` },
+      create: { code, name, taxCode, paymentTerms: terms, leadTimeDays: lead, email: `sales@${code.toLowerCase()}.vn`, orgId: org.id },
       update: {},
     });
     suppliers.push(s.id);
@@ -414,6 +414,7 @@ async function main() {
     await prisma.promotion.create({
       data: {
         name: "Mua 2 manga giảm 10%",
+        orgId: org.id,
         type: "percentage", value: 10n, minQty: 2,
         categoryId: cats["Sách"], channel: "ALL", stackable: false,
         endAt: new Date(Date.now() + 90 * 86400_000),
@@ -423,6 +424,7 @@ async function main() {
     await prisma.promotion.create({
       data: {
         name: "Thành viên Gold giảm 5% toàn bộ",
+        orgId: org.id,
         type: "percentage", value: 5n, memberOnly: true, stackable: true, priority: 5,
         endAt: new Date(Date.now() + 365 * 86400_000),
       },

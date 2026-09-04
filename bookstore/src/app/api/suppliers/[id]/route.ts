@@ -2,14 +2,16 @@ import { NextRequest } from "next/server";
 import { prisma, prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
+import { withOrg } from "@/lib/org-scope";
 
 // PUT /api/suppliers/[id] — Update supplier
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let auth;
   try {
-    await requirePermission("purchasing:manage");
+    auth = await requirePermission("purchasing:manage");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -18,7 +20,7 @@ export async function PUT(
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
 
-  const existing = await prismaRead.supplier.findUnique({ where: { id } });
+  const existing = await prismaRead.supplier.findUnique({ where: withOrg(auth, { id }) });
   if (!existing) return apiError({ status: 404, code: "NOT_FOUND", message: "Supplier not found" });
 
   const supplier = await prisma.supplier.update({
@@ -45,15 +47,16 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let auth;
   try {
-    await requirePermission("purchasing:manage");
+    auth = await requirePermission("purchasing:manage");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
   }
 
   const { id } = await params;
-  const existing = await prismaRead.supplier.findUnique({ where: { id } });
+  const existing = await prismaRead.supplier.findUnique({ where: withOrg(auth, { id }) });
   if (!existing) return apiError({ status: 404, code: "NOT_FOUND", message: "Supplier not found" });
 
   await prisma.supplier.update({ where: { id }, data: { active: false } });
@@ -65,8 +68,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let auth;
   try {
-    await requirePermission("purchasing:read");
+    auth = await requirePermission("purchasing:read");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -74,7 +78,7 @@ export async function GET(
 
   const { id } = await params;
   const supplier = await prismaRead.supplier.findUnique({
-    where: { id },
+    where: withOrg(auth, { id }),
     include: {
       productPrices: {
         include: {

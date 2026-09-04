@@ -117,7 +117,15 @@ export async function completeSale(input: CompleteSaleInput) {
       if (payment.method !== "GIFT_CARD") continue;
       const code = payment.giftCardCode?.trim().toUpperCase();
       if (!code) fail(400, "VALIDATION", "Gift card payment requires giftCardCode");
-      const card = await tx.giftCard.findUnique({ where: { code } });
+      // Audit 2026-08-30 SEC-005: cards are org-scoped — resolve this sale's
+      // org so a tenant's code can never debit another tenant's card.
+      const store = await tx.store.findUnique({
+        where: { id: input.storeId },
+        select: { region: { select: { orgId: true } } },
+      });
+      const card = await tx.giftCard.findFirst({
+        where: { code, orgId: store?.region.orgId },
+      });
       if (!card || !card.active || (card.expiresAt && card.expiresAt <= new Date()))
         fail(400, "VALIDATION", "Gift card is inactive or expired");
       const debited = await tx.giftCard.updateMany({
