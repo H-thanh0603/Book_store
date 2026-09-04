@@ -44,6 +44,17 @@ export type WebhookEvent = {
   payload: Record<string, unknown>;
 };
 
+type WebhookDeliveryRow = {
+  id: string;
+  eventId: string;
+  eventType: string;
+  payload: unknown;
+  attempts: number;
+  nextRetryAt: Date;
+  createdAt: Date;
+  endpoint: { id: string; url: string; secret: string; active: boolean };
+};
+
 /**
  * Fan out an event to matching endpoints. Idempotent on eventId: calling
  * twice with the same eventId is a no-op (the unique index swallows the
@@ -83,8 +94,11 @@ export async function emit(event: WebhookEvent): Promise<{ delivered: number; qu
 
 /**
  * Worker tick: claim a batch of due rows, try to deliver each, reschedule
- * or mark delivered. Safe to run from multiple workers because the per-row
- * update is conditional and the claim reads a bounded batch.
+ * or mark delivered. REL-002: rows are CLAIMED, not just read — the claim is
+ * a conditional updateMany pushing nextRetryAt past the request window, so a
+ * second worker (or a second scheduler instance) reading the same batch sees
+ * those rows as not-due and skips them. At-most-once per tick; a crashed
+ * worker's rows become due again when the claim lease lapses.
  */
 export async function processPendingDeliveries(): Promise<{ processed: number; delivered: number; deadLettered: number }> {
   const due = await prisma.webhookDelivery.findMany({
@@ -106,7 +120,17 @@ export async function processPendingDeliveries(): Promise<{ processed: number; d
       delivered++;
       continue;
     }
-    const ok = await deliverOne(row.id);
+    // Claim: only proceed when this worker wins the race to push nextRetryAt
+    // one request-window into the future. count === 0 means another worker
+    // claimed it (or the row changed) — skip without touching it.
+    const claimLease = new Date(Date.now() + REQUEST_TIMEOUT_MS + 5_000);
+    const claimed = await prisma.webhookDelivery.updateMany({
+      where: { id: row.id, deliveredAt: null, nextRetryAt: row.nextRetryAt },
+      data: { nextRetryAt: claimLease },
+    });
+    if (claimed.count !== 1) continue;
+
+    const ok = await deliverOne(row);
     if (ok === "delivered") delivered++;
     else if (ok === "dead") deadLettered++;
   }
@@ -115,12 +139,7 @@ export async function processPendingDeliveries(): Promise<{ processed: number; d
 
 type Outcome = "delivered" | "retry" | "dead";
 
-async function deliverOne(id: string): Promise<Outcome> {
-  const row = await prisma.webhookDelivery.findUniqueOrThrow({
-    where: { id },
-    include: { endpoint: true },
-  });
-
+async function deliverOne(row: WebhookDeliveryRow): Promise<Outcome> {
   const body = JSON.stringify({
     id: row.eventId,
     type: row.eventType,
@@ -161,7 +180,7 @@ async function deliverOne(id: string): Promise<Outcome> {
   const attempts = row.attempts + 1;
   if (status !== null && status >= 200 && status < 300) {
     await prisma.webhookDelivery.update({
-      where: { id },
+      where: { id: row.id },
       data: {
         attempts,
         lastStatus: status,
@@ -173,7 +192,7 @@ async function deliverOne(id: string): Promise<Outcome> {
   }
   if (attempts >= MAX_ATTEMPTS) {
     await prisma.webhookDelivery.update({
-      where: { id },
+      where: { id: row.id },
       data: {
         attempts,
         lastStatus: status,
@@ -187,7 +206,7 @@ async function deliverOne(id: string): Promise<Outcome> {
   }
   const delay = RETRY_BACKOFF_MS[Math.min(attempts - 1, RETRY_BACKOFF_MS.length - 1)];
   await prisma.webhookDelivery.update({
-    where: { id },
+    where: { id: row.id },
     data: {
       attempts,
       lastStatus: status,

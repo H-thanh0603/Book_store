@@ -21,6 +21,7 @@ const hoisted = vi.hoisted(() => {
           return include?.endpoint ? row : { id: row.id };
         }),
         update: vi.fn(),
+        updateMany: vi.fn(async () => ({ count: 1 })),
       },
     },
     setDueRows: (rows: any[]) => { lastFindMany.rows = rows; },
@@ -171,6 +172,25 @@ describe("processPendingDeliveries", () => {
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers["x-melio-event-id"]).toBe("evt-sig");
     expect(headers["x-melio-signature"]).toMatch(/^t=\d+,v1=sig-9-\d+$/);
+  });
+
+  it("skips a row another worker already claimed (REL-002)", async () => {
+    hoisted.setDueRows([{
+      id: "d1",
+      eventId: "evt-1",
+      eventType: "x",
+      payload: {},
+      attempts: 0,
+      createdAt: new Date(),
+      endpoint: { id: "e1", url: "https://hook.example.com", secret: "s3cret", active: true, eventTypes: [] },
+    }]);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    prismaMock.webhookDelivery.updateMany.mockResolvedValue({ count: 0 });
+    const r = await processPendingDeliveries();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(prismaMock.webhookDelivery.update).not.toHaveBeenCalled();
+    expect(r).toEqual({ processed: 1, delivered: 0, deadLettered: 0 });
   });
 });
 
