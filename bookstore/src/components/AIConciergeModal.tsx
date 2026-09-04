@@ -159,7 +159,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
                     {[0, 1, 2].map((i) => (
                       <span
                         key={i}
-                        className="size-1.5 rounded-full bg-slate-400 animate-bounce"
+                        className="size-1.5 rounded-full bg-slate-400 animate-pulse"
                         style={{ animationDelay: `${i * 150}ms` }}
                       />
                     ))}
