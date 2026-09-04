@@ -43,6 +43,12 @@ export async function register() {
     });
   }
 
+  // Metrics fleet-merge runs on EVERY worker (scheduler gate is below):
+  // each process holds its own in-process series, so all must flush deltas
+  // or /api/metrics undercounts. No-op without REDIS_URL.
+  const { flushMetricsDeltas } = await import("./lib/metrics");
+  setInterval(() => { flushMetricsDeltas().catch(() => {}); }, 30_000).unref();
+
   if (!schedulerEnabled()) {
     console.log(JSON.stringify({ level: "info", event: "scheduler_disabled", instance: process.env.NODE_APP_INSTANCE ?? null }));
     return;
