@@ -66,3 +66,21 @@ export async function cacheFlush(pattern: string): Promise<void> {
     // Silently fail
   }
 }
+
+/**
+ * Fixed-window counter: INCR + EXPIRE on first hit. Returns null when Redis
+ * is unavailable so callers can fall back (e.g. the Postgres rate limiter).
+ * One atomic round-trip, no script needed: a key without TTL simply expires
+ * on the next window's first INCR (EXPIRE is NX-scoped to count===1).
+ */
+export async function incrWindow(key: string, windowMs: number): Promise<number | null> {
+  const redis = getRedis()
+  if (!redis) return null
+  try {
+    const count = await redis.incr(key)
+    if (count === 1) await redis.pexpire(key, windowMs)
+    return count
+  } catch {
+    return null
+  }
+}

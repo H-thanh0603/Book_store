@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { prisma } from "./db";
+import { incrWindow } from "./redis";
 
 function digest(value: string) {
   return createHash("sha256").update(value).digest("hex");
@@ -23,9 +24,27 @@ export function clientIp(headers: Headers) {
   );
 }
 
-/** Atomic, database-backed fixed-window limiter shared by every app instance. */
+/**
+ * Fixed-window limiter shared by every app instance.
+ * Redis-first when REDIS_URL is set — public endpoints (AI chat, storefront)
+ * otherwise cost one Postgres upsert per request, turning the limiter itself
+ * into a DoS vector. Falls back to the Postgres bucket when Redis is absent
+ * or unreachable; behavior and contract are identical either way.
+ */
 export async function enforceRateLimit(namespace: string, identity: string, limit: number, windowMs: number) {
   const key = `${namespace}:${digest(identity.toLowerCase())}`;
+
+  const redisCount = await incrWindow(`rl:${key}`, windowMs);
+  if (redisCount !== null) {
+    if (redisCount > limit) {
+      const error = Object.assign(new Error("Too many attempts; try again later"), {
+        status: 429, code: "RATE_LIMITED",
+      });
+      throw error;
+    }
+    return;
+  }
+
   const now = new Date();
   const resetAt = new Date(now.getTime() + windowMs);
   const rows = await prisma.$queryRaw<{ count: number; resetAt: Date }[]>`
