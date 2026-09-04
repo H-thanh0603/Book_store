@@ -1,7 +1,7 @@
 import { prisma, withTxRetry, TX_OPTIONS } from "./db";
 import { fail, nextBusinessNumber } from "./api";
 import { applyMovement } from "./inventory";
-import { evaluatePromotions, mergeLineDiscounts, type CartLine } from "./promotions";
+import { evaluatePromotions, mergeLineDiscounts, claimRedemption, type CartLine } from "./promotions";
 import { OrderType, Prisma } from "../generated/prisma/client";
 
 export type CreateOrderInput = {
@@ -116,11 +116,12 @@ export async function createReservedOrder(
       variantId: line.variantId, locationId: location.id, type: "RESERVATION",
       quantityDelta: 0, reservedDelta: line.quantity, refType: "order", refId: order.id, userId: actorId,
     });
-    // Promotion usage counters — atomic claim identical to the POS path so a
-    // usage-limited promo can never be over-applied by concurrent web/webhook orders.
+    // Promotion usage counters (+ per-customer, PROMO-001) — atomic claim
+    // identical to the POS path so a usage-limited promo can never be
+    // over-applied by concurrent web/webhook orders.
     for (const promo of applied) {
       const row = await tx.promotion.findUniqueOrThrow({
-        where: { id: promo.promoId }, select: { usageLimit: true },
+        where: { id: promo.promoId }, select: { usageLimit: true, perCustomerLimit: true },
       });
       const claimed = await tx.promotion.updateMany({
         where: {
@@ -130,6 +131,7 @@ export async function createReservedOrder(
         data: { usedCount: { increment: 1 } },
       });
       if (claimed.count !== 1) fail(409, "VALIDATION", "Promotion usage limit reached");
+      if (input.customerId) await claimRedemption(tx, promo.promoId, input.customerId, row.perCustomerLimit);
     }
     return order;
   };

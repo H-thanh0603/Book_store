@@ -18,6 +18,36 @@ export type AppliedPromo = {
 };
 
 /**
+ * PROMO-001: atomically count one redemption for (promo, customer) inside the
+ * caller's transaction. Upsert-with-guard mirrors the usedCount claim — the
+ * updateMany only fires when the row is below the limit, so two concurrent
+ * sales can never both pass. Null limit = still counted (for reporting) but
+ * never capped.
+ */
+export async function claimRedemption(
+  client: Prisma.TransactionClient,
+  promoId: string,
+  customerId: string,
+  perCustomerLimit: number | null,
+): Promise<void> {
+  await client.promotionRedemption.upsert({
+    where: { promotionId_customerId: { promotionId: promoId, customerId } },
+    create: { promotionId: promoId, customerId, count: 1 },
+    update: {}, // ensure the row exists; the guarded increment is below
+  });
+  const claimed = await client.promotionRedemption.updateMany({
+    where: {
+      promotionId: promoId,
+      customerId,
+      ...(perCustomerLimit === null ? {} : { count: { lt: perCustomerLimit } }),
+    },
+    data: { count: { increment: 1 } },
+  });
+  if (claimed.count !== 1)
+    throw Object.assign(new Error("Per-customer promotion limit reached"), { status: 409, code: "VALIDATION" });
+}
+
+/**
  * Evaluate active promotions against a cart.
  * Non-stackable: highest-priority winner only. Stackable ones apply after.
  */
@@ -60,12 +90,26 @@ export async function evaluatePromotions(args: {
     include: { stores: true },
   });
 
+  // PROMO-001 (audit 2026-08-30): per-customer limits. One batched lookup of
+  // the caller's redemption counts for every candidate promo with a limit.
+  const perLimited = promos.filter((p) => p.perCustomerLimit !== null && args.customerId);
+  const redeemed = new Map<string, number>();
+  if (perLimited.length > 0 && args.customerId) {
+    const rows = await client.promotionRedemption.findMany({
+      where: { customerId: args.customerId, promotionId: { in: perLimited.map((p) => p.id) } },
+      select: { promotionId: true, count: true },
+    });
+    for (const r of rows) redeemed.set(r.promotionId, r.count);
+  }
+
   const scoped = promos.filter((p) => {
     if (p.stores.length > 0 && (!args.storeId || !p.stores.some((s) => s.storeId === args.storeId)))
       return false;
     if (p.memberOnly && !args.customerId) return false;
     if (p.code && p.code.toUpperCase() !== args.couponCode?.trim().toUpperCase()) return false;
     if (p.usageLimit !== null && p.usedCount >= p.usageLimit) return false;
+    if (p.perCustomerLimit !== null && args.customerId
+      && (redeemed.get(p.id) ?? 0) >= p.perCustomerLimit) return false;
     return true;
   });
 

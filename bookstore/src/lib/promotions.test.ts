@@ -11,6 +11,9 @@ const mockPrisma = vi.hoisted(() => ({
   promotion: {
     findMany: vi.fn(),
   },
+  promotionRedemption: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
 }))
 
 vi.mock('./db', () => ({
@@ -38,7 +41,7 @@ describe('evaluatePromotions', () => {
       id: 'promo1', name: '10% OFF', type: 'percentage', value: 10n,
       active: true, startAt: new Date('2020-01-01'), endAt: null,
       channel: 'POS', stores: [], memberOnly: false, code: null,
-      stackable: false, priority: 0, usageLimit: null, usedCount: 0,
+      stackable: false, priority: 0, usageLimit: null, usedCount: 0, perCustomerLimit: null,
       minQty: 0, buyQty: null, getQty: null, categoryId: null,
     }])
     const result = await evaluatePromotions({ lines, channel: 'POS', storeId: 's1' })
@@ -51,7 +54,7 @@ describe('evaluatePromotions', () => {
       id: 'promo1', name: '50k OFF', type: 'fixed', value: 50000n,
       active: true, startAt: new Date('2020-01-01'), endAt: null,
       channel: 'ALL', stores: [], memberOnly: false, code: null,
-      stackable: false, priority: 0, usageLimit: null, usedCount: 0,
+      stackable: false, priority: 0, usageLimit: null, usedCount: 0, perCustomerLimit: null,
       minQty: 0, buyQty: null, getQty: null, categoryId: null,
     }])
     const result = await evaluatePromotions({ lines, channel: 'POS', storeId: 's1' })
@@ -64,7 +67,7 @@ describe('evaluatePromotions', () => {
       id: 'promo1', name: 'Buy 2 Get 1', type: 'buy_x_get_y', value: 0n,
       active: true, startAt: new Date('2020-01-01'), endAt: null,
       channel: 'ALL', stores: [], memberOnly: false, code: null,
-      stackable: false, priority: 0, usageLimit: null, usedCount: 0,
+      stackable: false, priority: 0, usageLimit: null, usedCount: 0, perCustomerLimit: null,
       minQty: 0, buyQty: 2, getQty: 1, categoryId: null,
     }])
     const result = await evaluatePromotions({ lines, channel: 'POS', storeId: 's1' })
@@ -76,7 +79,7 @@ describe('evaluatePromotions', () => {
       id: 'promo1', name: 'Store only', type: 'percentage', value: 10n,
       active: true, startAt: new Date('2020-01-01'), endAt: null,
       channel: 'ALL', stores: [{ storeId: 'other-store' }], memberOnly: false,
-      code: null, stackable: false, priority: 0, usageLimit: null, usedCount: 0,
+      code: null, stackable: false, priority: 0, usageLimit: null, usedCount: 0, perCustomerLimit: null,
       minQty: 0, buyQty: null, getQty: null, categoryId: null,
     }])
     const result = await evaluatePromotions({ lines, channel: 'POS', storeId: 's1' })
@@ -88,7 +91,7 @@ describe('evaluatePromotions', () => {
       id: 'promo1', name: 'Members', type: 'percentage', value: 10n,
       active: true, startAt: new Date('2020-01-01'), endAt: null,
       channel: 'ALL', stores: [], memberOnly: true, code: null,
-      stackable: false, priority: 0, usageLimit: null, usedCount: 0,
+      stackable: false, priority: 0, usageLimit: null, usedCount: 0, perCustomerLimit: null,
       minQty: 0, buyQty: null, getQty: null, categoryId: null,
     }])
     const result = await evaluatePromotions({ lines, channel: 'POS', storeId: 's1' })
@@ -100,7 +103,7 @@ describe('evaluatePromotions', () => {
       id: 'promo1', name: 'Coupon', type: 'percentage', value: 10n,
       active: true, startAt: new Date('2020-01-01'), endAt: null,
       channel: 'ALL', stores: [], memberOnly: false, code: 'SAVE10',
-      stackable: false, priority: 0, usageLimit: null, usedCount: 0,
+      stackable: false, priority: 0, usageLimit: null, usedCount: 0, perCustomerLimit: null,
       minQty: 0, buyQty: null, getQty: null, categoryId: null,
     }])
     const result = await evaluatePromotions({ lines, channel: 'POS', storeId: 's1', couponCode: 'WRONG' })
@@ -112,11 +115,24 @@ describe('evaluatePromotions', () => {
       id: 'promo1', name: 'Coupon', type: 'percentage', value: 10n,
       active: true, startAt: new Date('2020-01-01'), endAt: null,
       channel: 'ALL', stores: [], memberOnly: false, code: 'SAVE10',
-      stackable: false, priority: 0, usageLimit: null, usedCount: 0,
+      stackable: false, priority: 0, usageLimit: null, usedCount: 0, perCustomerLimit: null,
       minQty: 0, buyQty: null, getQty: null, categoryId: null,
     }])
     const result = await evaluatePromotions({ lines, channel: 'POS', storeId: 's1', couponCode: 'save10' })
     expect(result.length).toBe(1)
+  })
+
+  it('skips when per-customer limit reached (PROMO-001)', async () => {
+    mockPrisma.promotion.findMany.mockResolvedValue([{
+      id: 'promo1', name: 'Once per customer', type: 'percentage', value: 10n,
+      active: true, startAt: new Date('2020-01-01'), endAt: null,
+      channel: 'ALL', stores: [], memberOnly: false, code: null,
+      stackable: false, priority: 0, usageLimit: null, usedCount: 0, perCustomerLimit: 1,
+      minQty: 0, buyQty: null, getQty: null, categoryId: null,
+    }])
+    mockPrisma.promotionRedemption.findMany.mockResolvedValue([{ promotionId: 'promo1', count: 1 }])
+    const result = await evaluatePromotions({ lines, channel: 'POS', storeId: 's1', customerId: 'c1' })
+    expect(result).toEqual([])
   })
 
   it('skips when usage limit reached', async () => {
@@ -124,7 +140,7 @@ describe('evaluatePromotions', () => {
       id: 'promo1', name: 'Limited', type: 'percentage', value: 10n,
       active: true, startAt: new Date('2020-01-01'), endAt: null,
       channel: 'ALL', stores: [], memberOnly: false, code: null,
-      stackable: false, priority: 0, usageLimit: 10, usedCount: 10,
+      stackable: false, priority: 0, usageLimit: 10, usedCount: 10, perCustomerLimit: null,
       minQty: 0, buyQty: null, getQty: null, categoryId: null,
     }])
     const result = await evaluatePromotions({ lines, channel: 'POS', storeId: 's1' })
@@ -137,14 +153,14 @@ describe('evaluatePromotions', () => {
         id: 'low', name: 'Low', type: 'percentage', value: 5n,
         active: true, startAt: new Date('2020-01-01'), endAt: null,
         channel: 'ALL', stores: [], memberOnly: false, code: null,
-        stackable: false, priority: 1, usageLimit: null, usedCount: 0,
+        stackable: false, priority: 1, usageLimit: null, usedCount: 0, perCustomerLimit: null,
         minQty: 0, buyQty: null, getQty: null, categoryId: null,
       },
       {
         id: 'high', name: 'High', type: 'fixed', value: 30000n,
         active: true, startAt: new Date('2020-01-01'), endAt: null,
         channel: 'ALL', stores: [], memberOnly: false, code: null,
-        stackable: false, priority: 10, usageLimit: null, usedCount: 0,
+        stackable: false, priority: 10, usageLimit: null, usedCount: 0, perCustomerLimit: null,
         minQty: 0, buyQty: null, getQty: null, categoryId: null,
       },
     ])
@@ -158,7 +174,7 @@ describe('evaluatePromotions', () => {
       id: 'promo1', name: 'Cat only', type: 'percentage', value: 20n,
       active: true, startAt: new Date('2020-01-01'), endAt: null,
       channel: 'ALL', stores: [], memberOnly: false, code: null,
-      stackable: false, priority: 0, usageLimit: null, usedCount: 0,
+      stackable: false, priority: 0, usageLimit: null, usedCount: 0, perCustomerLimit: null,
       minQty: 0, buyQty: null, getQty: null, categoryId: 'other-cat',
     }])
     const result = await evaluatePromotions({ lines, channel: 'POS', storeId: 's1' })
@@ -171,14 +187,14 @@ describe('evaluatePromotions', () => {
         id: 'nonstack', name: 'NonStack', type: 'percentage', value: 10n,
         active: true, startAt: new Date('2020-01-01'), endAt: null,
         channel: 'ALL', stores: [], memberOnly: false, code: null,
-        stackable: false, priority: 5, usageLimit: null, usedCount: 0,
+        stackable: false, priority: 5, usageLimit: null, usedCount: 0, perCustomerLimit: null,
         minQty: 0, buyQty: null, getQty: null, categoryId: null,
       },
       {
         id: 'stack', name: 'Stack', type: 'fixed', value: 5000n,
         active: true, startAt: new Date('2020-01-01'), endAt: null,
         channel: 'ALL', stores: [], memberOnly: false, code: null,
-        stackable: true, priority: 0, usageLimit: null, usedCount: 0,
+        stackable: true, priority: 0, usageLimit: null, usedCount: 0, perCustomerLimit: null,
         minQty: 0, buyQty: null, getQty: null, categoryId: null,
       },
     ])

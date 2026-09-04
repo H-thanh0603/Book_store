@@ -2,7 +2,7 @@
 import { prisma, withTxRetry, TX_OPTIONS } from "./db";
 import { fail } from "./api";
 import { applyMovement } from "./inventory";
-import { evaluatePromotions, mergeLineDiscounts, CartLine } from "./promotions";
+import { evaluatePromotions, mergeLineDiscounts, claimRedemption, CartLine } from "./promotions";
 import { nextBusinessNumber, getSystemConfig } from "./api";
 import { MovementType, PaymentMethod, Prisma } from "../generated/prisma/client";
 import { enqueueEinvoiceForPosTransaction } from "./einvoice";
@@ -216,10 +216,10 @@ export async function completeSale(input: CompleteSaleInput) {
         });
     }
 
-    // Promotion usage counters
+    // Promotion usage counters (+ per-customer, PROMO-001)
     for (const ap of applied) {
       const promotion = await tx.promotion.findUniqueOrThrow({
-        where: { id: ap.promoId }, select: { usageLimit: true },
+        where: { id: ap.promoId }, select: { usageLimit: true, perCustomerLimit: true },
       });
       const claimed = await tx.promotion.updateMany({
         where: {
@@ -229,6 +229,7 @@ export async function completeSale(input: CompleteSaleInput) {
         data: { usedCount: { increment: 1 } },
       });
       if (claimed.count !== 1) fail(409, "VALIDATION", "Promotion usage limit reached");
+      if (input.customerId) await claimRedemption(tx, ap.promoId, input.customerId, promotion.perCustomerLimit);
     }
 
     return txn;

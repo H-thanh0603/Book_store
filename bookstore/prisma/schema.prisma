@@ -363,6 +363,7 @@ model ProductVariant {
   sku       String @unique
   productId String
   product   Product @relation(fields: [productId], references: [id])
+  @@index([productId]) // SCALE-004: Product→variants lookups
   name      String // e.g. "Black 20L"
   attributes AttributeValue[]
   barcodes  ProductBarcode[]
@@ -682,6 +683,7 @@ model Customer {
   posTransactions PosTransaction[]
   sessions  CustomerSession[]
   supportConversations SupportConversation[]
+  promoRedemptions PromotionRedemption[]
 
   @@unique([orgId, phone])
   @@unique([orgId, email])
@@ -744,13 +746,29 @@ model Promotion {
   stackable   Boolean @default(false)
   usageLimit  Int?
   usedCount   Int @default(0)
+  perCustomerLimit Int? // PROMO-001: max redemptions per customer; null = unlimited
   memberOnly  Boolean @default(false)
   priority    Int @default(0)
   active      Boolean @default(true)
   startAt     DateTime @default(now())
   endAt       DateTime?
   stores      PromotionStore[]
+  redemptions PromotionRedemption[]
   @@index([orgId])
+}
+
+// PROMO-001 (audit 2026-08-30): per-customer redemption counter. One row per
+// (promo, customer); `count` is incremented atomically by the same
+// updateMany-with-guard claim that protects the global usedCount.
+model PromotionRedemption {
+  id          String @id @default(uuid())
+  promotionId String
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  count       Int @default(0)
+  createdAt   DateTime @default(now())
+  @@unique([promotionId, customerId])
 }
 
 model PromotionStore {
