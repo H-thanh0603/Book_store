@@ -14,6 +14,11 @@
  * worker would race for the same JobRun rows — safe (DB claims) but wasteful,
  * so by default ONLY worker NODE_APP_INSTANCE=0 schedules (see schedulerEnabled).
  * Set JOB_SCHEDULER_ENABLED=false to outsource jobs to external cron instead.
+ *
+ * Log rotation (OPS-002): PM2 itself never rotates ./logs/*. One-time on the
+ * server: `pm2 install pm2-logrotate` (defaults: 10MB × 30 files per stream
+ * are fine). Without it, disk fills slowly but certainly. MISA zips under
+ * var/misa are pruned in-app by runDailyMisaExport (MISA_RETENTION_DAYS=90).
  */
 module.exports = {
   apps: [

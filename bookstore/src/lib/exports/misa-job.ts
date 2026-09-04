@@ -72,10 +72,49 @@ export async function runDailyMisaExport(): Promise<{ produced: number; path: st
   }
 
   const sftpHost = process.env.MISA_SFTP_HOST;
-  if (!sftpHost) return { produced, path: outDir };
+  if (!sftpHost) return finishRun(produced, outDir);
   console.log(JSON.stringify({
     level: "info", event: "misa_sftp_skip", reason: "ssh2 not configured",
     hint: `MISA_SFTP_HOST=${sftpHost} but no sftp client is installed; files in ${outDir}`,
   }));
-  return { produced, path: outDir };
+  return finishRun(produced, outDir);
+}
+
+/**
+ * OPS-002 (audit 2026-08-30): zips accumulated nightly with no retention —
+ * a slow but certain disk-full. Keep the newest MISA_RETENTION_DAYS (default
+ * 90; accountant audit window) zips per org, delete the rest. Never throws:
+ * retention failure must not fail the export run.
+ */
+async function pruneMisaZips(outDir: string): Promise<number> {
+  try {
+    const files = await fs.readdir(outDir);
+    const zips = files.filter((f) => f.startsWith("misa_") && f.endsWith(".zip"));
+    // Filename embeds the export day as ..._YYYY-MM-DD.zip (the `to` stamp);
+    // lexicographic sort on the date part equals chronological sort.
+    const byOrg = new Map<string, string[]>();
+    for (const f of zips) {
+      const orgId = f.slice("misa_".length).split("_")[0]; // uuid has no _
+      byOrg.set(orgId, [...(byOrg.get(orgId) ?? []), f].sort().reverse());
+    }
+    const keep = Number(process.env.MISA_RETENTION_DAYS ?? 90);
+    let deleted = 0;
+    for (const [, newestFirst] of byOrg) {
+      for (const f of newestFirst.slice(keep)) {
+        await fs.unlink(path.join(outDir, f)).catch(() => {});
+        deleted++;
+      }
+    }
+    return deleted;
+  } catch {
+    return 0; // missing dir / unreadable — nothing we can or should do here
+  }
+}
+
+function finishRun(produced: number, outDir: string) {
+  return pruneMisaZips(outDir).then((pruned) => {
+    if (pruned > 0)
+      console.log(JSON.stringify({ level: "info", event: "misa_retention", pruned, dir: outDir }));
+    return { produced, path: outDir };
+  });
 }
