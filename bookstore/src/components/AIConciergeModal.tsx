@@ -60,23 +60,38 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
     setMessages(newMsgs);
     setInput("");
 
-    // AI Response simulation
-    setTimeout(() => {
-      let key = "default";
-      const lower = q.toLowerCase();
-      if (lower.includes("chữa lành") || lower.includes("tâm") || lower.includes("đi làm")) key = "healing";
-      else if (lower.includes("bé") || lower.includes("trẻ") || lower.includes("quà") || lower.includes("đồ chơi")) key = "kids";
+    // AI response from /api/concierge (DeepSeek + real catalog search).
+    // Falls back to the canned demo replies when the API is unconfigured
+    // (no DEEPSEEK_API_KEY) or unreachable, so the demo never dead-ends.
+    const chatHistory = newMsgs
+      .filter((m) => m.sender === "user" || m.sender === "ai")
+      .slice(-8)
+      .map((m) => ({ role: m.sender === "user" ? ("user" as const) : ("assistant" as const), content: m.text }));
 
-      const recs = mockRecommendations[key] || mockRecommendations.default;
-      setMessages((prev) => [
-        ...prev,
-        {
-          sender: "ai",
-          text: `Dựa trên sở thích của bạn, mình đã tuyển chọn các ấn phẩm phù hợp nhất đang có sẵn tại quầy:`,
-          items: recs,
-        },
-      ]);
-    }, 600);
+    fetch("/api/concierge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: chatHistory }),
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        const data = (await res.json()) as { text: string; items: ProductSuggestion[] };
+        setMessages((prev) => [...prev, { sender: "ai", text: data.text, items: data.items }]);
+      })
+      .catch(() => {
+        let key = "default";
+        const lower = q.toLowerCase();
+        if (lower.includes("chữa lành") || lower.includes("tâm") || lower.includes("đi làm")) key = "healing";
+        else if (lower.includes("bé") || lower.includes("trẻ") || lower.includes("quà") || lower.includes("đồ chơi")) key = "kids";
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "ai",
+            text: "Mình đang chế độ demo (chưa cấu hình AI). Đây là vài gợi ý mẫu:",
+            items: mockRecommendations[key] || mockRecommendations.default,
+          },
+        ]);
+      });
   }
 
   return (

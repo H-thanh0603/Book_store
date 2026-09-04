@@ -69,68 +69,68 @@ export default function LoginPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#1c1917] flex flex-col justify-center relative overflow-hidden selection:bg-[#8c2d19] selection:text-white">
+    <div className="min-h-screen bg-gradient-to-br from-rose-50/70 via-slate-50 to-amber-50/60 flex flex-col justify-center relative overflow-hidden selection:bg-rose-500 selection:text-white">
       {/* Background glow accents */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-[#8c2d19]/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-[#d97706]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-40 -left-40 size-96 bg-rose-400/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 size-96 bg-amber-400/15 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           {/* Left Hero Section */}
-          <div className="lg:col-span-7 space-y-6 text-white pr-0 lg:pr-8">
+          <div className="lg:col-span-7 space-y-6 text-slate-900 pr-0 lg:pr-8">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-[#8c2d19] flex items-center justify-center text-[#ffd56a] shadow-lg shadow-[#8c2d19]/30">
+              <div className="size-12 rounded-2xl bg-gradient-to-tr from-rose-600 via-orange-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-rose-500/25">
                 <BookOpen className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-black tracking-tight flex items-center gap-2 text-white">
+                <h1 className="text-2xl font-black tracking-tight flex items-center gap-2 text-slate-900">
                   Melio Books
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-[#8c2d19]/20 text-[#ffd56a] border border-[#8c2d19]/40 font-mono">
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 font-mono font-bold">
                     Retail OS
                   </span>
                 </h1>
-                <p className="text-xs text-[#a8a29e] font-medium">Hệ thống quản trị bán lẻ sách &amp; phong cách sống</p>
+                <p className="text-xs text-slate-500 font-medium">Hệ thống quản trị bán lẻ sách &amp; phong cách sống</p>
               </div>
             </div>
 
             <div className="space-y-3 pt-2">
-              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 leading-tight">
                 Vận hành tinh gọn, <br />
-                <span className="text-[#ffd56a]">
+                <span className="text-[#8c2d19]">
                   Bán hàng đa kênh liền mạch
                 </span>
               </h2>
-              <p className="text-[#a8a29e] text-sm leading-relaxed max-w-lg">
+              <p className="text-slate-600 text-sm leading-relaxed max-w-lg font-medium">
                 Giải pháp toàn diện đồng bộ hóa điểm bán POS, tồn kho liên kho tức thời, điều chuyển hàng hóa và chăm sóc khách hàng thân thiết.
               </p>
-              <Link href="/shop" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-indigo-50">
+              <Link href="/shop" className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 px-5 py-3 text-sm font-bold text-white shadow-md shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all">
                 Mở website mua hàng <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
 
             {/* Feature highlights */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
-              <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-xs">
-                <Store className="w-5 h-5 text-[#ffd56a] mb-1.5" />
-                <p className="text-xs font-bold text-white">POS Siêu Tốc</p>
-                <p className="text-[11px] text-[#a8a29e] mt-0.5">Thanh toán QR, giữ giỏ, tích điểm tức thì</p>
+              <div className="p-4 rounded-2xl bg-white/80 border border-slate-200/80 backdrop-blur-xs shadow-xs">
+                <Store className="w-5 h-5 text-rose-600 mb-1.5" />
+                <p className="text-xs font-bold text-slate-900">POS Siêu Tốc</p>
+                <p className="text-[11px] text-slate-500 mt-0.5 font-medium">Thanh toán QR, giữ giỏ, tích điểm tức thì</p>
               </div>
-              <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-xs">
-                <Boxes className="w-5 h-5 text-[#ffd56a] mb-1.5" />
-                <p className="text-xs font-bold text-white">Kho Đa Điểm</p>
-                <p className="text-[11px] text-[#a8a29e] mt-0.5">Kiểm soát tồn khả dụng, luân chuyển</p>
+              <div className="p-4 rounded-2xl bg-white/80 border border-slate-200/80 backdrop-blur-xs shadow-xs">
+                <Boxes className="w-5 h-5 text-amber-600 mb-1.5" />
+                <p className="text-xs font-bold text-slate-900">Kho Đa Điểm</p>
+                <p className="text-[11px] text-slate-500 mt-0.5 font-medium">Kiểm soát tồn khả dụng, luân chuyển</p>
               </div>
-              <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-xs">
-                <ShieldCheck className="w-5 h-5 text-[#ffd56a] mb-1.5" />
-                <p className="text-xs font-bold text-white">Bảo Mật &amp; Audit</p>
-                <p className="text-[11px] text-[#a8a29e] mt-0.5">Phân quyền chi tiết, lưu vết giao dịch</p>
+              <div className="p-4 rounded-2xl bg-white/80 border border-slate-200/80 backdrop-blur-xs shadow-xs">
+                <ShieldCheck className="w-5 h-5 text-emerald-600 mb-1.5" />
+                <p className="text-xs font-bold text-slate-900">Bảo Mật &amp; Audit</p>
+                <p className="text-[11px] text-slate-500 mt-0.5 font-medium">Phân quyền chi tiết, lưu vết giao dịch</p>
               </div>
             </div>
           </div>
 
           {/* Right Auth Card */}
           <div className="lg:col-span-5">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#ede5d8]">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80">
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-slate-900 tracking-tight">
                   {mode === "login" ? "Đăng nhập tài khoản" : mode === "forgot" ? "Quên mật khẩu" : "Đặt lại mật khẩu"}
@@ -220,7 +220,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#8c2d19] hover:bg-[#7a2816] disabled:bg-[#d6d3d1] text-white font-semibold py-2.5 rounded-xl shadow-md shadow-[#8c2d19]/20 flex items-center justify-center gap-2 text-sm transition-all hover:scale-[1.01]"
+                  className="w-full bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 disabled:bg-slate-300 disabled:text-slate-500 text-white font-bold py-3 rounded-2xl shadow-md shadow-rose-500/25 flex items-center justify-center gap-2 text-sm transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
                 >
                   {loading ? (
                     <>
@@ -241,9 +241,9 @@ export default function LoginPage() {
 
               {/* Demo Account Quick Selectors — never rendered in production builds */}
               {process.env.NODE_ENV !== "production" && (
-              <div className="mt-6 pt-5 border-t border-[#ede5d8]">
-                <p className="text-[11px] font-semibold text-[#574431] uppercase tracking-wider mb-2 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-[#8c2d19]" />
+              <div className="mt-6 pt-5 border-t border-slate-200">
+                <p className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-rose-600" />
                   Chọn nhanh tài khoản Demo:
                 </p>
                 <div className="space-y-1.5">
@@ -255,17 +255,17 @@ export default function LoginPage() {
                         setEmail(acc.email);
                         setPassword("");
                       }}
-                      className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between border transition-all ${
+                      className={`w-full text-left p-2.5 rounded-2xl text-xs flex items-center justify-between border transition-all cursor-pointer ${
                         email === acc.email
-                          ? "bg-[#faf4ea] border-[#ede5d8] text-[#1c1917]"
-                          : "bg-[#faf7f2] hover:bg-[#faf4ea] border-[#ede5d8] text-[#574431]"
+                          ? "bg-rose-50 border-rose-300 text-rose-950 font-bold shadow-xs scale-[1.01]"
+                          : "bg-slate-50 hover:bg-rose-50/50 border-slate-200 text-slate-700"
                       }`}
                     >
                       <div>
-                        <p className="font-semibold">{acc.label}</p>
+                        <p className="font-bold">{acc.label}</p>
                         <p className="text-[10px] text-slate-500">{acc.role}</p>
                       </div>
-                      <span className="text-[10px] font-mono text-[#574431]/60">{acc.email}</span>
+                      <span className="text-[10px] font-mono text-slate-400">{acc.email}</span>
                     </button>
                   ))}
                 </div>

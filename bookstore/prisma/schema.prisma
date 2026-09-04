@@ -343,6 +343,7 @@ model Product {
   publisherId String?
   publisher   Publisher? @relation(fields: [publisherId], references: [id])
   description String?
+  imageUrl    String?
   dimensions  String?
   weightGrams Int?
   taxRate     Decimal @db.Decimal(5, 4) @default(0)

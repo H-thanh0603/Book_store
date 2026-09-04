@@ -57,7 +57,7 @@ const toyCategories = [
   { id: "plush", name: "Gấu Bông & Sanrio Hello Kitty", icon: Smile, color: "bg-pink-100 text-pink-900 border-pink-300" },
   { id: "boardgame", name: "Board Game & Trò Chơi Gia Đình", icon: Gamepad2, color: "bg-indigo-100 text-indigo-900 border-indigo-300" },
   { id: "steam", name: "Đồ Chơi Khoa Học & STEAM", icon: Rocket, color: "bg-emerald-100 text-emerald-900 border-emerald-300" },
-  { id: "figure", name: "Mô Hình Nhân Vật & Búp Bê", icon: Bot, color: "bg-purple-100 text-purple-900 border-purple-300" },
+  { id: "figure", name: "Mô Hình Nhân Vật & Búp Bê", icon: Bot, color: "bg-[#faf4ea] text-[#574431] border-[#e8dac5]" },
 ];
 
 const ageGroups = [
@@ -186,18 +186,18 @@ export default function ToysPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#fffdf7] text-slate-900 pb-24 font-sans selection:bg-[#f59e0b] selection:text-white">
+    <main className="min-h-screen bg-slate-50/70 text-slate-900 pb-24 font-sans selection:bg-pink-500 selection:text-white">
       {/* 1. TOP ANNOUNCEMENT */}
-      <div className="bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 text-white px-4 py-2 text-xs font-black shadow-sm">
+      <div className="bg-gradient-to-r from-[#8c2d19] via-[#a63a1f] to-[#d97706] text-white px-4 py-2 text-xs font-bold shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-white text-rose-600 px-2 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-white text-[#8c2d19] px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
               VƯƠNG QUỐC ĐỒ CHƠI
             </span>
-            <span>🎪 Thế giới đồ chơi chính hãng 100% LEGO, Sanrio Hello Kitty, Board Game an toàn cho bé</span>
+            <span className="drop-shadow-xs">🎪 Thế giới đồ chơi chính hãng 100% LEGO, Sanrio Hello Kitty, Board Game an toàn cho bé</span>
           </div>
-          <div className="hidden md:flex items-center gap-4 text-[11px]">
-            <Link href="/shop" className="hover:underline flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-4 text-[11px] font-bold">
+            <Link href="/shop" className="hover:text-yellow-200 flex items-center gap-1">
               ← Trở về siêu thị sách &amp; VPP
             </Link>
             <span className="bg-black/20 px-2 py-0.5 rounded">📍 {activeStore?.name}</span>
@@ -206,33 +206,33 @@ export default function ToysPage() {
       </div>
 
       {/* 2. HEADER */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-amber-100 shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
           <Link href="/toys" className="flex items-center gap-2.5 group">
-            <div className="size-11 rounded-2xl bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-500 text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-all">
+            <div className="size-11 rounded-2xl bg-gradient-to-tr from-[#8c2d19] to-[#d97706] text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-all">
               <ToyBrick className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <span className="font-black text-2xl text-slate-900 tracking-tight leading-none">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-amber-950 px-1.5 py-0.5 rounded-full">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-[#1c1917] text-[#ffd56a] px-2 py-0.5 rounded-full shadow-2xs">
                   Toys &amp; Play
                 </span>
               </div>
-              <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Thế Giới Đồ Chơi Sáng Tạo</p>
+              <p className="text-[10px] text-[#8c2d19] font-bold uppercase tracking-wider">Thế Giới Đồ Chơi Sáng Tạo</p>
             </div>
           </Link>
 
           {/* Search bar */}
           <div className="relative flex-1 max-w-md hidden sm:block">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-[#8c2d19] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Tìm kiếm LEGO, Hello Kitty, Board Game..."
-              className="w-full bg-white border border-amber-200 rounded-2xl pl-10 pr-9 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full bg-slate-50 focus:bg-white border border-slate-200 rounded-2xl pl-10 pr-9 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/30"
             />
           </div>
 
@@ -253,12 +253,12 @@ export default function ToysPage() {
 
             <button
               onClick={() => setCartOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-rose-500 text-white font-bold text-xs shadow-md hover:scale-105 transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-xs shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
             >
               <ShoppingBag className="w-4 h-4" />
               <span className="hidden sm:inline">Giỏ đồ chơi</span>
               {itemCount > 0 && (
-                <span className="size-5 rounded-full bg-white text-rose-600 font-black text-[10px] flex items-center justify-center">
+                <span className="size-5 rounded-full bg-[#ffd56a] text-[#6b2113] font-black text-[10px] flex items-center justify-center shadow-xs">
                   {itemCount}
                 </span>
               )}
@@ -269,28 +269,28 @@ export default function ToysPage() {
 
       {/* 3. HERO SHOWCASE */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-8">
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#4c1d95] via-[#831843] to-[#9a3412] p-8 sm:p-12 text-white shadow-2xl">
-          <div className="absolute -top-10 -right-10 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
+        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#574431] via-[#6b2113] to-[#8c2d19] p-8 sm:p-14 text-white shadow-2xl">
+          <div className="absolute -top-10 -right-10 size-96 bg-white/20 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
           <div className="relative z-10 max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 bg-amber-400 text-amber-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-sm">
+            <div className="inline-flex items-center gap-2 bg-yellow-300 text-amber-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-sm">
               <PartyPopper className="w-4 h-4" /> Lễ Hội Đồ Chơi Sáng Tạo 2026
             </div>
-            <h1 className="font-serif font-black text-3xl sm:text-5xl leading-tight">
+            <h1 className="font-serif font-black text-3xl sm:text-5xl leading-tight text-white drop-shadow-sm">
               Khơi Dậy Trí Tuệ &amp; <br />
-              <span className="text-amber-300">Niềm Vui Tuổi Thơ Bất Tận</span>
+              <span className="text-yellow-200">Niềm Vui Tuổi Thơ Bất Tận</span>
             </h1>
-            <p className="text-xs sm:text-sm text-purple-100 leading-relaxed max-w-xl">
+            <p className="text-sm sm:text-base text-[#f3e5d0] font-medium leading-relaxed max-w-xl">
               Tuyển tập những bộ xếp hình LEGO trí tuệ, gấu bông Sanrio siêu mềm mại và Board Game kết nối cả gia đình trong từng khoảnh khắc sum vầy.
             </p>
             <div className="pt-2 flex flex-wrap items-center gap-3">
               <a
                 href="#toy-grid"
-                className="px-6 py-3.5 rounded-full bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs sm:text-sm shadow-xl transition-all hover:scale-105"
+                className="px-6 py-3.5 rounded-full bg-yellow-300 hover:bg-yellow-200 text-amber-950 font-black text-xs sm:text-sm shadow-xl transition-all hover:scale-105"
               >
                 Khám phá ngay bộ sưu tập
               </a>
-              <div className="flex items-center gap-1.5 text-xs text-amber-200 font-bold bg-white/10 px-3.5 py-2.5 rounded-full backdrop-blur-md">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" /> Nhựa an toàn EN71 &amp; CR chuẩn quốc tế
+              <div className="flex items-center gap-1.5 text-xs text-white font-bold bg-black/20 px-3.5 py-2.5 rounded-full backdrop-blur-md border border-white/20">
+                <ShieldCheck className="w-4 h-4 text-emerald-300" /> Nhựa an toàn EN71 &amp; CR chuẩn quốc tế
               </div>
             </div>
           </div>

@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
               // Per Next 16 docs: "unsafe-eval is not required for production."
               "script-src 'self' 'unsafe-inline'" + (process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : ""),
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob:",
+              "img-src 'self' data: blob: https://salt.tikicdn.com",
               "font-src 'self' data:",
               "connect-src 'self'",
               "object-src 'none'",

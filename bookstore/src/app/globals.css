@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  /* Melio Heritage — primary system */
+  /* Melio Editorial Heritage Design System (DESIGN.md §2) */
   --background: #faf7f2;
   --foreground: #1c1917;
   --card: #ffffff;
@@ -43,197 +43,6 @@
   --color-melio-border-warm: var(--melio-border-warm);
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
-
-  /* ponytail: admin pages still use slate/indigo/blue Tailwind utilities
-     from older code. Alias their palette to Melio Heritage so every
-     existing utility (text-slate-*, bg-indigo-*, border-blue-*) renders
-     on-brand without touching ~40 component files. Drop these shims
-     once the admin migration lands and components use heritage tokens
-     directly. */
-  --color-slate-50: #faf7f2;
-  --color-slate-100: #f5efe4;
-  --color-slate-200: #ede5d8;
-  --color-slate-300: #d6cab3;
-  --color-slate-400: #8b7c66;
-  --color-slate-500: #6b5d4b;
-  --color-slate-600: #574431;
-  --color-slate-700: #3f3327;
-  --color-slate-800: #2a2218;
-  --color-slate-900: #1c1917;
-  --color-slate-950: #0f0d0a;
-
-  --color-indigo-50: #faf4ea;
-  --color-indigo-100: #f4e4d4;
-  --color-indigo-200: #e8c7a8;
-  --color-indigo-300: #d97706;
-  --color-indigo-400: #c83f49;
-  --color-indigo-500: #8c2d19;
-  --color-indigo-600: #8c2d19;
-  --color-indigo-700: #7a2816;
-  --color-indigo-800: #5e1f10;
-  --color-indigo-900: #42160b;
-
-  --color-blue-50: #faf4ea;
-  --color-blue-100: #f4e4d4;
-  --color-blue-200: #e8dac5;
-  --color-blue-300: #d6cab3;
-  --color-blue-400: #d97706;
-  --color-blue-500: #c2410c;
-  --color-blue-600: #8c2d19;
-  --color-blue-700: #7a2816;
-  --color-blue-800: #5e1f10;
-  --color-blue-900: #42160b;
-
-  /* 950 shades for gradient endpoints used on dark hero sections. */
-  --color-indigo-950: #0f0d0a;
-  --color-blue-950: #0f0d0a;
-  --color-rose-950: #2a0d08;
-  --color-emerald-950: #0f2419;
-  --color-teal-950: #0d2624;
-  --color-cyan-950: #0d2326;
-  --color-amber-950: #2a1a07;
-  --color-sky-950: #0c1d2a;
-  --color-violet-950: #1f0a26;
-  --color-purple-950: #1f0a26;
-  --color-fuchsia-950: #2a0a1f;
-  --color-pink-950: #2a0a16;
-  --color-orange-950: #2a1407;
-  --color-gray-950: #0f0d0a;
-
-  /* Warm-tinted palette aliases: 50=cream, 100-200=paper, 300-400=gold,
-     500-700=crimson, 800-950=charcoal. All gradient utilities (from-rose-600,
-     to-amber-500, etc.) resolve to heritage colors. */
-  --color-rose-50: #faf4ea;
-  --color-rose-100: #f4e4d4;
-  --color-rose-200: #e8c7a8;
-  --color-rose-300: #d97706;
-  --color-rose-400: #c83f49;
-  --color-rose-500: #8c2d19;
-  --color-rose-600: #8c2d19;
-  --color-rose-700: #7a2816;
-  --color-rose-800: #5e1f10;
-  --color-rose-900: #42160b;
-
-  --color-amber-50: #faf4ea;
-  --color-amber-100: #fbf8f3;
-  --color-amber-200: #fde68a;
-  --color-amber-300: #ffd56a;
-  --color-amber-400: #d97706;
-  --color-amber-500: #d97706;
-  --color-amber-600: #b45309;
-  --color-amber-700: #92400e;
-  --color-amber-800: #78350f;
-  --color-amber-900: #451a03;
-
-  --color-emerald-50: #faf4ea;
-  --color-emerald-100: #e8dac5;
-  --color-emerald-200: #ede5d8;
-  --color-emerald-300: #d6cab3;
-  --color-emerald-400: #d97706;
-  --color-emerald-500: #8c2d19;
-  --color-emerald-600: #14532d;
-  --color-emerald-700: #166534;
-  --color-emerald-800: #14532d;
-  --color-emerald-900: #0f2419;
-
-  --color-teal-50: #faf4ea;
-  --color-teal-100: #e8dac5;
-  --color-teal-200: #ede5d8;
-  --color-teal-300: #d97706;
-  --color-teal-400: #d97706;
-  --color-teal-500: #d97706;
-  --color-teal-600: #b45309;
-  --color-teal-700: #92400e;
-  --color-teal-800: #0d2624;
-  --color-teal-900: #0d2624;
-
-  --color-cyan-50: #faf4ea;
-  --color-cyan-100: #e8dac5;
-  --color-cyan-200: #ede5d8;
-  --color-cyan-300: #d97706;
-  --color-cyan-400: #d97706;
-  --color-cyan-500: #d97706;
-  --color-cyan-600: #b45309;
-  --color-cyan-700: #92400e;
-  --color-cyan-800: #0d2326;
-  --color-cyan-900: #0d2326;
-
-  --color-sky-50: #faf4ea;
-  --color-sky-100: #e8dac5;
-  --color-sky-200: #ede5d8;
-  --color-sky-300: #d97706;
-  --color-sky-400: #d97706;
-  --color-sky-500: #c2410c;
-  --color-sky-600: #8c2d19;
-  --color-sky-700: #7a2816;
-  --color-sky-800: #5e1f10;
-  --color-sky-900: #42160b;
-
-  --color-violet-50: #faf4ea;
-  --color-violet-100: #f4e4d4;
-  --color-violet-200: #e8c7a8;
-  --color-violet-300: #d97706;
-  --color-violet-400: #c83f49;
-  --color-violet-500: #8c2d19;
-  --color-violet-600: #8c2d19;
-  --color-violet-700: #7a2816;
-  --color-violet-800: #5e1f10;
-  --color-violet-900: #42160b;
-
-  --color-purple-50: #faf4ea;
-  --color-purple-100: #f4e4d4;
-  --color-purple-200: #e8c7a8;
-  --color-purple-300: #d97706;
-  --color-purple-400: #c83f49;
-  --color-purple-500: #8c2d19;
-  --color-purple-600: #8c2d19;
-  --color-purple-700: #7a2816;
-  --color-purple-800: #5e1f10;
-  --color-purple-900: #42160b;
-
-  --color-fuchsia-50: #faf4ea;
-  --color-fuchsia-100: #f4e4d4;
-  --color-fuchsia-200: #e8c7a8;
-  --color-fuchsia-300: #d97706;
-  --color-fuchsia-400: #c83f49;
-  --color-fuchsia-500: #8c2d19;
-  --color-fuchsia-600: #8c2d19;
-  --color-fuchsia-700: #7a2816;
-  --color-fuchsia-800: #5e1f10;
-  --color-fuchsia-900: #42160b;
-
-  --color-pink-50: #faf4ea;
-  --color-pink-100: #f4e4d4;
-  --color-pink-200: #e8c7a8;
-  --color-pink-300: #d97706;
-  --color-pink-400: #c83f49;
-  --color-pink-500: #8c2d19;
-  --color-pink-600: #8c2d19;
-  --color-pink-700: #7a2816;
-  --color-pink-800: #5e1f10;
-  --color-pink-900: #42160b;
-
-  --color-orange-50: #faf4ea;
-  --color-orange-100: #fbf8f3;
-  --color-orange-200: #fde68a;
-  --color-orange-300: #ffd56a;
-  --color-orange-400: #d97706;
-  --color-orange-500: #d97706;
-  --color-orange-600: #b45309;
-  --color-orange-700: #92400e;
-  --color-orange-800: #78350f;
-  --color-orange-900: #451a03;
-
-  --color-gray-50: #faf7f2;
-  --color-gray-100: #f5efe4;
-  --color-gray-200: #ede5d8;
-  --color-gray-300: #d6cab3;
-  --color-gray-400: #8b7c66;
-  --color-gray-500: #6b5d4b;
-  --color-gray-600: #574431;
-  --color-gray-700: #3f3327;
-  --color-gray-800: #2a2218;
-  --color-gray-900: #1c1917;
 }
 
 body {
@@ -244,7 +53,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom smooth scrollbar */
+/* Custom smooth scrollbar, tinted from the kraft paper hue */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -255,12 +64,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #d8c9b2;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #b09a7c;
 }
 
 /* Smooth transitions */
@@ -307,18 +116,6 @@ button, a, input, select, textarea {
     opacity: 0.8;
     transform: scale(1.08);
   }
-}
-
-.animate-float {
-  animation: float 4s ease-in-out infinite;
-}
-
-.animate-float-delayed {
-  animation: float 5s ease-in-out 1.5s infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
 }
 
 .book-shadow {
@@ -403,10 +200,87 @@ button, a, input, select, textarea {
 }
 
 .shimmer-effect {
-  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100%);
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0) 100%);
   background-size: 200% 100%;
-  animation: shimmer 3s infinite;
 }
 
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
 
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.gradient-animated {
+  background-size: 200% 200%;
+}
+
+.glow-card-rose {
+  box-shadow: 0 10px 30px -10px rgba(140, 45, 25, 0.22);
+}
+
+.glow-card-amber {
+  box-shadow: 0 10px 30px -10px rgba(217, 119, 6, 0.22);
+}
+
+.glow-card-emerald {
+  box-shadow: 0 10px 30px -10px rgba(21, 128, 61, 0.22);
+}
+
+.glow-card-indigo {
+  box-shadow: 0 10px 30px -10px rgba(120, 88, 60, 0.22);
+}
+
+/* Heritage paper texture — warm kraft tone, not a repeating stripe. */
+.paper-mesh {
+  background: radial-gradient(circle at 12% 18%, rgba(250, 244, 234, 0.9) 0%, transparent 42%),
+              radial-gradient(circle at 88% 8%, rgba(232, 218, 197, 0.55) 0%, transparent 46%),
+              radial-gradient(circle at 50% 85%, rgba(250, 244, 234, 0.75) 0%, transparent 50%),
+              var(--melio-paper-base);
+}
+
+/* Reduced motion: decorative loops stop; functional transitions stay.
+   State changes remain visible because they are also communicated by
+   color/layout, never by motion alone. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Gentle motion classes loop only when the visitor allows motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+
+  .animate-float-delayed {
+    animation: float 5s ease-in-out 1.5s infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+
+  .animate-gentle-float {
+    animation: gentle-float 2s ease-in-out infinite;
+  }
+
+  .shimmer-effect {
+    animation: shimmer 2.5s infinite;
+  }
+
+  .gradient-animated {
+    animation: gradient-flow 6s ease infinite;
+  }
+}
 

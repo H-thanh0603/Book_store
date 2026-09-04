@@ -58,7 +58,7 @@ export function assertSameOrg(auth: AuthContext, claimedOrgId: string | null | u
 //   withOrg() / withOrgViaStore() is intentionally NOT in this commit —
 //   the existing store-scope check on Order/Inventory paths already
 //   blocks cross-tenant writes via requirePermission(..., storeId). The
-//   audit verifies that empirically: scripts/test-tenant-isolation.ts.
+//   audit verifies that empirically: scripts/tests/test-tenant-isolation.ts.
 //   When B2 follow-ups land they should add withOrg to /api/invoices,
 //   /api/webhooks, and the new org-scoped routes; Order-scoped routes
 //   already use resolveStoreScope which is the right tool there.

@@ -126,36 +126,36 @@ export default async function Home() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#faf7f2] pb-16">
+    <main className="min-h-screen bg-slate-50/70 pb-16">
       <Nav />
 
       {/* Hero Welcome Banner */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <div className="relative overflow-hidden rounded-3xl bg-[#1c1917] p-8 sm:p-10 text-white shadow-xl">
-          <div className="absolute right-0 top-0 -mt-8 -mr-8 w-96 h-96 bg-[#8c2d19]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-rose-600 via-orange-500 to-amber-500 p-8 sm:p-10 text-white shadow-xl">
+          <div className="absolute right-0 top-0 -mt-8 -mr-8 size-96 bg-white/20 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
           <div className="relative z-10 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#8c2d19]/20 text-[#ffd56a] border border-[#8c2d19]/30">
-                <Sparkles className="w-3.5 h-3.5" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-xs text-white border border-white/30">
+                <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
                 Hệ thống Quản lý Bán lẻ Đa kênh Melio
               </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#14532d]/20 text-emerald-300 border border-[#14532d]/30">
-                <CheckCircle2 className="w-3 h-3" />
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/30 text-white border border-emerald-300/40">
+                <CheckCircle2 className="w-3 h-3 text-emerald-200" />
                 Trạng thái: Hoạt động bình thường
               </span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3 text-white">
-              Xin chào, <span className="text-[#ffd56a]">{auth.email}</span>!
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-3 text-white drop-shadow-xs">
+              Xin chào, <span className="text-yellow-200">{auth.email}</span>!
             </h1>
-            <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
+            <p className="text-white/95 text-sm sm:text-base leading-relaxed mb-6 font-medium">
               Hệ thống vận hành tổng thể cho chuỗi nhà sách và phong cách sống: POS thu ngân, tồn kho liên kho, đơn hàng đa kênh và quản trị khuyến mãi.
             </p>
 
             <div className="flex flex-wrap items-center gap-3">
               <Link
                 href="/pos"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#8c2d19] hover:bg-[#7a2816] text-white shadow-lg shadow-[#8c2d19]/30 transition-all hover:translate-y-[-1px]"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold bg-white text-rose-600 hover:bg-yellow-200 hover:text-amber-950 shadow-lg shadow-black/10 transition-all hover:scale-105 active:scale-95"
               >
                 <Store className="w-4 h-4" />
                 Mở POS Bán hàng ngay
@@ -163,7 +163,7 @@ export default async function Home() {
               </Link>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm border border-white/10 transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold bg-white/20 hover:bg-white/30 text-white backdrop-blur-xs border border-white/30 transition-all hover:scale-105 active:scale-95"
               >
                 <TrendingUp className="w-4 h-4" />
                 Xem Báo cáo Doanh thu
@@ -171,19 +171,19 @@ export default async function Home() {
             </div>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-[#2a2523] flex flex-wrap items-center justify-between gap-4 text-xs text-[#a8a29e]">
+          <div className="mt-6 pt-6 border-t border-white/20 flex flex-wrap items-center justify-between gap-4 text-xs text-white/90">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-[#d6d3d1]">Quyền hạn kích hoạt:</span>
+              <span className="font-bold">Quyền hạn kích hoạt:</span>
               {auth.roles.map((r, i) => (
                 <span
                   key={i}
-                  className="px-2 py-0.5 rounded bg-[#292524] text-[#ffd56a] border border-[#44403c] font-mono font-medium"
+                  className="px-2.5 py-0.5 rounded-full bg-black/20 text-yellow-200 border border-white/25 font-mono font-bold"
                 >
                   {r.role}
                 </span>
               ))}
             </div>
-            <span>Thời gian máy chủ: {new Date().toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</span>
+            <span className="font-medium">Thời gian máy chủ: {new Date().toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</span>
           </div>
         </div>
       </div>

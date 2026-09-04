@@ -8,6 +8,7 @@ const MUTATIONS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const PUBLIC_PATHS = [
   "/api/auth",
   "/api/storefront",
+  "/api/concierge",
   "/api/health",
   "/api/payments/vnpay",
   "/api/integrations/webhook",
@@ -15,7 +16,15 @@ const PUBLIC_PATHS = [
 
 const PUBLIC_PAGE_PREFIXES = [
   "/login",
+  "/signup",
   "/shop",
+  "/deals",
+  "/bestsellers",
+  "/toys",
+  "/back-to-school",
+  "/gift-finder",
+  "/reading-challenge",
+  "/stores",
   "/track",
   "/bookshelf",
   "/api/health",

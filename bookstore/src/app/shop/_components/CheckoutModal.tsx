@@ -1,12 +1,17 @@
 // Section 19: CHECKOUT MODAL
 // Loaded via next/dynamic from page.tsx so its JS ships in a separate chunk
 // and is only fetched when the customer actually opens checkout.
+import { useEffect, useRef } from "react";
 import { Banknote, Check, CreditCard, Gift, Store, Truck, X } from "lucide-react";
-import type { CartLine, Fulfillment, GiftWrapping, PaymentMethodChoice } from "./types";
+import type { CartLine, Fulfillment, GiftWrapping, PaymentMethodChoice, QuotePreview } from "./types";
 
 export default function CheckoutModal({
   cart,
+  discountTotal,
+  wrappingFee,
   grandTotal,
+  quote,
+  quoteChecking,
   fulfillment,
   onFulfillment,
   paymentMethod,
@@ -27,7 +32,11 @@ export default function CheckoutModal({
   onSubmit,
 }: {
   cart: CartLine[];
+  discountTotal: number;
+  wrappingFee: number;
   grandTotal: number;
+  quote: QuotePreview | null;
+  quoteChecking: boolean;
   fulfillment: Fulfillment;
   onFulfillment: (v: Fulfillment) => void;
   paymentMethod: PaymentMethodChoice;
@@ -47,9 +56,58 @@ export default function CheckoutModal({
   onClose: () => void;
   onSubmit: () => void;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Focus trap + Escape close + return focus on unmount (a11y).
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusables = () =>
+      Array.from(
+        dialog?.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        ) ?? []
+      ).filter((el) => !(el as HTMLButtonElement | HTMLInputElement).disabled);
+    focusables()[0]?.focus();
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusables();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true);
+      previouslyFocused?.focus();
+    };
+  }, [onClose]);
+
+  const couponHint = couponInput.trim()
+    ? quote?.couponInvalidReason
+      ? { tone: "error" as const, text: quote.couponInvalidReason }
+      : quote?.couponApplied
+        ? { tone: "ok" as const, text: `Đã áp dụng mã ${couponInput.trim()}` }
+        : quoteChecking
+          ? { tone: "muted" as const, text: "Đang kiểm tra mã..." }
+          : null
+    : null;
   return (
     <div className="fixed inset-0 z-50 bg-[#1c1917]/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="checkout-modal-title"
@@ -325,9 +383,31 @@ export default function CheckoutModal({
                 value={couponInput}
                 onChange={(e) => onCouponInput(e.target.value.toUpperCase())}
                 placeholder="Nhập mã: MELIOVIP, FREESHIP..."
+                aria-describedby={couponHint ? "checkout-coupon-hint" : undefined}
                 className="flex-1 bg-white border border-[#ede5d8] rounded-xl px-3 py-2 text-xs font-mono uppercase text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20 focus:border-[#8c2d19]"
               />
+              {couponInput.trim() && (
+                <button
+                  type="button"
+                  onClick={() => onCouponInput("")}
+                  className="px-3 rounded-xl bg-[#faf4ea] hover:bg-[#ede5d8] text-slate-600 text-xs font-bold border border-[#ede5d8] cursor-pointer"
+                >
+                  Xóa mã
+                </button>
+              )}
             </div>
+            {couponHint && (
+              <p
+                id="checkout-coupon-hint"
+                className={`mt-1.5 text-[11px] font-semibold flex items-center gap-1 ${
+                  couponHint.tone === "error" ? "text-red-600" : couponHint.tone === "ok" ? "text-[#14532d]" : "text-slate-400"
+                }`}
+              >
+                {couponHint.tone === "ok" && <Check className="w-3.5 h-3.5" />}
+                {couponHint.tone === "error" && <X className="w-3.5 h-3.5" />}
+                {couponHint.text}
+              </p>
+            )}
           </div>
         </div>
 
@@ -352,7 +432,17 @@ export default function CheckoutModal({
         {/* Total Breakdown & Submit */}
         <div className="pt-4 border-t border-[#ede5d8] flex items-center justify-between gap-4">
           <div>
-            <span className="text-xs text-slate-500">Tổng thanh toán COD:</span>
+            {discountTotal > 0 && (
+              <span className="block text-[11px] font-bold text-[#14532d]">
+                −{money(discountTotal)} ưu đãi áp dụng
+              </span>
+            )}
+            {wrappingFee > 0 && (
+              <span className="block text-[11px] font-semibold text-slate-500">
+                Gói quà +{money(wrappingFee)}
+              </span>
+            )}
+            <span className="text-xs text-slate-500">Tổng thanh toán {paymentMethod === "COD" ? "khi nhận hàng (COD)" : "trực tuyến"}:</span>
             <span className="block text-2xl font-black text-[#1c1917]">{money(grandTotal)}</span>
           </div>
 

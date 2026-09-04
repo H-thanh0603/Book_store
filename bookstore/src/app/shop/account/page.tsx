@@ -116,9 +116,9 @@ function AccountInner() {
           {auth.email ? <div className="text-slate-500">{auth.email}</div> : null}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/shop/orders" className="px-4 py-2 rounded-2xl bg-[#1c1917] text-white text-xs font-serif">Lịch sử đơn hàng</Link>
-          <Link href="/shop/wishlist" className="px-4 py-2 rounded-2xl border border-[#ede5d8] text-slate-700 text-xs font-serif">Sách yêu thích</Link>
-          <button onClick={logout} className="px-4 py-2 rounded-2xl border border-rose-200 text-rose-700 text-xs font-serif">Đăng xuất</button>
+          <Link href="/shop/orders" className="px-4 py-2 rounded-2xl bg-gradient-to-r from-rose-600 to-orange-500 text-white text-xs font-bold shadow-xs">Lịch sử đơn hàng</Link>
+          <Link href="/shop/wishlist" className="px-4 py-2 rounded-2xl border border-slate-200 bg-white text-slate-700 text-xs font-bold">Sách yêu thích</Link>
+          <button onClick={logout} className="px-4 py-2 rounded-2xl border border-rose-200 text-rose-700 text-xs font-bold hover:bg-rose-50 cursor-pointer">Đăng xuất</button>
         </div>
       </div>
     );
@@ -126,15 +126,15 @@ function AccountInner() {
 
   return (
     <div className="max-w-md mx-auto p-6 space-y-4">
-      <h1 className="font-serif text-2xl text-slate-900">Tài khoản</h1>
+      <h1 className="font-serif font-black text-2xl text-slate-900">Tài khoản</h1>
       <div className="flex gap-2">
         <button
           onClick={() => { setTab("login"); setErr(null); setMsg(null); }}
-          className={`flex-1 py-2 rounded-2xl text-xs font-serif font-bold ${tab === "login" ? "bg-[#1c1917] text-white" : "bg-white border border-[#ede5d8] text-slate-700"}`}
+          className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer ${tab === "login" ? "bg-gradient-to-r from-rose-600 to-orange-500 text-white shadow-xs" : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"}`}
         >Đăng nhập</button>
         <button
           onClick={() => { setTab("signup"); setErr(null); setMsg(null); }}
-          className={`flex-1 py-2 rounded-2xl text-xs font-serif font-bold ${tab === "signup" ? "bg-[#1c1917] text-white" : "bg-white border border-[#ede5d8] text-slate-700"}`}
+          className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer ${tab === "signup" ? "bg-gradient-to-r from-rose-600 to-orange-500 text-white shadow-xs" : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"}`}
         >Đăng ký</button>
       </div>
 
@@ -143,17 +143,17 @@ function AccountInner() {
 
       {tab === "login" ? (
         <form onSubmit={submitLogin} className="space-y-3">
-          <label className="block text-xs font-serif text-slate-600">
+          <label className="block text-xs font-medium text-slate-600">
             Email hoặc số điện thoại
             <input
               name="identifier"
               type="text"
               autoComplete="username"
               required
-              className="mt-1 w-full rounded-2xl border border-[#ede5d8] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20"
+              className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20"
             />
           </label>
-          <label className="block text-xs font-serif text-slate-600">
+          <label className="block text-xs font-medium text-slate-600">
             Mật khẩu
             <input
               name="password"
@@ -161,37 +161,37 @@ function AccountInner() {
               autoComplete="current-password"
               required
               minLength={10}
-              className="mt-1 w-full rounded-2xl border border-[#ede5d8] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20"
+              className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20"
             />
           </label>
           <button
             type="submit"
             disabled={busy}
-            className="w-full py-2.5 rounded-2xl bg-[#1c1917] text-white text-sm font-serif font-bold disabled:bg-slate-300 disabled:text-slate-700"
+            className="w-full py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white text-sm font-bold shadow-md shadow-rose-500/20 disabled:bg-slate-300 disabled:text-slate-500 cursor-pointer"
           >{busy ? "Đang xử lý..." : "Đăng nhập"}</button>
         </form>
       ) : (
         <form onSubmit={submitSignup} className="space-y-3">
-          <label className="block text-xs font-serif text-slate-600">
+          <label className="block text-xs font-medium text-slate-600">
             Họ tên
-            <input name="name" type="text" required maxLength={120} className="mt-1 w-full rounded-2xl border border-[#ede5d8] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20" />
+            <input name="name" type="text" required maxLength={120} className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20" />
           </label>
-          <label className="block text-xs font-serif text-slate-600">
+          <label className="block text-xs font-medium text-slate-600">
             Email
-            <input name="email" type="email" required className="mt-1 w-full rounded-2xl border border-[#ede5d8] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20" />
+            <input name="email" type="email" required className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20" />
           </label>
-          <label className="block text-xs font-serif text-slate-600">
+          <label className="block text-xs font-medium text-slate-600">
             Số điện thoại
-            <input name="phone" type="tel" required pattern="[0-9+\-\s()]{8,20}" className="mt-1 w-full rounded-2xl border border-[#ede5d8] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20" />
+            <input name="phone" type="tel" required pattern="[0-9+\-\s()]{8,20}" className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20" />
           </label>
-          <label className="block text-xs font-serif text-slate-600">
+          <label className="block text-xs font-medium text-slate-600">
             Mật khẩu (tối thiểu 10 ký tự)
-            <input name="password" type="password" required minLength={10} autoComplete="new-password" className="mt-1 w-full rounded-2xl border border-[#ede5d8] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20" />
+            <input name="password" type="password" required minLength={10} autoComplete="new-password" className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20" />
           </label>
           <button
             type="submit"
             disabled={busy}
-            className="w-full py-2.5 rounded-2xl bg-[#1c1917] text-white text-sm font-serif font-bold disabled:bg-slate-300 disabled:text-slate-700"
+            className="w-full py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white text-sm font-bold shadow-md shadow-rose-500/20 disabled:bg-slate-300 disabled:text-slate-500 cursor-pointer"
           >{busy ? "Đang xử lý..." : "Tạo tài khoản"}</button>
         </form>
       )}

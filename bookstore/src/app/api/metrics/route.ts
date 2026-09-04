@@ -11,7 +11,7 @@ import { prismaRead } from "@/lib/db";
  *   1. p95 latency per route (catalog target: < 500 ms)
  *   2. 429 rejection rate (rate limiter + checkout admission control)
  *   3. DB pool wait time (p95 of acquire waits + queue high-water mark)
- *   4. FAILED job runs (alert source — see scripts/check-alerts.ts)
+ *   4. FAILED job runs (alert source — see scripts/ops/check-alerts.ts)
  */
 export async function GET() {
   try {

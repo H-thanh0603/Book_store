@@ -121,35 +121,35 @@ export default function BackToSchoolPage() {
   const subtotal = cart.reduce((sum, l) => sum + l.quantity * l.price, 0);
 
   return (
-    <main className="min-h-screen bg-[#f7fafc] text-slate-900 pb-24 font-sans selection:bg-[#059669] selection:text-white">
+    <main className="min-h-screen bg-slate-50/70 text-slate-900 pb-24 font-sans selection:bg-emerald-500 selection:text-white">
       {/* 1. TOP ANNOUNCEMENT */}
-      <div className="bg-[#059669] text-white px-4 py-2 text-xs font-black shadow-sm">
+      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 gradient-animated text-white px-4 py-2 text-xs font-bold shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-amber-300 text-amber-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-white text-emerald-800 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
               MÙA TỰU TRƯỜNG 2026
             </span>
-            <span>🎒 Trọn bộ dụng cụ học tập, vở ô ly, bút Thiên Long &amp; Balo chống gù giảm đến 40%</span>
+            <span className="drop-shadow-xs">🎒 Trọn bộ dụng cụ học tập, vở ô ly, bút Thiên Long &amp; Balo chống gù giảm đến 40%</span>
           </div>
-          <Link href="/shop" className="hover:underline hidden sm:inline text-[11px]">
+          <Link href="/shop" className="hover:text-yellow-200 hidden sm:inline text-[11px] font-bold">
             ← Về Siêu Thị Sách
           </Link>
         </div>
       </div>
 
       {/* 2. HEADER */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-emerald-100 shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
           <Link href="/back-to-school" className="flex items-center gap-2.5 group">
-            <div className="size-11 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600 text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-all">
+            <div className="size-11 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/25 group-hover:scale-105 transition-all">
               <GraduationCap className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <span className="font-black text-2xl text-slate-900 tracking-tight leading-none">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white px-1.5 py-0.5 rounded">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-500 text-white px-2 py-0.5 rounded-full shadow-2xs">
                   School Hub
                 </span>
               </div>
@@ -166,7 +166,7 @@ export default function BackToSchoolPage() {
             </Link>
             <button
               onClick={() => setCartOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md hover:scale-105 transition-all"
+              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs shadow-md shadow-emerald-600/25 hover:scale-105 active:scale-95 transition-all cursor-pointer"
             >
               <ShoppingBag className="w-4 h-4" />
               <span>Giỏ hàng ({itemCount})</span>
@@ -177,28 +177,28 @@ export default function BackToSchoolPage() {
 
       {/* 3. HERO BANNER */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#064e3b] via-[#047857] to-[#0f766e] text-white p-8 sm:p-14 shadow-2xl">
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
+        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white p-8 sm:p-14 shadow-2xl">
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 size-96 bg-white/20 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
           <div className="relative z-10 max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 bg-amber-400 text-amber-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-sm">
+            <div className="inline-flex items-center gap-2 bg-yellow-300 text-amber-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-sm">
               <GraduationCap className="w-4 h-4" /> MÙA KHAI TRƯỜNG RỘN RÀNG
             </div>
-            <h1 className="font-serif font-black text-3xl sm:text-5xl leading-tight">
+            <h1 className="font-serif font-black text-3xl sm:text-5xl leading-tight text-white drop-shadow-sm">
               Tự Tin Bước Vào Năm Học Mới <br />
-              <span className="text-amber-300">Cùng Bộ Dụng Cụ Học Tập Chuẩn</span>
+              <span className="text-yellow-200">Cùng Bộ Dụng Cụ Học Tập Chuẩn</span>
             </h1>
-            <p className="text-xs sm:text-sm text-emerald-100 leading-relaxed max-w-xl">
+            <p className="text-sm sm:text-base text-emerald-100 font-medium leading-relaxed max-w-xl">
               Cung cấp đầy đủ vở viết, bút Thiên Long chính hãng, giấy Double A và balo chống gù chuẩn y khoa bảo vệ cột sống cho học sinh sinh viên.
             </p>
             <div className="pt-2 flex flex-wrap items-center gap-3">
               <a
                 href="#combo-checklist"
-                className="px-6 py-3.5 rounded-full bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs sm:text-sm shadow-xl transition-all hover:scale-105"
+                className="px-6 py-3.5 rounded-full bg-yellow-300 hover:bg-yellow-200 text-amber-950 font-black text-xs sm:text-sm shadow-xl transition-all hover:scale-105"
               >
                 Xem danh sách trọn bộ dụng cụ
               </a>
-              <div className="flex items-center gap-1.5 text-xs text-emerald-200 font-bold bg-white/10 px-3.5 py-2.5 rounded-full backdrop-blur-md">
-                <ShieldCheck className="w-4 h-4 text-amber-300" /> 100% Sản phẩm chính hãng Thiên Long, Double A
+              <div className="flex items-center gap-1.5 text-xs text-white font-bold bg-black/20 px-3.5 py-2.5 rounded-full backdrop-blur-md border border-white/20">
+                <ShieldCheck className="w-4 h-4 text-emerald-300" /> 100% Sản phẩm chính hãng Thiên Long, Double A
               </div>
             </div>
           </div>

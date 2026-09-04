@@ -12,11 +12,13 @@ import {
   CheckSquare,
   Square,
   X,
+  BookOpen,
 } from "lucide-react";
 
 type Product = {
   id: string;
   name: string;
+  imageUrl: string | null;
   category: { name: string } | null;
   brand: { name: string } | null;
   author: { name: string } | null;
@@ -171,8 +173,24 @@ export default function ProductsPage() {
                         </button>
                       </td>
                       <td className="p-4">
-                        <div className="font-bold text-slate-900">{p.name}</div>
-                        {p.author && <div className="text-[11px] text-slate-400 italic">✍️ {p.author.name}</div>}
+                        <div className="flex items-center gap-3">
+                          {p.imageUrl ? (
+                            <img
+                              src={p.imageUrl}
+                              alt={p.name}
+                              className="w-10 h-14 object-cover rounded border border-slate-200 shrink-0 bg-white"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-10 h-14 rounded border border-slate-200 shrink-0 bg-slate-50 flex items-center justify-center">
+                              <BookOpen className="w-4 h-4 text-slate-300" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-bold text-slate-900">{p.name}</div>
+                            {p.author && <div className="text-[11px] text-slate-400 italic">✍️ {p.author.name}</div>}
+                          </div>
+                        </div>
                       </td>
                       <td className="p-4">
                         <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">

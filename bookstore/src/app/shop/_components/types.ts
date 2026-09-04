@@ -88,6 +88,12 @@ export type ComboBundle = {
   originalPrice: number;
   items: string[];
   desc: string;
+  /**
+   * Catalog search terms resolving each physical component to a real product.
+   * `addComboToCart` adds every matched product; a bundle whose components
+   * cannot all be resolved is never added partially.
+   */
+  matchTerms: string[];
 };
 
 export type AuthorSpotlightData = {
@@ -115,6 +121,19 @@ export type Voucher = {
 };
 
 export type GiftWrapping = "none" | "vintage" | "heritage";
+
+/**
+ * Server-side checkout preview from /api/storefront/quote — the same promotion
+ * engine the order will use, so the displayed total matches the charged one.
+ */
+export type QuotePreview = {
+  subtotal: number;
+  discountTotal: number;
+  total: number;
+  promotions: { name: string; discountTotal: number }[];
+  couponApplied: boolean;
+  couponInvalidReason?: string;
+};
 
 export type Fulfillment = "delivery" | "pickup";
 

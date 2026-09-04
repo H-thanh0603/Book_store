@@ -8,7 +8,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Feather } from "lucide-react";
 
@@ -38,6 +38,7 @@ import {
   WishlistDrawer,
   CartDrawer,
   OrderSuccessModal,
+  StoreSwitchModal,
 } from "./_components/ShopOverlays";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
@@ -87,16 +88,9 @@ export default function ShopPage() {
       s.setQuickViewProduct(null);
       s.setShelfProduct(null);
       s.setFlipbookProduct(null);
+      s.cancelStoreChange();
     },
   });
-
-  // Rotate hero slides every 7s.
-  useEffect(() => {
-    const slideTimer = setInterval(() => {
-      s.setCurrentSlide((s.currentSlide + 1) % featuredCampaigns.length);
-    }, 7000);
-    return () => clearInterval(slideTimer);
-  }, [s]);
 
   function handleDepartment(deptId: string) {
     s.setActiveDepartment(deptId);
@@ -108,10 +102,11 @@ export default function ShopPage() {
       c.name.toLowerCase().includes(deptId.toLowerCase())
     );
     if (matched) s.setCategoryId(matched.id);
+    document.querySelector("#catalog")?.scrollIntoView({ behavior: "smooth" });
   }
 
   return (
-    <main className="min-h-screen bg-[#faf7f2] text-[#1c1917] pb-24 font-sans selection:bg-[#c83f49] selection:text-white">
+    <main className="min-h-screen paper-mesh text-slate-900 pb-24 font-sans selection:bg-[#8c2d19] selection:text-white">
       {/* 1. TOP ANNOUNCEMENT BAR */}
       <AnnouncementBar
         wishlistCount={s.wishlist.length}
@@ -150,10 +145,17 @@ export default function ShopPage() {
             s.setCurrentSlide(s.currentSlide === 0 ? featuredCampaigns.length - 1 : s.currentSlide - 1)
           }
           onNext={() => s.setCurrentSlide((s.currentSlide + 1) % featuredCampaigns.length)}
+          paused={s.heroPaused}
+          onPause={s.pauseHeroSlideShow}
+          onResume={s.resumeHeroSlideShow}
         />
 
-        {/* 4. DEPARTMENT DISCOVERY CARDS */}
-        <DepartmentCards departments={departments} onDepartment={handleDepartment} />
+        {/* 4. DEPARTMENT DISCOVERY — compact chip row (merged from the old 6-card grid) */}
+        <DepartmentCards
+          departments={departments}
+          onDepartment={handleDepartment}
+          activeDepartment={s.activeDepartment}
+        />
 
         {/* 5. FLASH SALE */}
         <FlashSale
@@ -286,7 +288,11 @@ export default function ShopPage() {
       {s.checkoutOpen && (
         <CheckoutModal
           cart={s.cart}
+          discountTotal={s.discountTotal}
+          wrappingFee={s.wrappingFee}
           grandTotal={s.grandTotal}
+          quote={s.quote}
+          quoteChecking={s.quoteChecking}
           fulfillment={s.fulfillment}
           onFulfillment={s.setFulfillment}
           paymentMethod={s.paymentMethod}
@@ -305,6 +311,16 @@ export default function ShopPage() {
           error={s.error}
           onClose={() => s.setCheckoutOpen(false)}
           onSubmit={s.checkout}
+        />
+      )}
+
+      {/* 19b. STORE-SWITCH CONFIRM — replaces native window.confirm */}
+      {s.pendingStore && (
+        <StoreSwitchModal
+          nextStoreName={s.catalog?.stores.find((st) => st.id === s.pendingStore)?.name ?? "chi nhánh mới"}
+          itemCount={s.itemCount}
+          onCancel={s.cancelStoreChange}
+          onConfirm={s.confirmStoreChange}
         />
       )}
 
@@ -348,10 +364,16 @@ export default function ShopPage() {
       {/* 23. AI CONCIERGE — dynamic */}
       <AIConciergeModal
         onAddToCart={(item) => {
-          const matched =
-            s.allProducts.find((p) => p.name.toLowerCase().includes(item.name.toLowerCase())) ??
-            s.allProducts[0];
-          if (matched) s.addToCart(matched);
+          // Match by name only; never fall back to a random product — an
+          // unmatched suggestion is surfaced honestly instead.
+          const matched = s.allProducts.find((p) =>
+            p.name.toLowerCase().includes(item.name.toLowerCase())
+          );
+          if (matched) {
+            s.addToCart(matched);
+          } else {
+            s.showToast(`Không tìm thấy "${item.name}" trong kho — thử gợi ý khác nhé`);
+          }
         }}
       />
 
@@ -360,8 +382,8 @@ export default function ShopPage() {
 
       {/* 25. FLOATING TOAST */}
       {s.toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#1c1917] text-[#fbf8f3] px-5 py-3.5 rounded-2xl shadow-2xl border border-white/10 text-xs font-serif font-semibold flex items-center gap-2.5 animate-in slide-in-from-bottom-5 duration-200">
-          <Feather className="w-4 h-4 text-amber-400" />
+        <div className="fixed bottom-6 right-6 z-50 bg-white text-slate-900 px-5 py-3.5 rounded-2xl shadow-2xl border border-[#ede5d8] text-xs font-bold flex items-center gap-2.5 animate-in slide-in-from-bottom-5 duration-200">
+          <Feather className="w-4 h-4 text-[#8c2d19]" />
           <span>{s.toast.message}</span>
         </div>
       )}

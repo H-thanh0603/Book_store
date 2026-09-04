@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { money, readingAtmospheres } from "./data";
+import { money, readingAtmospheres, comboBundles } from "./data";
 import type {
   Catalog,
   Fulfillment,
@@ -20,8 +20,19 @@ import { useCart } from "@/contexts/CartContext";
 
 export type Toast = { id: string; message: string };
 
+export type QuotePreview = {
+  subtotal: number;
+  discountTotal: number;
+  total: number;
+  promotions: { name: string; discountTotal: number }[];
+  couponApplied: boolean;
+  couponInvalidReason?: string;
+};
+
 const defaultCustomer = { name: "", phone: "", email: "", address: "" };
 const FREE_SHIPPING_THRESHOLD = 250000;
+/** Hero slides — kept in the hook so the rotation timer owns one source of truth. */
+const featuredCampaignCount = 4;
 
 /** Body of a backend error as returned by apiError (details surfaced on 409). */
 type ApiErrorBody = {
@@ -54,6 +65,9 @@ export function useStorefront() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [couponInput, setCouponInput] = useState("");
+  const [quote, setQuote] = useState<QuotePreview | null>(null);
+  const [quoteChecking, setQuoteChecking] = useState(false);
+  const [pendingStore, setPendingStore] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ number: string; total: number } | null>(null);
   const [fulfillment, setFulfillment] = useState<Fulfillment>("delivery");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodChoice>("COD");
@@ -69,6 +83,8 @@ export function useStorefront() {
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const checkoutAttempt = useRef<{ signature: string; key: string } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heroPausedRef = useRef(false);
+  const [heroPaused, setHeroPaused] = useState(false);
 
   // ── effects ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -81,7 +97,9 @@ export function useStorefront() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Load wishlist from localStorage (deferred past mount for hydration).
+  // Load wishlist from localStorage (deferred past mount for hydration), and
+  // pick up a deep-link search term (?q=...) so shared/blog links land on a
+  // meaningful catalog view.
   useEffect(() => {
     let storedWishlist: string[] = [];
     try {
@@ -90,12 +108,61 @@ export function useStorefront() {
     const t = setTimeout(() => {
       setWishlist(storedWishlist);
     }, 0);
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) setQuery(q);
     return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
     localStorage.setItem("melio.storefront.wishlist.v1", JSON.stringify(wishlist));
   }, [wishlist]);
+
+  // Rotate hero slides every 7s — paused on interaction (WCAG 2.2.2) and
+  // suspended entirely when the visitor prefers reduced motion.
+  useEffect(() => {
+    if (heroPausedRef.current) return;
+    const slideTimer = setInterval(() => {
+      setCurrentSlide((current) => (current + 1) % featuredCampaignCount);
+    }, 7000);
+    return () => clearInterval(slideTimer);
+  }, [heroPaused]);
+
+  function pauseHeroSlideShow() {
+    heroPausedRef.current = true;
+    setHeroPaused(true);
+  }
+
+  function resumeHeroSlideShow() {
+    heroPausedRef.current = false;
+    setHeroPaused(false);
+  }
+
+  // Debounced coupon/cart preview — mirrors the real promotion engine so the
+  // displayed total always matches what checkout will charge.
+  useEffect(() => {
+    if (!checkoutOpen || cart.length === 0) {
+      setQuote(null);
+      return;
+    }
+    const timer = window.setTimeout(async () => {
+      setQuoteChecking(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("storeId", storeId);
+        params.set("items", cart.map((line) => `${line.variantId}:${line.quantity}`).join(","));
+        if (couponInput.trim()) params.set("couponCode", couponInput.trim());
+        const response = await fetch(`/api/storefront/quote?${params}`);
+        const data = await response.json();
+        if (response.ok) setQuote(data as QuotePreview);
+      } catch {
+        // Preview is best-effort — the real total is enforced at checkout.
+        setQuote(null);
+      } finally {
+        setQuoteChecking(false);
+      }
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [checkoutOpen, cart, couponInput, storeId]);
 
   // Countdown to midnight (store timezone) — a real deadline, not a loop.
   useEffect(() => {
@@ -226,7 +293,10 @@ export function useStorefront() {
   );
 
   const wrappingFee = giftWrapping === "vintage" ? 25000 : giftWrapping === "heritage" ? 45000 : 0;
-  const grandTotal = cartSubtotal + wrappingFee;
+  // Prefer the server quote (real promotion engine) when present; the local
+  // arithmetic is the no-network fallback so the total never reads 0.
+  const discountTotal = quote?.discountTotal ?? 0;
+  const grandTotal = Math.max(0, cartSubtotal - discountTotal + wrappingFee);
   const activeStore = catalog?.stores.find((store) => store.id === storeId);
   const progressToFreeShipping = Math.min(100, Math.round((cartSubtotal / FREE_SHIPPING_THRESHOLD) * 100));
   const hasActiveFilters =
@@ -272,12 +342,62 @@ export function useStorefront() {
     setCartOpen(true);
   }
 
+  /**
+   * Add a combo bundle as its real component products. Each bundle declares
+   * matching search terms for every physical item; we resolve each to a real
+   * catalog product and add every in-stock component. If ANY component cannot
+   * be matched or is out of stock, nothing is added and the toast says so —
+   * a partial bundle in the cart would be a lie the customer discovers at
+   * the door.
+   */
   function addComboToCart(bundle: { title: string }) {
-    const firstProduct = allProducts[0];
-    if (firstProduct && firstProduct.variants[0]) {
-      addToCart(firstProduct);
-      showToast(`🎁 Đã thêm trọn gói "${bundle.title}" vào giỏ hàng!`);
+    const spec = comboBundles.find((b) => b.title === bundle.title);
+    const searchTerms = spec?.matchTerms ?? [];
+    if (!spec || searchTerms.length === 0 || allProducts.length === 0) {
+      showToast("Combo này tạm không khả dụng — vui lòng quay lại sau");
+      return;
     }
+    const missing: string[] = [];
+    for (const term of searchTerms) {
+      const needle = term.toLowerCase();
+      const product = allProducts.find((p) =>
+        p.name.toLowerCase().includes(needle) ||
+        p.category.name.toLowerCase().includes(needle)
+      );
+      const variant = product?.variants[0];
+      if (!product || !variant || variant.available <= 0) {
+        missing.push(term);
+      }
+    }
+    if (missing.length > 0) {
+      showToast(`Combo tạm thiếu: ${missing.join(", ")} — chưa thể thêm trọn gói`);
+      return;
+    }
+    for (const term of searchTerms) {
+      const needle = term.toLowerCase();
+      const product = allProducts.find((p) =>
+        p.name.toLowerCase().includes(needle) ||
+        p.category.name.toLowerCase().includes(needle)
+      )!;
+      addToCartSilently(product);
+    }
+    showToast(`🎁 Đã thêm ${searchTerms.length} sản phẩm của gói "${bundle.title}" vào giỏ hàng!`);
+    setCartOpen(true);
+  }
+
+  /** addToCart without its toast/open-cart side effects (used by bundle adds). */
+  function addToCartSilently(product: Product) {
+    const variant = product.variants[0];
+    if (!variant || variant.available <= 0) return;
+    addToCartContext({
+      variantId: variant.id,
+      productId: product.id,
+      name: product.name,
+      category: product.category.name,
+      brand: product.brand?.name,
+      price: variant.price,
+      available: variant.available,
+    });
   }
 
   function addAllWishlistToCart() {
@@ -323,20 +443,36 @@ export function useStorefront() {
     removeCartLineContext(variantId);
   }
 
+  /**
+   * Store switch: with items in the cart we stop and ask via an in-brand
+   * dialog (pendingStore) instead of a native confirm. The caller confirms
+   * with confirmStoreChange() or dismisses with cancelStoreChange().
+   */
   function changeStore(nextStoreId: string) {
-    if (
-      cart.length &&
-      !window.confirm("Đổi chi nhánh sẽ làm mới giỏ hàng để cập nhật tồn kho thực tế. Bạn có muốn tiếp tục?")
-    )
+    if (nextStoreId === storeId) return;
+    if (cart.length > 0) {
+      setPendingStore(nextStoreId);
       return;
-    clearCart();
+    }
     setStoreId(nextStoreId);
+  }
+
+  function confirmStoreChange() {
+    if (!pendingStore) return;
+    clearCart();
+    setStoreId(pendingStore);
+    setPendingStore(null);
+    showToast("Đã chuyển chi nhánh và làm mới giỏ hàng theo tồn kho mới");
+  }
+
+  function cancelStoreChange() {
+    setPendingStore(null);
   }
 
   function applyVoucherCode(code: string) {
     setCouponInput(code);
     navigator.clipboard.writeText(code);
-    showToast(`🎟️ Đã sao chép mã ưu đãi "${code}"!`);
+    showToast(`🎟️ Đã chép mã "${code}" — dán vào ô mã giảm giá khi thanh toán`);
   }
 
   /** Clamp one cart line to freshly-reported availability (post-409 recovery). */
@@ -452,6 +588,7 @@ export function useStorefront() {
     searchFocused, setSearchFocused, activeDepartment, setActiveDepartment,
     activeMood, setActiveMood, currentSlide, setCurrentSlide, sortBy, setSortBy,
     viewMode, setViewMode, priceRange, setPriceRange, onlyInStock, setOnlyInStock,
+    heroPaused, pauseHeroSlideShow, resumeHeroSlideShow,
     // cart / wishlist / modals
     cart, wishlist, cartOpen, setCartOpen, wishlistOpen, setWishlistOpen,
     checkoutOpen, setCheckoutOpen, quickViewProduct, setQuickViewProduct,
@@ -459,18 +596,21 @@ export function useStorefront() {
     giftWrapping, setGiftWrapping, giftMessage, setGiftMessage,
     fulfillment, setFulfillment, customer, setCustomer,
     paymentMethod, setPaymentMethod,
-    couponInput, setCouponInput,
+    couponInput, setCouponInput, quote, quoteChecking,
+    pendingStore, confirmStoreChange, cancelStoreChange,
     // totals / derived
-    itemCount, subtotal: cartSubtotal, wrappingFee, grandTotal, progressToFreeShipping,
-    freeShippingThreshold: FREE_SHIPPING_THRESHOLD, hasActiveFilters,
+    itemCount, subtotal: cartSubtotal, discountTotal, wrappingFee, grandTotal,
+    progressToFreeShipping, freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
+    hasActiveFilters,
     // server interaction
     loading, submitting, error, setError, success, setSuccess,
     countdown, toast,
     searchContainerRef,
     // actions
-    showToast, toggleFavorite, addToCart, addComboToCart, addAllWishlistToCart,
-    resetAllFilters, changeQuantity, removeCartLine, changeStore, applyVoucherCode,
-    updateCartAvailability, checkout, refreshCatalog, money,
+    showToast, toggleFavorite, addToCart, addToCartSilently, addComboToCart,
+    addAllWishlistToCart, resetAllFilters, changeQuantity, removeCartLine,
+    changeStore, applyVoucherCode, updateCartAvailability, checkout,
+    refreshCatalog, money,
   };
 }
 

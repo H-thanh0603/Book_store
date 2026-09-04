@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Award, Crown, Flame, Medal, Plus, ShoppingBag, Sparkles, Trophy } from "lucide-react";
+import ProductCover from "../shop/_components/ProductCover";
+import { useCart } from "@/contexts/CartContext";
 
 type Variant = { id: string; name: string; sku: string; price: number; available: number };
 type Product = {
@@ -13,12 +15,10 @@ type Product = {
   brand?: { name: string } | null;
   author?: { name: string } | null;
   publisher?: { name: string } | null;
+  image?: string | null;
   variants: Variant[];
 };
 type Catalog = { products: Product[]; categories: { id: string; name: string }[]; stores: { id: string; name: string; code: string }[]; storeId: string };
-type CartLine = { variantId: string; productId: string; name: string; category: string; price: number; quantity: number; available: number };
-
-const CART_KEY = "melio.storefront.cart.v1";
 
 const rankBadges = [
   { rank: 1, bg: "bg-amber-400 text-amber-950 font-black ring-4 ring-amber-200", icon: Crown, label: "QUÁN QUÂN" },
@@ -34,23 +34,8 @@ export default function BestsellersPage() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [timeframe, setTimeframe] = useState<"week" | "month" | "year">("week");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [cart, setCart] = useState<CartLine[]>([]);
+  const { addItem, itemCount } = useCart();
   const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    let stored: CartLine[] = [];
-    try {
-      stored = JSON.parse(localStorage.getItem(CART_KEY) ?? "[]");
-    } catch {}
-    // Defer past mount so the first client render matches SSR and the cart
-    // hydrates without a synchronous setState cascade.
-    const t = setTimeout(() => setCart(stored), 0);
-    return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(CART_KEY, JSON.stringify(cart));
-  }, [cart]);
 
   useEffect(() => {
     fetch("/api/storefront")
@@ -67,15 +52,13 @@ export default function BestsellersPage() {
   function addToCart(p: Product) {
     const v = p.variants[0];
     if (!v || v.available <= 0) return;
-    setCart((lines) => {
-      const cur = lines.find((l) => l.variantId === v.id);
-      if (cur) return lines.map((l) => (l.variantId === v.id ? { ...l, quantity: l.quantity + 1 } : l));
-      return [...lines, { variantId: v.id, productId: p.id, name: p.name, category: p.category.name, price: v.price, quantity: 1, available: v.available }];
+    addItem({
+      variantId: v.id, productId: p.id, name: p.name,
+      category: p.category.name, price: v.price, available: v.available,
     });
-    showToast(`🏆 Đã thêm "${p.name}" vào giỏ hàng!`);
+    showToast(`Đã thêm "${p.name}" vào giỏ hàng!`);
   }
 
-  // Stable identity across renders even while catalog is still null.
   const products = useMemo(() => catalog?.products ?? [], [catalog]);
   const filtered = useMemo(() => {
     if (selectedCategory === "all") return products;
@@ -85,35 +68,35 @@ export default function BestsellersPage() {
   }, [products, selectedCategory]);
 
   return (
-    <main className="min-h-screen bg-[#faf8f5] text-slate-900 pb-24 font-sans selection:bg-[#d97706] selection:text-white">
+    <main className="min-h-screen bg-slate-50/70 text-slate-900 pb-24 font-sans selection:bg-amber-500 selection:text-white">
       {/* 1. TOP ANNOUNCEMENT BAR */}
-      <div className="bg-[#1c1917] text-white px-4 py-2 text-xs font-bold shadow-xs border-b border-white/10">
+      <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 gradient-animated text-white px-4 py-2 text-xs font-bold shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-amber-400 text-amber-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-white text-amber-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
               MELIO CHARTS 2026
             </span>
-            <span>🏆 Bảng xếp hạng 100 tác phẩm &amp; ấn phẩm bán chạy nhất được cập nhật mỗi thứ Hai</span>
+            <span className="drop-shadow-xs">🏆 Bảng xếp hạng 100 tác phẩm &amp; ấn phẩm bán chạy nhất được cập nhật mỗi thứ Hai</span>
           </div>
-          <Link href="/shop" className="hover:underline text-[11px] hidden sm:inline text-amber-200">
+          <Link href="/shop" className="hover:text-yellow-200 text-[11px] hidden sm:inline font-bold">
             ← Trở về siêu thị sách
           </Link>
         </div>
       </div>
 
       {/* 2. HEADER */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-[#ede5d8] shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
           <Link href="/bestsellers" className="flex items-center gap-2.5 group">
-            <div className="size-11 rounded-2xl bg-[#1c1917] text-amber-400 flex items-center justify-center shadow-md group-hover:scale-105 transition-all">
+            <div className="size-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-md shadow-amber-500/25 group-hover:scale-105 transition-all">
               <Trophy className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <span className="font-serif font-black text-2xl text-slate-900 tracking-tight leading-none">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-amber-950 px-1.5 py-0.5 rounded">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 px-2 py-0.5 rounded-full shadow-2xs">
                   Bestsellers
                 </span>
               </div>
@@ -128,15 +111,15 @@ export default function BestsellersPage() {
             <Link href="/reading-challenge" className="text-xs font-bold text-slate-600 hover:text-amber-700 hidden sm:inline">
               👥 Thử Thách Đọc
             </Link>
-            <Link href="/stores" className="text-xs font-bold text-slate-600 hover:text-amber-700 hidden sm:inline">
-              🏛️ Chi Nhánh &amp; Sự Kiện
+            <Link href="/deals" className="text-xs font-bold text-slate-600 hover:text-amber-700 hidden sm:inline">
+              ⚡ Săn Giờ Vàng
             </Link>
             <Link
               href="/shop"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[#1c1917] text-white font-bold text-xs shadow-md hover:bg-amber-600 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all hover:scale-105"
             >
               <ShoppingBag className="w-4 h-4" />
-              <span>Giỏ hàng ({cart.reduce((s, l) => s + l.quantity, 0)})</span>
+              <span>Giỏ hàng ({itemCount})</span>
             </Link>
           </div>
         </div>
@@ -144,18 +127,18 @@ export default function BestsellersPage() {
 
       {/* 3. HERO SPREAD */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
-        <section className="rounded-3xl bg-gradient-to-r from-[#1c1917] via-[#2a221b] to-[#171412] text-white p-8 sm:p-14 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+        <section className="rounded-3xl bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 text-white p-8 sm:p-14 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 size-96 bg-white/20 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
           <div className="relative z-10 max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 bg-amber-400 text-amber-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
-              <Flame className="w-4 h-4" /> BẢNG XẾP HẠNG THỊNH HÀNH
+            <div className="inline-flex items-center gap-2 bg-black/20 text-white px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider backdrop-blur-xs border border-white/20">
+              <Flame className="w-4 h-4 text-amber-200" /> BẢNG XẾP HẠNG THỊNH HÀNH
             </div>
-            <h1 className="font-serif font-black text-3xl sm:text-5xl leading-tight">
+            <h1 className="font-serif font-black text-3xl sm:text-5xl leading-tight text-white drop-shadow-sm">
               Những Tác Phẩm &amp; Ấn Bản <br />
-              <span className="text-amber-300">Được Yêu Thích Nhất 2026</span>
+              <span className="text-slate-950 font-serif">Được Yêu Thích Nhất 2026</span>
             </h1>
-            <p className="text-xs sm:text-sm text-slate-300 font-serif italic leading-relaxed">
-              Tổng hợp dữ liệu doanh số thực tế từ hệ thống 5 siêu thị nhà sách Melio và kênh bán hàng trực tuyến toàn quốc.
+            <p className="text-sm sm:text-base text-white/90 font-medium leading-relaxed">
+              Tổng hợp dữ liệu doanh số thực tế từ hệ thống siêu thị nhà sách Melio và kênh bán lẻ trực tuyến giao hàng 2H toàn quốc.
             </p>
 
             {/* Timeframe selector */}
@@ -168,10 +151,10 @@ export default function BestsellersPage() {
                 <button
                   key={t.id}
                   onClick={() => setTimeframe(t.id as "week" | "month" | "year")}
-                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all ${
+                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
                     timeframe === t.id
-                      ? "bg-amber-400 text-amber-950 shadow-md font-black"
-                      : "bg-white/10 text-white hover:bg-white/20"
+                      ? "bg-slate-950 text-white shadow-md font-black scale-105"
+                      : "bg-white/20 text-white hover:bg-white/30"
                   }`}
                 >
                   {t.label}
@@ -193,10 +176,10 @@ export default function BestsellersPage() {
             <button
               key={c.id}
               onClick={() => setSelectedCategory(c.id)}
-              className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
+              className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                 selectedCategory === c.id
-                  ? "bg-[#1c1917] text-white shadow-md"
-                  : "bg-white border border-[#ede5d8] text-slate-700 hover:bg-[#faf7f2]"
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md font-black scale-105"
+                  : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
               }`}
             >
               {c.label}
@@ -210,30 +193,40 @@ export default function BestsellersPage() {
             const rank = idx + 1;
             const variant = product.variants[0];
             const badge = rankBadges.find((b) => b.rank === rank);
-            const soldCount = (120 - idx * 7) > 20 ? (120 - idx * 7) : 25;
 
             return (
               <div
                 key={product.id}
-                className="p-5 rounded-3xl bg-white border border-[#ede5d8] shadow-2xs hover:shadow-xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
+                className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
               >
                 <div className="flex items-center gap-4">
                   {/* Rank Number */}
                   <div
-                    className={`size-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 ${
-                      badge ? badge.bg : "bg-slate-100 text-slate-600 font-mono"
+                    className={`size-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 shadow-xs ${
+                      badge ? badge.bg : "bg-slate-100 text-slate-700 font-mono"
                     }`}
                   >
                     #{rank}
                   </div>
 
+                  {/* Cover thumbnail */}
+                  <div className="w-16 shrink-0 hidden sm:block">
+                    <ProductCover
+                      id={product.id}
+                      name={product.name}
+                      categoryName={product.category.name}
+                      authorName={product.author?.name}
+                      image={product.image ?? null}
+                    />
+                  </div>
+
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full">
                         {product.category.name}
                       </span>
                       {rank <= 3 && (
-                        <span className="text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 px-2 py-0.5 rounded">
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full">
                           HOT TRENDING
                         </span>
                       )}
@@ -249,7 +242,6 @@ export default function BestsellersPage() {
 
                 <div className="flex items-center justify-between sm:justify-end gap-6 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                   <div className="text-left sm:text-right">
-                    <span className="text-[11px] text-slate-400 block font-serif">Đã bán {soldCount * 12}+ cuốn</span>
                     <b className="text-lg font-serif font-black text-slate-900">
                       {variant ? money(variant.price) : "Liên hệ"}
                     </b>
@@ -258,7 +250,7 @@ export default function BestsellersPage() {
                   <button
                     onClick={() => addToCart(product)}
                     disabled={!variant?.available}
-                    className="px-5 py-3 rounded-2xl bg-[#1c1917] hover:bg-amber-600 disabled:bg-slate-200 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2"
+                    className="px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 disabled:bg-slate-200 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
                   >
                     <Plus className="w-4 h-4" /> Mua Ngay
                   </button>

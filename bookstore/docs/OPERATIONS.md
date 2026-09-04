@@ -126,7 +126,7 @@ Restore: `pg_restore --clean --dbname "$DATABASE_URL" backup-YYYY-MM-DD.dump`.
 
 A backup is only as good as its last restore. Run the drill automatically in CI
 and before every major release:
-`./scripts/restore-drill.sh /path/to/backup.dump`
+`./scripts/ops/restore-drill.sh /path/to/backup.dump`
 It restores into a throw-away database `$DB_RESTORE_DRILL=<dbname>`, runs
 `prisma migrate deploy` to confirm migration parity, checks row-counts on the
 core tables, then drops the scratch database. A CI failure here fails the build.

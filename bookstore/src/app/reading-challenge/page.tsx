@@ -34,35 +34,35 @@ export default function ReadingChallengePage() {
   const activeQuote = literaryQuotes[currentQuoteIdx];
 
   return (
-    <main className="min-h-screen bg-[#faf7f2] text-slate-900 pb-24 font-sans selection:bg-[#14532d] selection:text-white">
+    <main className="min-h-screen bg-slate-50/70 text-slate-900 pb-24 font-sans selection:bg-emerald-500 selection:text-white">
       {/* 1. TOP ANNOUNCEMENT BAR */}
-      <div className="bg-[#14532d] text-white px-4 py-2 text-xs font-bold shadow-xs">
+      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 gradient-animated text-white px-4 py-2 text-xs font-bold shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-amber-300 text-amber-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-white text-emerald-800 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
               GOODREADS &amp; MELIO
             </span>
-            <span>📚 Thử thách đọc sách 2026 · Nuôi dưỡng thói quen đọc mỗi ngày</span>
+            <span className="drop-shadow-xs">📚 Thử thách đọc sách 2026 · Nuôi dưỡng thói quen đọc mỗi ngày</span>
           </div>
-          <Link href="/shop" className="hover:underline text-[11px] hidden sm:inline text-emerald-200">
+          <Link href="/shop" className="hover:text-yellow-200 text-[11px] hidden sm:inline font-bold">
             ← Về Siêu Thị Sách
           </Link>
         </div>
       </div>
 
       {/* 2. HEADER */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-[#ede5d8] shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
           <Link href="/reading-challenge" className="flex items-center gap-2.5 group">
-            <div className="size-11 rounded-2xl bg-[#14532d] text-amber-300 flex items-center justify-center shadow-md group-hover:scale-105 transition-all">
+            <div className="size-11 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/25 group-hover:scale-105 transition-all">
               <BookOpen className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <span className="font-serif font-black text-2xl text-slate-900 tracking-tight leading-none">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-[#14532d] text-white px-1.5 py-0.5 rounded">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-500 text-white px-2 py-0.5 rounded-full shadow-2xs">
                   Challenge
                 </span>
               </div>
@@ -86,17 +86,18 @@ export default function ReadingChallengePage() {
 
       {/* 3. HERO GOAL TRACKER */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
-        <section className="rounded-3xl bg-gradient-to-r from-[#14532d] via-[#166534] to-[#0f3d23] text-white p-8 sm:p-12 shadow-2xl relative overflow-hidden">
+        <section className="rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white p-8 sm:p-12 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 size-96 bg-white/20 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-8 items-center relative z-10">
             <div className="sm:col-span-8 space-y-4">
-              <span className="inline-flex items-center gap-1.5 bg-amber-400 text-amber-950 px-3 py-1 rounded-full text-xs font-black uppercase">
+              <span className="inline-flex items-center gap-1.5 bg-yellow-300 text-amber-950 px-3 py-1 rounded-full text-xs font-black uppercase shadow-xs">
                 <Target className="w-4 h-4" /> MỤC TIÊU ĐỌC SÁCH 2026
               </span>
-              <h1 className="font-serif font-black text-3xl sm:text-5xl leading-tight">
+              <h1 className="font-serif font-black text-3xl sm:text-5xl leading-tight text-white drop-shadow-xs">
                 Hành Trình Chinh Phục <br />
-                <span className="text-amber-300">{goal} Cuốn Sách Trong Năm</span>
+                <span className="text-yellow-200">{goal} Cuốn Sách Trong Năm</span>
               </h1>
-              <p className="text-xs sm:text-sm text-emerald-100 font-serif leading-relaxed italic">
+              <p className="text-sm text-emerald-100 font-medium leading-relaxed">
                 Bạn đã hoàn thành <b>{completedCount} / {goal} cuốn sách</b>. Chỉ còn 14 cuốn nữa để về đích trước ngày 31/12/2026!
               </p>
             </div>

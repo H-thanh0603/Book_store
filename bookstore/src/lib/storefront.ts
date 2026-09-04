@@ -2,6 +2,7 @@ import { Prisma } from "../generated/prisma/client";
 import { fail, nextBusinessNumber } from "./api";
 import { prisma, prismaRead } from "./db";
 import { createReservedOrder } from "./orders";
+import { evaluatePromotions, mergeLineDiscounts, type CartLine } from "./promotions";
 import { embedText } from "./embeddings";
 import { buildVnpayUrl, vnpayConfigured } from "./vnpay";
 import { sendMail } from "./mail";
@@ -192,6 +193,101 @@ export type StorefrontCheckoutInput = {
   couponCode?: string;
   items: { variantId: string; quantity: number }[];
 };
+
+export type StorefrontQuoteInput = {
+  storeId?: string | null;
+  couponCode?: string | null;
+  items: { variantId: string; quantity: number }[];
+};
+
+export type StorefrontQuote = {
+  subtotal: number;
+  discountTotal: number;
+  total: number;
+  promotions: { name: string; discountTotal: number }[];
+  couponApplied: boolean;
+  couponInvalidReason?: string;
+};
+
+/**
+ * Preview checkout totals without reserving stock or creating an order.
+ * Runs the SAME promotion engine as checkoutStorefrontOrder so the number the
+ * customer sees before submitting is the number the order will cost.
+ * An unknown/ineligible couponCode is reported (couponApplied: false + reason)
+ * rather than failing, so the UI can explain instead of blocking.
+ */
+export async function quoteStorefrontOrder(input: StorefrontQuoteInput): Promise<StorefrontQuote> {
+  if (!Array.isArray(input.items) || input.items.length === 0 || input.items.length > 50)
+    fail(400, "VALIDATION", "Cart must contain 1-50 items");
+  const coupon = input.couponCode?.trim().toUpperCase() || null;
+
+  // If a coupon was typed, verify a matching promotion exists before quoting.
+  let couponInvalidReason: string | undefined;
+  if (coupon) {
+    const promo = await prismaRead.promotion.findFirst({
+      where: { code: coupon, active: true, startAt: { lte: new Date() }, OR: [{ endAt: null }, { endAt: { gte: new Date() } }] },
+      select: { id: true, usageLimit: true, usedCount: true, memberOnly: true },
+    });
+    if (!promo) couponInvalidReason = "Mã không tồn tại hoặc đã hết hạn";
+    else if (promo.memberOnly) couponInvalidReason = "Mã chỉ áp dụng cho thành viên Melio";
+    else if (promo.usageLimit !== null && promo.usedCount >= promo.usageLimit)
+      couponInvalidReason = "Mã đã hết lượt sử dụng";
+  }
+
+  const variants = await prismaRead.productVariant.findMany({
+    where: { id: { in: input.items.map((item) => item.variantId) }, active: true },
+    include: {
+      product: { select: { categoryId: true } },
+      prices: {
+        where: {
+          priceList: { kind: { in: ["online", "retail"] } },
+          validFrom: { lte: new Date() },
+          OR: [{ validTo: null }, { validTo: { gt: new Date() } }],
+        },
+        include: { priceList: true }, orderBy: { validFrom: "desc" },
+      },
+    },
+  });
+  const lines: CartLine[] = input.items.flatMap((item) => {
+    const variant = variants.find((candidate) => candidate.id === item.variantId);
+    const unitPrice = variant?.prices.find((price) => price.priceList.kind === "online")?.amount
+      ?? variant?.prices.find((price) => price.priceList.kind === "retail")?.amount;
+    return variant && unitPrice
+      ? [{ variantId: variant.id, productId: variant.productId, categoryId: variant.product.categoryId, quantity: item.quantity, unitPrice }]
+      : [];
+  });
+  if (lines.length !== input.items.length) fail(404, "NOT_FOUND", "Unknown or inactive variant in cart");
+
+  // Guest quote: promotions are evaluated without a customer so member-only
+  // codes surface as "not applied" instead of silently matching.
+  const applied = await evaluatePromotions({
+    lines, storeId: input.storeId ?? null, channel: "WEB", customerId: null, couponCode: coupon,
+  });
+  const discounts = mergeLineDiscounts(applied, lines);
+  const subtotal = lines.reduce((sum, line) => sum + line.unitPrice * BigInt(line.quantity), 0n);
+
+  const couponApplied =
+    Boolean(coupon) && !couponInvalidReason && applied.some((promo) => promo.discountTotal > 0n);
+  if (coupon && !couponApplied && !couponInvalidReason) {
+    // The coupon exists but did not win the promotion evaluation — most often
+    // because a higher-priority automatic promotion took the non-stackable
+    // slot, or the cart does not meet the coupon's own conditions.
+    couponInvalidReason =
+      "Mã hợp lệ nhưng chưa được áp dụng cho giỏ hàng này (ưu đãi tự động đang được tính)";
+  }
+  return {
+    subtotal: Number(subtotal),
+    discountTotal: Number(discounts.total),
+    total: Number(subtotal - discounts.total),
+    promotions: applied
+      .filter((promo) => promo.discountTotal > 0n)
+      .map((promo) => ({ name: promo.name, discountTotal: Number(promo.discountTotal) })),
+    couponApplied,
+    couponInvalidReason: coupon && !couponApplied
+      ? (couponInvalidReason ?? "Mã chưa đạt điều kiện áp dụng cho giỏ hàng này")
+      : undefined,
+  };
+}
 
 /** Returns the created order plus a VNPay redirect URL when paying online. */
 export async function checkoutStorefrontOrder(

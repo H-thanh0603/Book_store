@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock prisma before importing the module under test. The real DB is
-// exercised by scripts/test-webhooks.ts; here we only verify the bus
+// exercised by scripts/tests/test-webhooks.ts; here we only verify the bus
 // control flow (dedup, fan-out filter, retry scheduling, dead-letter).
 
 const hoisted = vi.hoisted(() => {

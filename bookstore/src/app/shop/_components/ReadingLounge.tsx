@@ -1,5 +1,6 @@
 // Section 6: READING LOUNGE BY ATMOSPHERE & MOOD
 import type { Product, ReadingAtmosphere } from "./types";
+import ProductCover from "./ProductCover";
 
 export default function ReadingLounge({
   atmospheres,
@@ -17,10 +18,10 @@ export default function ReadingLounge({
   onQuickView: (p: Product) => void;
 }) {
   return (
-    <section className="rounded-3xl bg-white p-6 sm:p-10 paper-card shadow-xs space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#ede5d8] pb-5">
+    <section className="rounded-3xl bg-white p-6 sm:p-10 border border-slate-200/80 shadow-xs space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
         <div>
-          <span className="text-[10px] font-serif uppercase tracking-widest text-[#8c2d19] font-bold">
+          <span className="text-[10px] uppercase tracking-widest text-[#8c2d19] font-black">
             KHÔNG GIAN ĐỌC CẢM XÚC
           </span>
           <h2 className="font-serif font-black text-2xl sm:text-3xl text-slate-900 mt-0.5">
@@ -34,10 +35,10 @@ export default function ReadingLounge({
             <button
               key={m.id}
               onClick={() => onMood(m.id)}
-              className={`px-4 py-2 rounded-2xl text-xs font-serif font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+              className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeMood === m.id
-                  ? "bg-[#1c1917] text-white shadow-md"
-                  : "bg-[#faf7f2] border border-[#ede5d8] text-slate-700 hover:bg-white"
+                  ? "bg-[#1c1917] text-[#ffd56a] shadow-md font-black scale-105"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >
               <span>{m.icon}</span>
@@ -54,16 +55,24 @@ export default function ReadingLounge({
             <div
               key={p.id}
               onClick={() => onQuickView(p)}
-              className="p-4 rounded-2xl bg-[#faf8f5] border border-[#ede5d8] hover:bg-white hover:shadow-xl transition-all cursor-pointer group flex flex-col justify-between"
+              className="p-4 rounded-3xl bg-white border border-slate-200/80 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-200 cursor-pointer group flex flex-col justify-between"
             >
-              <div className="aspect-[4/5] rounded-xl bg-[#1c1917] text-white p-3 flex flex-col justify-between mb-3 shadow-md">
-                <span className="text-[9px] font-serif uppercase text-amber-300">{p.category.name}</span>
-                <h4 className="font-serif font-black text-xs sm:text-sm line-clamp-3 text-amber-100">{p.name}</h4>
-                <span className="text-[9px] font-serif italic text-slate-400">✍️ {p.author?.name ?? "Melio"}</span>
+              <div className="mb-3">
+                <ProductCover
+                  id={p.id}
+                  name={p.name}
+                  categoryName={p.category.name}
+                  authorName={p.author?.name}
+                  image={p.image ?? null}
+                />
               </div>
-              <div>
-                <h5 className="font-serif font-bold text-xs text-slate-900 line-clamp-1 group-hover:text-[#8c2d19]">{p.name}</h5>
-                <b className="font-serif text-sm font-black text-[#1c1917] mt-1 block">{variant ? money(variant.price) : "Liên hệ"}</b>
+              <div className="space-y-1">
+                <h5 className="font-bold text-xs sm:text-sm text-slate-900 line-clamp-1 group-hover:text-[#8c2d19] transition-colors">
+                  {p.name}
+                </h5>
+                <b className="text-sm font-black text-slate-900 block">
+                  {variant ? money(variant.price) : "Liên hệ"}
+                </b>
               </div>
             </div>
           );
@@ -72,3 +81,4 @@ export default function ReadingLounge({
     </section>
   );
 }
+

@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@/generated/prisma/client'
-import { exportData, exportFilename, type ExportColumn } from '@/lib/export'
+import { exportData, exportFilename, type ExportColumn } from '@/lib/exports/generic'
 import { requirePermission, resolveStoreScope } from '@/lib/auth'
 
 const productColumns: ExportColumn<any>[] = [
@@ -193,7 +193,7 @@ export async function GET(request: NextRequest) {
 
     const { columns, fetch } = EXPORT_TYPES[type]
     const data = await fetch(storeScope)
-    const result = exportData(data, columns(), type, format)
+    const result = await exportData(data, columns(), type, format)
 
     return new NextResponse(new Uint8Array(result.buffer), {
       headers: {

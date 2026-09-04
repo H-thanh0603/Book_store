@@ -1,9 +1,24 @@
 // Sections 17 + 18 + 20: WISHLIST DRAWER, CART DRAWER, ORDER SUCCESS MODAL
+// + STORE-SWITCH CONFIRM MODAL
 import Link from "next/link";
+import { useEffect } from "react";
 import {
-  ArrowRight, Check, CheckCircle2, Copy, Heart, Minus, Plus, ShoppingBag, Trash2, Truck, X,
+  ArrowRight, Check, CheckCircle2, Copy, Heart, MapPin, Minus, Plus, ShoppingBag, Trash2, Truck, X,
 } from "lucide-react";
 import type { CartLine, Product } from "./types";
+import ProductCover from "./ProductCover";
+
+/** Drawer/modal shell: Escape key closes. */
+function useEscapeClose(active: boolean, onClose: () => void) {
+  useEffect(() => {
+    if (!active) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [active, onClose]);
+}
 
 export function WishlistDrawer({
   open,
@@ -22,6 +37,7 @@ export function WishlistDrawer({
   onAddToCart: (p: Product) => void;
   onToggleFavorite: (id: string) => void;
 }) {
+  useEscapeClose(open, onClose);
   if (!open) return null;
   return (
     <div
@@ -29,6 +45,9 @@ export function WishlistDrawer({
       onMouseDown={onClose}
     >
       <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Tủ sách cá nhân"
         className="w-full max-w-md bg-[#fbf9f5] h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-200 font-serif"
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -55,9 +74,14 @@ export function WishlistDrawer({
             const variant = product.variants[0];
             return (
               <div key={id} className="p-3.5 rounded-2xl bg-white border border-[#ede5d8] flex items-center gap-3">
-                <div className="size-16 rounded-xl bg-[#1c1917] text-white p-2 text-[8px] flex flex-col justify-between shrink-0">
-                  <span className="line-clamp-1 text-amber-300">{product.category.name}</span>
-                  <span className="line-clamp-2 font-bold">{product.name}</span>
+                <div className="w-16 shrink-0">
+                  <ProductCover
+                    id={product.id}
+                    name={product.name}
+                    categoryName={product.category.name}
+                    authorName={product.author?.name}
+                    image={product.image ?? null}
+                  />
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -73,11 +97,11 @@ export function WishlistDrawer({
                         onClose();
                       }}
                       disabled={!variant?.available}
-                      className="px-3 py-1 rounded-lg bg-[#1c1917] text-white text-[11px] font-bold hover:bg-[#8c2d19] disabled:bg-slate-200 disabled:text-slate-400"
+                      className="px-3 py-1.5 rounded-xl bg-[#1c1917] hover:bg-[#8c2d19] text-white text-[11px] font-bold disabled:bg-slate-200 disabled:text-slate-400 cursor-pointer"
                     >
                       {variant?.available ? "+ Thêm vào giỏ" : "Hết hàng"}
                     </button>
-                    <button onClick={() => onToggleFavorite(id)} className="text-slate-400 hover:text-rose-600 text-xs p-1">
+                    <button onClick={() => onToggleFavorite(id)} className="text-slate-400 hover:text-[#8c2d19] text-xs p-1 cursor-pointer">
                       Bỏ lưu
                     </button>
                   </div>
@@ -135,6 +159,7 @@ export function CartDrawer({
   onRemoveLine: (variantId: string) => void;
   onCheckout: () => void;
 }) {
+  useEscapeClose(open, onClose);
   if (!open) return null;
   return (
     <div
@@ -142,6 +167,9 @@ export function CartDrawer({
       onMouseDown={onClose}
     >
       <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Giỏ hàng"
         className="w-full max-w-md bg-[#fbf9f5] h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-200 font-serif"
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -176,7 +204,7 @@ export function CartDrawer({
             <span className="font-bold">{progressToFreeShipping}%</span>
           </div>
           <div className="w-full bg-[#e8dac5] rounded-full h-1.5 overflow-hidden">
-            <div className="bg-[#8c2d19] h-full rounded-full transition-all duration-300" style={{ width: `${progressToFreeShipping}%` }} />
+            <div className="bg-gradient-to-r from-[#8c2d19] to-[#d97706] h-full rounded-full transition-all duration-300" style={{ width: `${progressToFreeShipping}%` }} />
           </div>
         </div>
 
@@ -184,9 +212,12 @@ export function CartDrawer({
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
           {cart.map((line) => (
             <div key={line.variantId} className="p-3.5 rounded-2xl bg-white border border-[#ede5d8] flex items-center gap-3">
-              <div className="size-16 rounded-xl bg-[#1c1917] text-white p-2 text-[8px] flex flex-col justify-between shrink-0">
-                <span className="line-clamp-1 text-amber-300">{line.category}</span>
-                <span className="line-clamp-2 font-bold">{line.name}</span>
+              <div className="w-16 shrink-0">
+                <ProductCover
+                  id={line.productId}
+                  name={line.name}
+                  categoryName={line.category}
+                />
               </div>
 
               <div className="flex-1 min-w-0">
@@ -198,7 +229,7 @@ export function CartDrawer({
                     <button
                       onClick={() => onChangeQuantity(line.variantId, -1)}
                       aria-label={`Giảm số lượng ${line.name}`}
-                      className="w-8 h-8 rounded-lg hover:bg-white flex items-center justify-center text-slate-700"
+                      className="w-8 h-8 rounded-lg hover:bg-white flex items-center justify-center text-slate-700 cursor-pointer"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
@@ -207,7 +238,7 @@ export function CartDrawer({
                       onClick={() => onChangeQuantity(line.variantId, 1)}
                       disabled={line.quantity >= line.available}
                       aria-label={`Tăng số lượng ${line.name}`}
-                      className="w-8 h-8 rounded-lg hover:bg-white disabled:opacity-30 flex items-center justify-center text-slate-700"
+                      className="w-8 h-8 rounded-lg hover:bg-white disabled:opacity-30 flex items-center justify-center text-slate-700 cursor-pointer"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -216,7 +247,7 @@ export function CartDrawer({
                   <button
                     onClick={() => onRemoveLine(line.variantId)}
                     aria-label={`Xóa ${line.name} khỏi giỏ`}
-                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 transition-colors"
+                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-[#8c2d19] transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -224,9 +255,9 @@ export function CartDrawer({
 
                 {/* Stock warnings after a 409 race loss clamped this line */}
                 {line.available <= 0 ? (
-                  <p className="mt-1 text-[10px] text-red-600 font-semibold">Hết hàng — vui lòng xóa khỏi giỏ</p>
+                  <p className="mt-1 text-[11px] text-red-600 font-semibold">Hết hàng — vui lòng xóa khỏi giỏ</p>
                 ) : line.quantity >= line.available ? (
-                  <p className="mt-1 text-[10px] text-amber-700 font-semibold">⚠️ Chỉ còn {line.available} sản phẩm</p>
+                  <p className="mt-1 text-[11px] text-amber-700 font-semibold">Chỉ còn {line.available} sản phẩm</p>
                 ) : null}
               </div>
             </div>
@@ -237,7 +268,7 @@ export function CartDrawer({
               <ShoppingBag className="w-12 h-12 opacity-30 text-[#8c2d19]" />
               <p className="text-sm font-bold text-slate-700">Giỏ hàng của bạn đang trống</p>
               <p className="text-xs text-slate-400">Hãy thêm những cuốn sách hay vào giỏ nhé!</p>
-              <button onClick={onClose} className="px-4 py-2 rounded-xl bg-[#faf4ea] text-[#8c2d19] text-xs font-bold hover:bg-[#ede5d8]">
+              <button onClick={onClose} className="px-4 py-2 rounded-xl bg-[#faf4ea] text-[#8c2d19] text-xs font-bold hover:bg-[#ede5d8] cursor-pointer border border-[#e8dac5]">
                 Duyệt kho hàng
               </button>
             </div>
@@ -249,14 +280,14 @@ export function CartDrawer({
           <div className="p-5 border-t border-[#ede5d8] bg-white space-y-3">
             <div className="flex items-center justify-between text-xs text-slate-600">
               <span>Tạm tính giỏ hàng:</span>
-              <span className="text-lg font-black text-slate-900">{money(subtotal)}</span>
+              <span className="text-lg font-black text-[#8c2d19]">{money(subtotal)}</span>
             </div>
 
             <button
               onClick={onCheckout}
-              className="w-full py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-xs sm:text-sm shadow-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+              className="w-full py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-xs sm:text-sm shadow-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.01] cursor-pointer"
             >
-              Tiến hành thanh toán COD <ArrowRight className="w-4 h-4" />
+              Tiến hành thanh toán <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -265,8 +296,66 @@ export function CartDrawer({
   );
 }
 
-export function OrderSuccessModal({
-  success,
+/**
+ * Inline store-switch confirmation. Replaces the old window.confirm that
+ * threatened to "làm mới" the cart — here the shopper sees exactly how many
+ * items would be dropped and chooses deliberately.
+ */
+export function StoreSwitchModal({
+  nextStoreName,
+  itemCount,
+  onCancel,
+  onConfirm,
+}: {
+  nextStoreName: string;
+  itemCount: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-[#1c1917]/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="store-switch-title"
+        className="w-full max-w-md bg-[#fbf9f5] rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#ede5d8] space-y-4 animate-in zoom-in-95 duration-200 font-serif"
+      >
+        <div className="flex items-start gap-3">
+          <div className="size-11 rounded-2xl bg-[#faf4ea] text-[#8c2d19] flex items-center justify-center border border-[#e8dac5] shrink-0">
+            <MapPin className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 id="store-switch-title" className="font-black text-xl text-slate-900">
+              Chuyển sang {nextStoreName}?
+            </h3>
+            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+              Tồn kho hiển thị theo từng chi nhánh. Chuyển sang <b>{nextStoreName}</b> sẽ
+              <b className="text-[#8c2d19]"> xóa {itemCount} món đang có trong giỏ hàng</b> để tải lại giá
+              và số lượng khả dụng của chi nhánh mới.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 pt-1">
+          <button
+            onClick={onConfirm}
+            className="flex-1 py-3 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
+          >
+            Xóa giỏ &amp; chuyển chi nhánh
+          </button>
+          <button
+            onClick={onCancel}
+            className="flex-1 py-3 rounded-2xl bg-[#faf7f2] hover:bg-[#ede5d8] text-slate-800 font-bold text-xs border border-[#ede5d8] transition-colors cursor-pointer"
+          >
+            Giữ nguyên giỏ hàng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function OrderSuccessModal({  success,
   storeName,
   money,
   copiedOrder,
@@ -292,21 +381,21 @@ export function OrderSuccessModal({
           <p className="text-xs text-slate-500 mt-1">Ấn bản của bạn đang được thủ thư Melio chuẩn bị chu đáo</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#1c1917] text-white space-y-1">
-          <span className="text-[10px] text-slate-400 font-mono">MÃ ĐƠN HÀNG CỦA BẠN</span>
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-[#8c2d19] via-[#a63a1f] to-[#d97706] text-white space-y-1 shadow-md">
+          <span className="text-[10px] text-white/80 font-mono font-bold">MÃ ĐƠN HÀNG CỦA BẠN</span>
           <div className="flex items-center justify-center gap-2">
-            <span className="font-mono text-xl font-black text-amber-200 tracking-wider">{success.number}</span>
+            <span className="font-mono text-xl font-black text-yellow-200 tracking-wider">{success.number}</span>
             <button
               onClick={onCopy}
-              className="p-1 rounded bg-white/10 hover:bg-white/20 text-slate-300 transition-colors"
+              className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer"
               title="Sao chép mã đơn hàng"
             >
-              {copiedOrder ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedOrder ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
 
-        <div className="text-xs text-slate-600 bg-white p-3.5 rounded-2xl border border-[#ede5d8] text-left space-y-1">
+        <div className="text-xs text-slate-600 bg-white p-3.5 rounded-2xl border border-slate-200 text-left space-y-1 shadow-xs">
           <div className="flex justify-between">
             <span>Tổng tiền thu khi giao (COD):</span>
             <b className="text-[#8c2d19] font-bold">{money(success.total)}</b>
@@ -319,13 +408,13 @@ export function OrderSuccessModal({
         <div className="flex flex-col gap-2 pt-2">
           <Link
             href={`/track?q=${encodeURIComponent(success.number)}`}
-            className="w-full py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.01]"
           >
-            <Truck className="w-4 h-4 text-amber-300" /> Theo Dõi Hành Trình Đơn Hàng
+            <Truck className="w-4 h-4 text-yellow-200" /> Theo Dõi Hành Trình Đơn Hàng
           </Link>
           <button
             onClick={onClose}
-            className="w-full py-2.5 rounded-2xl bg-[#faf7f2] hover:bg-[#ede5d8] text-slate-800 font-bold text-xs"
+            className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs cursor-pointer"
           >
             Tiếp Tục Mua Sắm
           </button>

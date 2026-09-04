@@ -171,7 +171,7 @@ export default function GiftFinderPage() {
             <button
               disabled={!selectedRecipient}
               onClick={() => setStep(2)}
-              className="w-full py-4 rounded-2xl bg-[#1c1917] hover:bg-[#c83f49] disabled:bg-slate-200 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-xs sm:text-sm shadow-md shadow-rose-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.01]"
             >
               Tiếp Tục Chọn Sở Thích <ArrowRight className="w-4 h-4" />
             </button>
@@ -222,7 +222,7 @@ export default function GiftFinderPage() {
               <button
                 disabled={!selectedInterest}
                 onClick={() => setStep(3)}
-                className="flex-1 py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#c83f49] disabled:bg-slate-200 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-xs sm:text-sm shadow-md shadow-rose-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.01]"
               >
                 Tiếp Tục Chọn Ngân Sách <ArrowRight className="w-4 h-4" />
               </button>

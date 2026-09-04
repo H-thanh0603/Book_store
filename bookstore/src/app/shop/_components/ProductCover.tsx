@@ -5,16 +5,21 @@
 // The CSP allows `img-src 'self' data: blob:` — local optimized images work
 // with no policy change. When real remote covers arrive, add their host to
 // both next.config images.remotePatterns and the CSP img-src directive.
+//
+// Placeholder gradients stay inside the Melio heritage palette (charcoal,
+// crimson, gold, kraft) — no fabricated star rating is rendered: social proof
+// returns only when a real reviews table feeds it.
 
 import Image from "next/image";
 import { useMemo } from "react";
 
 const PLACEHOLDER_GRADIENTS = [
-  "from-[#1c1917] via-[#2d2521] to-[#171412]",
-  "from-emerald-900 via-teal-900 to-cyan-950",
-  "from-rose-900 via-pink-900 to-amber-950",
-  "from-amber-900 via-orange-900 to-red-950",
-  "from-indigo-900 via-slate-900 to-gray-950",
+  "from-[#1c1917] via-[#3b2a1e] to-[#8c2d19]",
+  "from-[#8c2d19] via-[#a63a1f] to-[#d97706]",
+  "from-[#2d2521] via-[#574431] to-[#8c2d19]",
+  "from-[#6b2113] via-[#8c2d19] to-[#1c1917]",
+  "from-[#d97706] via-[#b45309] to-[#6b2113]",
+  "from-[#1c1917] via-[#574431] to-[#d97706]",
 ];
 
 function hashCode(str: string): number {
@@ -47,18 +52,43 @@ export default function ProductCover({
     () => PLACEHOLDER_GRADIENTS[Math.abs(hashCode(id)) % PLACEHOLDER_GRADIENTS.length],
     [id]
   );
-  const label = categoryName ?? "Sản phẩm";
+  const label = categoryName ?? "Sách";
 
   if (!src) {
     return (
       <div
-        className={`relative w-full pt-[125%] rounded-2xl bg-gradient-to-tr ${gradient} text-white p-4 flex flex-col justify-between shadow-md border border-white/10 overflow-hidden ${className ?? ""}`}
+        className={`relative w-full pt-[130%] rounded-2xl bg-gradient-to-tr ${gradient} text-white p-4 flex flex-col justify-between shadow-lg border border-white/20 overflow-hidden group/cover ${className ?? ""}`}
         aria-label={`Ảnh bìa ${name}`}
       >
-        <div className="bookmark-ribbon" />
-        <span className="text-[8px] font-mono text-amber-300 uppercase">{label.slice(0, 4)}</span>
-        <span className="text-sm font-serif font-black line-clamp-3 text-amber-100 my-auto py-2">{name}</span>
-        <span className="text-[9px] italic text-white/70 line-clamp-1">✍️ {authorName ?? "Melio Books"}</span>
+        {/* Book spine simulated crease */}
+        <div className="absolute top-0 bottom-0 left-0 w-2.5 bg-black/25 border-r border-white/20 pointer-events-none" />
+
+        {/* Gloss light reflection */}
+        <div className="absolute -inset-full top-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -rotate-45 group-hover/cover:translate-x-full transition-transform duration-1000 pointer-events-none" />
+
+        {/* Golden Bookmark ribbon */}
+        <div className="bookmark-ribbon-gold" />
+
+        {/* Category Pill Tag */}
+        <div className="relative z-10 pl-2">
+          <span className="inline-block px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[11px] font-mono font-black uppercase tracking-wider text-white border border-white/30">
+            {label}
+          </span>
+        </div>
+
+        {/* Title */}
+        <div className="relative z-10 pl-2 my-auto py-2">
+          <span className="text-sm sm:text-base font-serif font-black line-clamp-3 text-white drop-shadow-md leading-tight">
+            {name}
+          </span>
+        </div>
+
+        {/* Author / Publisher Footer */}
+        <div className="relative z-10 pl-2 pt-2 border-t border-white/20 flex items-center justify-between text-[11px] font-medium text-white/90">
+          <span className="italic truncate max-w-[85%]">
+            {authorName ?? "Melio Books"}
+          </span>
+        </div>
       </div>
     );
   }
