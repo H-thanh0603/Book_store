@@ -9,6 +9,16 @@ import { Prisma } from '@/generated/prisma/client'
 import { exportData, exportFilename, type ExportColumn } from '@/lib/exports/generic'
 import { requirePermission, resolveStoreScope } from '@/lib/auth'
 
+// PAY-004: one shared truncated-error factory — HTTP 413 with the overflow
+// count so the UI can tell the accountant to narrow the export (date range,
+// store) instead of silently shipping a partial file.
+function exportTruncated(remaining: number) {
+  return Object.assign(
+    new Error(`Export truncated: ${remaining} more rows beyond the 10000-row limit. Narrow the export (date range, store) and retry.`),
+    { status: 413, code: 'EXPORT_TRUNCATED' }
+  )
+}
+
 const productColumns: ExportColumn<any>[] = [
   { key: 'sku', header: 'SKU' },
   { key: 'name', header: 'Tên sản phẩm' },
@@ -101,16 +111,24 @@ async function fetchProducts(storeScope: string[] | null) {
 }
 
 async function fetchOrders(storeScope: string[] | null) {
-  return prisma.order.findMany({
+  const orders = await prisma.order.findMany({
     where: storeScope ? { storeId: { in: storeScope } } : {},
     include: { customer: { select: { name: true, phone: true } } },
     orderBy: { createdAt: 'desc' },
     take: 10000,
   })
+  const remaining = await prisma.order.count({
+    where: {
+      ...(storeScope ? { storeId: { in: storeScope } } : {}),
+      createdAt: { lt: orders[orders.length - 1]?.createdAt ?? new Date() },
+    },
+  })
+  if (remaining > 0) throw exportTruncated(remaining)
+  return orders
 }
 
 async function fetchInventory(storeScope: string[] | null) {
-  return prisma.inventoryBalance.findMany({
+  const balances = await prisma.inventoryBalance.findMany({
     where: {
       location: { active: true, ...(storeScope ? { storeId: { in: storeScope } } : {}) },
       variant: { active: true },
@@ -122,6 +140,19 @@ async function fetchInventory(storeScope: string[] | null) {
     orderBy: { onHand: 'desc' },
     take: 10000,
   })
+  // PAY-004 (audit 2026-08-30): take:10000 silently truncated exports, so
+  // accounting could file incomplete data without ever knowing. Each fetch
+  // now counts past its last row's cursor and fails loudly instead.
+  const remaining = await prisma.inventoryBalance.count({
+    where: {
+      location: { active: true, ...(storeScope ? { storeId: { in: storeScope } } : {}) },
+      variant: { active: true },
+      onHand: { lte: balances[balances.length - 1]?.onHand ?? 0 },
+      id: { notIn: balances.map((b) => b.id) },
+    },
+  })
+  if (remaining > 0) throw exportTruncated(remaining)
+  return balances
 }
 
 async function fetchCustomers() {
@@ -138,6 +169,10 @@ async function fetchCustomers() {
     orderBy: { code: 'asc' },
     take: 10000,
   })
+  const remaining = await prisma.customer.count({
+    where: { code: { gt: customers[customers.length - 1]?.code ?? '' } },
+  })
+  if (remaining > 0) throw exportTruncated(remaining)
   const agg = await prisma.order.groupBy({
     by: ['customerId'],
     where: { customerId: { in: customers.map((c) => c.id) } },
