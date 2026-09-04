@@ -138,7 +138,8 @@ export type QuotePreview = {
 export type Fulfillment = "delivery" | "pickup";
 
 /** Checkout payment method: cash-on-delivery or one of the sandbox gateways. */
-export type PaymentMethodChoice = "COD" | "VNPAY" | "MOMO" | "ZALOPAY";
+// MOMO/ZALOPAY hidden until the backend wires them (checkout accepts COD|VNPAY).
+export type PaymentMethodChoice = "COD" | "VNPAY";
 
 /** Shape of a backend 409 (INSUFFICIENT_STOCK) body after apiError surfaces details. */
 export type StockConflictDetail = {
