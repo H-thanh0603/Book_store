@@ -17,18 +17,13 @@ describe('clientIp', () => {
     expect(ip).toBe('local')
   })
 
-  it('returns cf-connecting-ip when present', () => {
+  it('ignores edge/CDN headers when proxy is untrusted (SEC-007)', () => {
     const headers = new Headers()
     headers.set('cf-connecting-ip', '1.2.3.4')
-    const ip = clientIp(headers)
-    expect(ip).toBe('1.2.3.4')
-  })
-
-  it('returns true-client-ip as fallback', () => {
-    const headers = new Headers()
     headers.set('true-client-ip', '5.6.7.8')
-    const ip = clientIp(headers)
-    expect(ip).toBe('5.6.7.8')
+    headers.set('x-vercel-forwarded-for', '9.9.9.9')
+    headers.set('x-forwarded-for', '7.7.7.7')
+    expect(clientIp(headers)).toBe('local')
   })
 
   it('returns x-real-ip when TRUST_PROXY_HEADERS is true', () => {

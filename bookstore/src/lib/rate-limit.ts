@@ -9,19 +9,13 @@ function digest(value: string) {
 export function clientIp(headers: Headers) {
   // Behind a proxy that overwrites X-Forwarded-For (see docs/OPERATIONS.md
   // "Reverse-proxy contract" / deploy/nginx.conf): full client precision.
+  // Audit 2026-08-30 SEC-007: when TRUST_PROXY_HEADERS is not true we trust NO
+  // client-supplied IP header (cf-connecting-ip included — an attacker sets
+  // it as easily as XFF). All direct clients share one bucket per namespace;
+  // per-account/per-email keys keep credential stuffing bounded regardless.
   if (process.env.TRUST_PROXY_HEADERS === "true")
     return headers.get("x-real-ip") ?? headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  // No trusted reverse proxy: fall back to edge-injected headers (only present
-  // when a real CDN/edge set them) instead of collapsing EVERY client into a
-  // single "untrusted-proxy" bucket, which let any busy NAT lock out all
-  // logins/checkouts platform-wide. Direct connections share the "local" bucket;
-  // per-account keys keep credential stuffing bounded regardless.
-  return (
-    headers.get("cf-connecting-ip") ??
-    headers.get("true-client-ip") ??
-    headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ??
-    "local"
-  );
+  return "local";
 }
 
 /**
