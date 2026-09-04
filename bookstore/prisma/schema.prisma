@@ -22,6 +22,7 @@ model Organization {
   updatedAt DateTime @updatedAt
   regions   Region[]
   users     User[]
+  customers Customer[]
   subscription Subscription?
   billingInvoices BillingInvoice[]
   supportConversations SupportConversation[]
@@ -654,8 +655,13 @@ model Customer {
   id        String @id @default(uuid())
   code      String @unique // CUS-000001
   name      String
-  phone     String @unique
-  email     String? @unique
+  // Audit 2026-08-30 SEC-004: phone/email were globally unique, so the
+  // storefront upsert keyed on phone alone attached org A's customer to
+  // org B's order. Uniques are now org-scoped.
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  phone     String
+  email     String?
   birthday  DateTime?
   address   String?
   passwordHash  String?
@@ -669,6 +675,8 @@ model Customer {
   sessions  CustomerSession[]
   supportConversations SupportConversation[]
 
+  @@unique([orgId, phone])
+  @@unique([orgId, email])
   @@index([email])
 }
 

@@ -18,12 +18,13 @@ const RUN_ID = `cust-auth-${Date.now()}`;
 async function main() {
   const phone = `09${String(Date.now()).slice(-8)}`;
   const email = `${RUN_ID}@example.vn`;
+  const org = await prisma.organization.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
 
   try {
     // 1. Signup shape: Customer created with hashed password, unique phone+email.
     const passwordHash = hashPassword("verysecret123");
     const customer = await prisma.customer.create({
-      data: { code: `CUS-${RUN_ID}`, name: "Smoke", phone, email, passwordHash },
+      data: { code: `CUS-${RUN_ID}`, name: "Smoke", phone, email, passwordHash, orgId: org.id },
     });
     assert.ok(customer.id, "customer created");
     assert.ok(verifyPassword("verysecret123", customer.passwordHash!), "password hashes correctly");
@@ -31,7 +32,7 @@ async function main() {
     // 2. Duplicate phone is rejected by the unique index.
     await assert.rejects(
       prisma.customer.create({
-        data: { code: `CUS-DUP`, name: "Dup", phone, email: "other@example.vn", passwordHash: null },
+        data: { code: `CUS-DUP`, name: "Dup", phone, email: "other@example.vn", passwordHash: null, orgId: org.id },
       }),
       /unique/i
     );
@@ -40,7 +41,7 @@ async function main() {
     const otherPhone = `0987${String(Date.now()).slice(-6)}`;
     await assert.rejects(
       prisma.customer.create({
-        data: { code: `CUS-DUP2`, name: "Dup", phone: otherPhone, email, passwordHash: null },
+        data: { code: `CUS-DUP2`, name: "Dup", phone: otherPhone, email, passwordHash: null, orgId: org.id },
       }),
       /unique/i
     );

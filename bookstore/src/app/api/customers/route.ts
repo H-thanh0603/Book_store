@@ -47,8 +47,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     if (body.action === "create") {
-      await requirePermission("customer.update");
+      const auth = await requirePermission("customer.update");
       if (!body.name || !body.phone) fail(400, "VALIDATION", "name and phone required");
+      // SEC-004: customers belong to an org; a legacy superuser (orgId null)
+      // has no org to attach — deny rather than create an orphan.
+      if (!auth.orgId) fail(403, "FORBIDDEN", "Customer creation requires an org-scoped account");
       try {
         const customer = await prisma.customer.create({
           data: {
@@ -60,6 +63,7 @@ export async function POST(req: NextRequest) {
             email: body.email ?? null,
             birthday: body.birthday ? new Date(body.birthday) : null,
             address: body.address ?? null,
+            orgId: auth.orgId,
           },
           include: { loyalty: true },
         });

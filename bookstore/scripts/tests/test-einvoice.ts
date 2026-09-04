@@ -23,10 +23,11 @@ async function setup() {
   const variant = await prisma.productVariant.findFirst({ include: { product: true } });
   if (!variant) throw new Error("Seed first: no ProductVariant found");
 
+  const org = await prisma.organization.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
   const customer = await prisma.customer.upsert({
-    where: { phone: "0900000999" },
+    where: { orgId_phone: { orgId: org.id, phone: "0900000999" } },
     update: {},
-    create: { code: `EINV-${Date.now()}`, phone: "0900000999", name: "E-Invoice Test Buyer" },
+    create: { code: `EINV-${Date.now()}`, phone: "0900000999", name: "E-Invoice Test Buyer", orgId: org.id },
   });
 
   const number = `ORD-EINV-${Date.now()}`;

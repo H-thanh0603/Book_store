@@ -24,6 +24,19 @@ import {
 import { apiError, fail, ok } from "@/lib/api";
 import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 
+// SEC-004: customer phone/email are unique per ORG, so every lookup needs one.
+// The public storefront is single-tenant per deployment: resolve the org from
+// the first active store (same fallback listStorefrontProducts uses).
+async function storefrontOrgId(): Promise<string> {
+  const store = await prisma.store.findFirst({
+    where: { active: true },
+    orderBy: { code: "asc" },
+    select: { region: { select: { orgId: true } } },
+  });
+  if (!store) fail(503, "NO_STORE", "No active store configured");
+  return store.region.orgId;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -45,9 +58,10 @@ export async function POST(req: NextRequest) {
       // Two uniqueness checks (phone and email) before insert. Both
       // are covered by unique constraints in the DB; checking first
       // gives a clean 409 instead of a 500 from a constraint violation.
+      const orgId = await storefrontOrgId();
       const [existingEmail, existingPhone] = await Promise.all([
-        email ? prisma.customer.findFirst({ where: { email }, select: { id: true } }) : null,
-        prisma.customer.findUnique({ where: { phone }, select: { id: true } }),
+        email ? prisma.customer.findFirst({ where: { orgId, email }, select: { id: true } }) : null,
+        prisma.customer.findFirst({ where: { orgId, phone }, select: { id: true } }),
       ]);
       if (existingEmail) fail(409, "CONFLICT", "Email already registered");
       if (existingPhone) fail(409, "CONFLICT", "Phone already registered");
@@ -70,6 +84,7 @@ export async function POST(req: NextRequest) {
           name,
           phone,
           email,
+          orgId,
           passwordHash: null,
           emailVerifyTokenHash: token.hash,
           emailVerifyExpiresAt: token.expiresAt,
@@ -107,9 +122,10 @@ export async function POST(req: NextRequest) {
         enforceRateLimit("cust-login-ip", clientIp(req.headers), 20, 60_000),
         enforceRateLimit("cust-login-id", id, 10, 5 * 60_000),
       ]);
+      const orgId = await storefrontOrgId();
       const customer = id.includes("@")
-        ? await prisma.customer.findFirst({ where: { email: id } })
-        : await prisma.customer.findUnique({ where: { phone: id } });
+        ? await prisma.customer.findFirst({ where: { orgId, email: id } })
+        : await prisma.customer.findFirst({ where: { orgId, phone: id } });
       if (!customer) fail(401, "BAD_REQUEST", "Invalid credentials");
       const ok2 = await checkCustomerPassword(customer.id, password);
       if (!ok2) fail(401, "BAD_REQUEST", "Invalid credentials");

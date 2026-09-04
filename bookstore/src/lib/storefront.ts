@@ -325,13 +325,19 @@ export async function checkoutStorefrontOrder(
     if (existing.customer.phone !== phone) fail(409, "DUPLICATE", "Checkout key belongs to another order");
     return withPayment(existing, method, opts);
   }
-  const store = await prisma.store.findFirst({ where: { id: input.storeId, active: true } });
+  const store = await prisma.store.findFirst({
+    where: { id: input.storeId, active: true },
+    include: { region: { select: { orgId: true } } },
+  });
   if (!store) fail(404, "NOT_FOUND", "Store not found or inactive");
 
+  // SEC-004: customer identity is scoped per org — the same phone at two
+  // tenants is two customers, and this order belongs to this store's org.
+  const orgId = store.region.orgId;
   const customerCode = await nextBusinessNumber("CUS");
   const customer = await prisma.customer.upsert({
-    where: { phone },
-    create: { code: customerCode, name, phone, email, address },
+    where: { orgId_phone: { orgId, phone } },
+    create: { code: customerCode, name, phone, email, address, orgId },
     // Guest checkout must not overwrite an existing member profile using only a known phone number.
     update: {},
   });

@@ -110,7 +110,7 @@ describe('checkoutStorefrontOrder', () => {
 
   it('creates order successfully on first checkout', async () => {
     mockPrisma.order.findFirst.mockResolvedValue(null)
-    mockPrisma.store.findFirst.mockResolvedValue({ id: 'store-1', active: true })
+    mockPrisma.store.findFirst.mockResolvedValue({ id: 'store-1', active: true, region: { orgId: 'org-1' } })
     mockPrisma.customer.upsert.mockResolvedValue({ id: 'cust-1' })
     mockPrisma.productVariant.findMany.mockResolvedValue([
       { id: 'v1', product: { name: 'Test Book' } },
@@ -144,7 +144,7 @@ describe('checkoutStorefrontOrder', () => {
 
   it('validates pickup fulfillment without address', async () => {
     mockPrisma.order.findFirst.mockResolvedValue(null)
-    mockPrisma.store.findFirst.mockResolvedValue({ id: 'store-1', active: true })
+    mockPrisma.store.findFirst.mockResolvedValue({ id: 'store-1', active: true, region: { orgId: 'org-1' } })
     mockPrisma.customer.upsert.mockResolvedValue({ id: 'cust-1' })
     mockPrisma.productVariant.findMany.mockResolvedValue([
       { id: 'v1', product: { name: 'Test Book' } },

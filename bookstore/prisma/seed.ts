@@ -56,7 +56,7 @@ async function main() {
     throw new Error(
       "Refusing to seed a production database. Set ALLOW_SEED_PRODUCTION=true only if you understand demo accounts will exist."
     );
-  const { region } = await getOrCreateOrg();
+  const { org, region } = await getOrCreateOrg();
   // Permissions + roles
   const perms = await Promise.all(
     PERMS.map((code) => prisma.permission.upsert({ where: { code }, create: { code }, update: {} }))
@@ -402,6 +402,7 @@ async function main() {
           code,
           name: `Khách hàng ${i}`,
           phone: `090${String(1000000 + i * 137).slice(0, 7)}`,
+          orgId: org.id, // SEC-004: customers are org-scoped
         },
       });
       await prisma.loyaltyAccount.create({ data: { customerId: c.id, points: i * 3, tier: i > 80 ? "Gold" : i > 50 ? "Silver" : "Member" } });

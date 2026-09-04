@@ -42,6 +42,8 @@ async function main() {
   }
 
   // ── Customers: upsert to 100 ─────────────────────────────
+  // SEC-004: Customer.orgId is required — Phase-1 seed owns the org.
+  const org = await prisma.organization.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
   for (let i = 31; i <= 100; i++) {
     const code = `CUS-${String(i).padStart(6, "0")}`;
     const existing = await prisma.customer.findUnique({ where: { code } });
@@ -51,6 +53,7 @@ async function main() {
         code,
         name: `Khách hàng ${i}`,
         phone: `090${String(2000000 + i * 313).slice(0, 7)}`,
+        orgId: org.id,
       },
     });
     await prisma.loyaltyAccount.create({ data: { customerId: c.id, points: i * 2, tier: i > 80 ? "Gold" : i > 50 ? "Silver" : "Member" } });

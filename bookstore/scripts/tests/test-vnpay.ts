@@ -22,10 +22,13 @@ if (!secret) {
 
 // Synthetic customer + order so we never depend on seed contents.
 const suffix = Date.now().toString(36);
-const customer = await prisma.customer.create({
-  data: { code: `TST-${suffix}`, name: "VNPay Test", phone: `0900${suffix.padStart(6, "0").slice(0, 6)}` },
+const store = await prisma.store.findFirstOrThrow({
+  where: { active: true },
+  include: { region: { select: { orgId: true } } },
 });
-const store = await prisma.store.findFirstOrThrow({ where: { active: true } });
+const customer = await prisma.customer.create({
+  data: { code: `TST-${suffix}`, name: "VNPay Test", phone: `0900${suffix.padStart(6, "0").slice(0, 6)}`, orgId: store.region.orgId },
+});
 const order = await prisma.order.create({
   data: {
     number: `ORD-TST-${suffix}`, channel: "WEB", type: "pickup", storeId: store.id,
