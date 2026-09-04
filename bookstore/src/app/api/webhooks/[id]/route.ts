@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission, type AuthContext } from "@/lib/auth";
 import { withOrg } from "@/lib/org-scope";
 import { apiError, ok, optStr } from "@/lib/api";
+import { webhookUrlBlockReason } from "@/lib/ssrf";
 import { randomBytes } from "crypto";
 import { emit, rearmDelivery } from "@/lib/webhook-bus";
 
@@ -41,7 +42,11 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const { id } = await ctx.params;
     const body = await req.json().catch(() => ({}));
     const data: Record<string, unknown> = {};
-    if (typeof body.url === "string") data.url = body.url;
+    if (typeof body.url === "string") {
+      const urlError = webhookUrlBlockReason(body.url);
+      if (urlError) return ok({ error: "VALIDATION", message: urlError }, 400);
+      data.url = body.url;
+    }
     if (typeof body.active === "boolean") data.active = body.active;
     if (typeof body.description === "string") data.description = body.description;
     if (Array.isArray(body.eventTypes)) {

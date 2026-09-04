@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { withOrg } from "@/lib/org-scope";
+import { webhookUrlBlockReason } from "@/lib/ssrf";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -18,7 +19,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     };
     const data: Record<string, unknown> = {};
     if (typeof body.url === "string") {
-      if (!/^https?:\/\//.test(body.url)) return ok({ error: "VALIDATION", message: "url must be http(s)" }, 400);
+      const urlError = webhookUrlBlockReason(body.url);
+      if (urlError) return ok({ error: "VALIDATION", message: urlError }, 400);
       data.url = body.url;
     }
     if (Array.isArray(body.eventTypes)) data.eventTypes = body.eventTypes.filter((e) => typeof e === "string");

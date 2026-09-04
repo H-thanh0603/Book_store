@@ -18,6 +18,7 @@
 
 import { prisma } from "./db";
 import { hmacSign } from "./einvoice";
+import { assertSafeWebhookTarget } from "./ssrf";
 import { randomUUID } from "crypto";
 
 const BATCH_SIZE = 25;
@@ -132,6 +133,11 @@ async function deliverOne(id: string): Promise<Outcome> {
   let status: number | null = null;
   let error: string | null = null;
   try {
+    // SEC-006: re-check the resolved IP right before fetching — endpoints
+    // created before the URL guard (or DNS rebinds) must not reach internal
+    // targets from the worker. Treated as a normal failed attempt so the
+    // row follows the usual retry/dead-letter path.
+    await assertSafeWebhookTarget(row.endpoint.url);
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
     const res = await fetch(row.endpoint.url, {

@@ -109,6 +109,20 @@ describe("POST /api/webhooks/endpoints", () => {
     const res = await POST({ json: async () => ({ provider: "x", url: "ftp://x" }) } as any);
     expect(res.status).toBe(400);
   });
+
+  it("rejects SSRF targets (SEC-006)", async () => {
+    const { POST } = await import("./endpoints/route");
+    for (const url of [
+      "http://localhost:3000/hook",
+      "http://127.0.0.1:8080/admin",
+      "http://169.254.169.254/latest/meta-data",
+      "http://10.0.0.5/internal",
+      "http://[::1]/x",
+    ]) {
+      const res = await POST({ json: async () => ({ provider: "x", url }) } as any);
+      expect(res.status, url).toBe(400);
+    }
+  });
 });
 
 describe("POST /api/webhooks/endpoints/[id]/rotate", () => {

@@ -4,10 +4,8 @@
 // endpoint owner is responsible for storing the secret; we cannot
 // recover it. This is the same contract Stripe / GitHub use.
 //
-// ponytail: URL is not validated beyond a `^https?://` regex. We
-// don't DNS-resolve or HEAD-probe on create to avoid leaking the
-// subscription to attacker-controlled hosts (the first delivery
-// surfaces URL misconfiguration naturally).
+// URLs are screened against SSRF targets at create AND at delivery time
+// (audit 2026-08-30 SEC-006, see src/lib/ssrf.ts).
 
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
@@ -15,6 +13,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { withOrg } from "@/lib/org-scope";
+import { webhookUrlBlockReason } from "@/lib/ssrf";
 
 function newSecret() {
   return randomBytes(32).toString("hex");
@@ -41,7 +40,8 @@ export async function POST(req: NextRequest) {
       provider?: string; url?: string; eventTypes?: string[]; description?: string;
     };
     if (!body.provider || !body.url) return ok({ error: "VALIDATION", message: "provider and url required" }, 400);
-    if (!/^https?:\/\//.test(body.url)) return ok({ error: "VALIDATION", message: "url must be http(s)" }, 400);
+    const urlError = webhookUrlBlockReason(body.url);
+    if (urlError) return ok({ error: "VALIDATION", message: urlError }, 400);
     const eventTypes = Array.isArray(body.eventTypes) ? body.eventTypes.filter((e) => typeof e === "string") : [];
     const secret = newSecret();
     const endpoint = await prisma.webhookEndpoint.create({
