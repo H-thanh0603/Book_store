@@ -18,6 +18,18 @@ export function schedulerEnabled(): boolean {
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
+  // Behind nginx/Cloudflare without TRUST_PROXY_HEADERS=true, every client
+  // collapses into one shared rate-limit bucket per namespace — one spammer
+  // can lock logins/checkouts/AI chat for the whole site (docs/OPERATIONS.md
+  // "Reverse-proxy contract"). Loud warning, not a hard fail: direct-exposed
+  // (no proxy) deployments are legitimately configured without it.
+  if (process.env.NODE_ENV === "production" && process.env.TRUST_PROXY_HEADERS !== "true") {
+    console.warn(JSON.stringify({
+      level: "warn", event: "proxy_headers_untrusted",
+      message: "TRUST_PROXY_HEADERS != true in production: all clients share one rate-limit bucket per namespace. Set it if running behind nginx/Cloudflare.",
+    }));
+  }
+
   // OPS-003: server-side global handlers so an unawaited promise can't die
   // silently. PM2 restarts on exit; these handlers log-and-continue instead —
   // a crash-looping process that loses no data is worse than a degraded one.

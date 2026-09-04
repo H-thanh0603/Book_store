@@ -13,6 +13,10 @@ import { apiError } from "@/lib/api";
 
 // Base URL overridable for local mock testing (OpenAI-compatible convention).
 const DEEPSEEK_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com") + "/chat/completions";
+// Global daily spend cap — per-IP limits can't stop a distributed botnet
+// burning credits; one shared bucket does. Counts only turns that reach
+// DeepSeek, so demo-mode (no key) costs nothing.
+const DAILY_LIMIT = Number(process.env.DEEPSEEK_DAILY_LIMIT) || 2000;
 // ponytail: model name pinned; swap when DeepSeek ships a better chat model
 const MODEL = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
 
@@ -124,6 +128,9 @@ export async function POST(req: NextRequest) {
     if (history.length === 0) {
       return NextResponse.json({ code: "VALIDATION", message: "Thiếu nội dung tin nhắn" }, { status: 400 });
     }
+
+    // Shared daily bucket across ALL IPs: hard ceiling on credit burn.
+    await enforceRateLimit("concierge-daily", "global", DAILY_LIMIT, 24 * 60 * 60_000);
 
     const messages: ChatMessage[] = [
       { role: "system", content: SYSTEM_PROMPT },

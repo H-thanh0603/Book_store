@@ -43,6 +43,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
   const [open, setOpen] = useState(false);
   useEscapeClose(open, () => setOpen(false));
   const [input, setInput] = useState("");
+  const [pending, setPending] = useState(false);
   const [messages, setMessages] = useState<
     { sender: "user" | "ai"; text: string; items?: ProductSuggestion[] }[]
   >([
@@ -54,11 +55,12 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
 
   function handleSend(textToSend?: string) {
     const q = textToSend || input;
-    if (!q.trim()) return;
+    if (!q.trim() || pending) return;
 
     const newMsgs = [...messages, { sender: "user" as const, text: q }];
     setMessages(newMsgs);
     setInput("");
+    setPending(true);
 
     // AI response from /api/concierge (DeepSeek + real catalog search).
     // Falls back to the canned demo replies when the API is unconfigured
@@ -74,11 +76,25 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
       body: JSON.stringify({ messages: chatHistory }),
     })
       .then(async (res) => {
-        if (!res.ok) throw new Error(String(res.status));
+        if (!res.ok) throw Object.assign(new Error(String(res.status)), { status: res.status });
         const data = (await res.json()) as { text: string; items: ProductSuggestion[] };
         setMessages((prev) => [...prev, { sender: "ai", text: data.text, items: data.items }]);
       })
-      .catch(() => {
+      .catch((err: Error & { status?: number }) => {
+        // 429 rate-limited / 5xx configured-but-broken: honest message, no
+        // fake demo suggestions (those are only for NOT_CONFIGURED 503).
+        if (err.status && err.status !== 503) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              sender: "ai",
+              text: err.status === 429
+                ? "Bạn gửi nhanh quá — chợ mình cần vài giây nghỉ, thử lại sau nhé!"
+                : "Mình đang gặp sự cố kỹ thuật, thử lại sau nhé!",
+            },
+          ]);
+          return;
+        }
         let key = "default";
         const lower = q.toLowerCase();
         if (lower.includes("chữa lành") || lower.includes("tâm") || lower.includes("đi làm")) key = "healing";
@@ -91,7 +107,8 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
             items: mockRecommendations[key] || mockRecommendations.default,
           },
         ]);
-      });
+      })
+      .finally(() => setPending(false));
   }
 
   return (
@@ -135,6 +152,19 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
 
             {/* Chat message thread */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 font-serif">
+              {pending && (
+                <div className="flex justify-start">
+                  <div className="bg-white border border-[#ede5d8] shadow-2xs rounded-2xl rounded-bl-none px-4 py-3 flex gap-1" aria-label="Thủ thư AI đang soạn tin">
+                    {[0, 1, 2].map((i) => (
+                      <span
+                        key={i}
+                        className="size-1.5 rounded-full bg-slate-400 animate-bounce"
+                        style={{ animationDelay: `${i * 150}ms` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
               {messages.map((m, idx) => (
                 <div
                   key={idx}
@@ -209,12 +239,14 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                disabled={pending}
                 placeholder="Hỏi thủ thư: Tìm sách kinh tế, quà sinh nhật..."
-                className="flex-1 bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-2 text-xs font-serif text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20"
+                className="flex-1 bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-2 text-xs font-serif text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20 disabled:opacity-60"
               />
               <button
                 type="submit"
-                className="size-9 rounded-xl bg-[#1c1917] hover:bg-[#8c2d19] text-white flex items-center justify-center shadow"
+                disabled={pending}
+                className="size-9 rounded-xl bg-[#1c1917] hover:bg-[#8c2d19] text-white flex items-center justify-center shadow disabled:opacity-60"
               >
                 <Send className="w-4 h-4" />
               </button>
