@@ -23,27 +23,30 @@ export async function PUT(
   if (!existing) return apiError({ status: 404, code: "NOT_FOUND", message: "Gift card not found" });
 
   if (action === "adjust") {
-    if (typeof amount !== "number") return apiError({ status: 400, code: "VALIDATION", message: "Amount is required" });
+    if (typeof amount !== "number" || !Number.isInteger(amount) || amount === 0) return apiError({ status: 400, code: "VALIDATION", message: "Amount must be a non-zero integer" });
     if (!reason?.trim()) return apiError({ status: 400, code: "VALIDATION", message: "Reason is required for adjustment" });
 
-    const newBalance = Number(existing.balance) + amount;
-    if (newBalance < 0) return apiError({ status: 400, code: "VALIDATION", message: "Insufficient balance" });
-
-    const adjusted = await prisma.giftCard.update({
-      where: { id },
-      data: { balance: BigInt(newBalance) },
+    // Atomic increment + ledger row in ONE transaction (audit 2026-08-30
+    // MONEY-003): the old code read the balance outside, wrote an absolute
+    // value, then wrote the ledger separately — a POS redemption racing the
+    // adjust re-credited money just spent.
+    const adjusted = await prisma.$transaction(async (tx) => {
+      const updated = await tx.giftCard.update({
+        where: { id },
+        data: { balance: { increment: BigInt(amount) } },
+      });
+      if (updated.balance < 0n) throw Object.assign(new Error("Insufficient balance"), { status: 400 });
+      await tx.giftCardTransaction.create({
+        data: {
+          giftCardId: id,
+          amount: BigInt(amount),
+          balanceAfter: updated.balance,
+          refType: "adjustment",
+          refId: reason.trim(),
+        },
+      });
+      return updated;
     });
-
-    await prisma.giftCardTransaction.create({
-      data: {
-        giftCardId: id,
-        amount: BigInt(amount),
-        balanceAfter: BigInt(newBalance),
-        refType: "adjustment",
-        refId: reason.trim(),
-      },
-    });
-
     return ok({ giftCard: adjusted });
   }
 
