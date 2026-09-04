@@ -364,11 +364,13 @@ export default function ShopPage() {
       {/* 23. AI CONCIERGE — dynamic */}
       <AIConciergeModal
         onAddToCart={(item) => {
-          // Match by name only; never fall back to a random product — an
-          // unmatched suggestion is surfaced honestly instead.
-          const matched = s.allProducts.find((p) =>
-            p.name.toLowerCase().includes(item.name.toLowerCase())
-          );
+          // ID first (exact, straight from search results); name substring
+          // only as fallback when the model dropped productId. Never fall
+          // back to a random product — unmatched is surfaced honestly.
+          const matched = s.allProducts.find((p) => p.id === item.productId)
+            ?? s.allProducts.find((p) =>
+              p.name.toLowerCase().includes(item.name.toLowerCase())
+            );
           if (matched) {
             s.addToCart(matched);
           } else {

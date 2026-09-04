@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { listStorefrontProducts } from "@/lib/storefront";
 import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 import { apiError } from "@/lib/api";
+import { observeRequest } from "@/lib/metrics";
 
 // Base URL overridable for local mock testing (OpenAI-compatible convention).
 const DEEPSEEK_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com") + "/chat/completions";
@@ -68,7 +69,7 @@ const SYSTEM_PROMPT = `Bạn là "Thư Thủ AI" của Melio Bookstore — nhà 
 
 ## Định dạng trả lời (BẮT BUỘC)
 Trả về DUY NHẤT một JSON object, không markdown, không text bọc ngoài:
-{"text": "<1-3 câu trả lời tiếng Việt>", "items": [{"id": "<variantId hoặc productId từ kết quả search>", "name": "<tên>", "price": <số nguyên VND>, "category": "<tên nhóm>", "reason": "<một mệnh đề lý do>"}]}
+{"text": "<1-3 câu trả lời tiếng Việt>", "items": [{"id": "<variantId từ kết quả search>", "productId": "<productId từ kết quả search>", "name": "<tên>", "price": <số nguyên VND>, "category": "<tên nhóm>", "reason": "<một mệnh đề lý do>"}]}
 - items: [] nếu không có sản phẩm phù hợp. Tối đa 4 items.
 - price là SỐ (đơn vị VND, không phân tách hàng nghìn).
 - Nếu cần hỏi lại khách, đặt câu hỏi trong "text", items để [].`;
@@ -95,6 +96,7 @@ async function searchProducts(query: string) {
       const stock = (first?.balances ?? []).reduce((s, b) => s + b.onHand - b.reserved, 0);
       return {
         id: first?.id ?? p.id,
+        productId: p.id,
         name: p.name,
         category: (p as { category?: { name?: string } }).category?.name ?? "Sách",
         price,
@@ -110,11 +112,16 @@ async function searchProducts(query: string) {
 }
 
 export async function POST(req: NextRequest) {
+  const startedAt = Date.now();
+  // observeRequest only fires on explicit returns; the throw path is covered
+  // by apiError's recordHttpError, so durations stay honest either way.
+  const finish = (status: number) => observeRequest("/api/concierge", "POST", status, Date.now() - startedAt);
   try {
     // Public, per-IP: cheap enough to be generous, tight enough to cap cost.
     await enforceRateLimit("concierge", clientIp(req.headers), 20, 60_000);
 
     if (!conciergeConfigured()) {
+      finish(503);
       return NextResponse.json(
         { code: "NOT_CONFIGURED", message: "DEEPSEEK_API_KEY chưa cấu hình — thủ thư AI đang chạy chế độ demo." },
         { status: 503 },
@@ -126,6 +133,7 @@ export async function POST(req: NextRequest) {
     } | null;
     const history = body?.messages?.filter((m) => typeof m.content === "string" && m.content.trim()).slice(-8) ?? [];
     if (history.length === 0) {
+      finish(400);
       return NextResponse.json({ code: "VALIDATION", message: "Thiếu nội dung tin nhắn" }, { status: 400 });
     }
 
@@ -151,6 +159,7 @@ export async function POST(req: NextRequest) {
       if (!res.ok) {
         const errText = await res.text().catch(() => "");
         console.error(JSON.stringify({ level: "error", event: "concierge_upstream", status: res.status, message: errText.slice(0, 300) }));
+        finish(502);
         return NextResponse.json(
           { code: "UPSTREAM", message: "Thủ thư AI tạm thời không phản hồi, thử lại sau nhé." },
           { status: 502 },
@@ -158,6 +167,7 @@ export async function POST(req: NextRequest) {
       }
       const data = (await res.json()) as {
         choices: { message: ChatMessage & { tool_calls?: ChatMessage["tool_calls"] } }[];
+        usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
       };
       const msg = data.choices[0]?.message;
       if (!msg) throw new Error("empty response");
@@ -166,7 +176,7 @@ export async function POST(req: NextRequest) {
       if (toolCalls.length === 0) {
         // Parse the JSON the system prompt demands; degrade to raw text if the
         // model strayed, so the UI still shows something useful.
-        let parsed: { text?: string; items?: { id: string; name: string; price: number; category: string; reason: string }[] };
+        let parsed: { text?: string; items?: { id: string; productId?: string; name: string; price: number; category: string; reason: string }[] };
         try {
           const raw = msg.content ?? "";
           const start = raw.indexOf("{");
@@ -175,6 +185,18 @@ export async function POST(req: NextRequest) {
         } catch {
           parsed = { text: msg.content ?? "" };
         }
+        // Token accounting: one log line per turn, the ops signal for credit
+        // burn. usage is on the FINAL round of the loop only (first response
+        // that carries no tool_calls) — this return sits inside that branch.
+        if (data.usage) {
+          console.info(JSON.stringify({
+            level: "info", event: "concierge_usage",
+            promptTokens: data.usage.prompt_tokens,
+            completionTokens: data.usage.completion_tokens,
+            totalTokens: data.usage.total_tokens,
+          }));
+        }
+        finish(200);
         return NextResponse.json({
           text: parsed.text?.slice(0, 1500) ?? "Mình chưa hiểu ý bạn, thử diễn đạt khác nhé!",
           items: Array.isArray(parsed.items)
@@ -183,6 +205,7 @@ export async function POST(req: NextRequest) {
                 .slice(0, 4)
                 .map((i) => ({
                   id: i.id,
+                  productId: typeof i.productId === "string" ? i.productId : i.id,
                   name: i.name,
                   price: Number(i.price) || 0,
                   category: typeof i.category === "string" ? i.category : "Sách",
@@ -206,6 +229,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    finish(200);
     return NextResponse.json({ text: "Mình cần thêm thông tin nhé — bạn mô tả cụ thể hơn được không?", items: [] });
   } catch (error) {
     return apiError(error);

@@ -11,6 +11,7 @@ import {
 
 type ProductSuggestion = {
   id: string;
+  productId: string;
   name: string;
   price: number;
   category: string;
@@ -26,16 +27,16 @@ const quickPrompts = [
 
 const mockRecommendations: Record<string, ProductSuggestion[]> = {
   default: [
-    { id: "1", name: "Dế Mèn Phiêu Lưu Ký (Bản Bìa Cứng)", price: 89000, category: "Văn Học", reason: "Tác phẩm kinh điển nuôi dưỡng tâm hồn và lòng trắc ẩn qua nhiều thế hệ." },
-    { id: "2", name: "LEGO Classic Creative Bricks 11002", price: 899000, category: "Đồ Chơi", reason: "Bộ lắp ráp 300+ chi tiết kích thích tư duy không gian và sáng tạo vô hạn." },
+    { id: "1", productId: "1", name: "Dế Mèn Phiêu Lưu Ký (Bản Bìa Cứng)", price: 89000, category: "Văn Học", reason: "Tác phẩm kinh điển nuôi dưỡng tâm hồn và lòng trắc ẩn qua nhiều thế hệ." },
+    { id: "2", productId: "2", name: "LEGO Classic Creative Bricks 11002", price: 899000, category: "Đồ Chơi", reason: "Bộ lắp ráp 300+ chi tiết kích thích tư duy không gian và sáng tạo vô hạn." },
   ],
   healing: [
-    { id: "3", name: "Tôi Thấy Hoa Vàng Trên Cỏ Xanh", price: 118000, category: "Văn Học", reason: "Những trang văn êm đềm đưa tâm trí trở về ký ức tuổi thơ thanh bình." },
-    { id: "4", name: "Bộ Quà Tết: Sổ Tay Mộc + Bookmark Dập Nổi", price: 159000, category: "Quà Tặng", reason: "Món quà tinh tế giúp ghi chép nhật ký biết ơn và tĩnh tâm mỗi ngày." },
+    { id: "3", productId: "3", name: "Tôi Thấy Hoa Vàng Trên Cỏ Xanh", price: 118000, category: "Văn Học", reason: "Những trang văn êm đềm đưa tâm trí trở về ký ức tuổi thơ thanh bình." },
+    { id: "4", productId: "4", name: "Bộ Quà Tết: Sổ Tay Mộc + Bookmark Dập Nổi", price: 159000, category: "Quà Tặng", reason: "Món quà tinh tế giúp ghi chép nhật ký biết ơn và tĩnh tâm mỗi ngày." },
   ],
   kids: [
-    { id: "5", name: "Gấu Bông Hello Kitty Sanrio 30cm", price: 259000, category: "Đồ Chơi", reason: "Chất liệu lông cừu mềm mại chuẩn an toàn cho bé ôm khi ngủ." },
-    { id: "6", name: "Bộ Màu Nước Mỹ Thuật 12 Màu Cao Cấp", price: 78000, category: "Mỹ Thuật", reason: "Màu sắc tươi sáng, gốc nước an toàn không độc hại cho trẻ nhỏ." },
+    { id: "5", productId: "5", name: "Gấu Bông Hello Kitty Sanrio 30cm", price: 259000, category: "Đồ Chơi", reason: "Chất liệu lông cừu mềm mại chuẩn an toàn cho bé ôm khi ngủ." },
+    { id: "6", productId: "6", name: "Bộ Màu Nước Mỹ Thuật 12 Màu Cao Cấp", price: 78000, category: "Mỹ Thuật", reason: "Màu sắc tươi sáng, gốc nước an toàn không độc hại cho trẻ nhỏ." },
   ],
 };
 

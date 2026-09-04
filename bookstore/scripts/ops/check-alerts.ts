@@ -12,6 +12,7 @@
 //   - catalog p95 latency above ALERT_CATALOG_P95_MS (500)   [when sampled]
 //   - DB pool acquire p95 above ALERT_POOL_WAIT_MS (2_000)
 //   - 429 share of storefront requests above ALERT_429_RATIO (0.10)
+//   - 5xx share of AI concierge turns above ALERT_AI_5XX_RATIO (0.20)
 
 import "dotenv/config";
 import { prisma } from "../../src/lib/db";
@@ -23,6 +24,7 @@ if (!TEST_PASSWORD) throw new Error("SEED_USER_PASSWORD is required");
 const CATALOG_P95_BUDGET = Number(process.env.ALERT_CATALOG_P95_MS ?? 500);
 const POOL_WAIT_BUDGET = Number(process.env.ALERT_POOL_WAIT_MS ?? 2_000);
 const RATE429_MAX_RATIO = Number(process.env.ALERT_429_RATIO ?? 0.1);
+const CONCIERGE_5XX_MAX_RATIO = Number(process.env.ALERT_AI_5XX_RATIO ?? 0.2);
 
 type Jar = { cookie?: string };
 
@@ -67,8 +69,18 @@ async function main() {
   // ── 2. Latency / pool / 429 thresholds from the metrics snapshot ──────────
   const metrics = await api(jar, "GET", "/api/metrics");
   if (metrics.status === 200) {
-    type RouteRow = { route: string; p95Ms: number | null; rateLimited429: number; count: number };
+    type RouteRow = { route: string; p95Ms: number | null; rateLimited429: number; serverErrors5xx: number; count: number };
     const routes = ((metrics.data.routes as RouteRow[]) ?? []).filter((r) => r.route === "GET /api/storefront");
+
+    // AI concierge health: 5xx ratio (upstream failures + thrown errors).
+    // p95 latency is expected in seconds (LLM + tool rounds), so only the
+    // error ratio is meaningful here — not latency.
+    const concierge = ((metrics.data.routes as RouteRow[]) ?? []).find((r) => r.route === "POST /api/concierge");
+    if (concierge && concierge.count >= 10) {
+      const aiRatio = concierge.serverErrors5xx / concierge.count;
+      if (aiRatio > CONCIERGE_5XX_MAX_RATIO)
+        alerts.push(`AI_UNHEALTHY: ${(aiRatio * 100).toFixed(1)}% of AI concierge turns errored 5xx (> ${(CONCIERGE_5XX_MAX_RATIO * 100).toFixed(0)}%, ${concierge.count} samples) — check concierge_upstream logs / DeepSeek key`);
+    }
     const catalog = routes[0];
     if (catalog && catalog.p95Ms != null && catalog.count >= 20) {
       if (catalog.p95Ms > CATALOG_P95_BUDGET)
