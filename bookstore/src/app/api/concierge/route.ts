@@ -81,33 +81,33 @@ type ChatMessage = {
   tool_call_id?: string;
 };
 
-async function searchProducts(query: string) {
+type CatalogItem = {
+  id: string; productId: string; name: string;
+  category: string; price: number | null;
+  inStock: boolean; author: string | null;
+};
+
+async function searchProducts(query: string): Promise<CatalogItem[]> {
   try {
     const result = await listStorefrontProducts({ q: query });
     // Compact the catalog for the model: name, price, stock, category.
-    const products = result.products.slice(0, 12).map((p) => {
-      const variants = p.variants as {
-        id: string; name: string;
-        prices: { amount: number }[];
-        balances: { onHand: number; reserved: number }[];
-      }[];
+    // listStorefrontProducts already flattens variants to {id, name, price, available}.
+    return result.products.slice(0, 12).map((p) => {
+      const variants = p.variants as { id: string; name: string; price: number; available: number }[];
       const first = variants[0];
-      const price = first?.prices?.[0]?.amount ?? null;
-      const stock = (first?.balances ?? []).reduce((s, b) => s + b.onHand - b.reserved, 0);
       return {
         id: first?.id ?? p.id,
         productId: p.id,
         name: p.name,
         category: (p as { category?: { name?: string } }).category?.name ?? "Sách",
-        price,
-        inStock: stock > 0,
+        price: first?.price ?? null,
+        inStock: (first?.available ?? 0) > 0,
         author: (p as { author?: { name?: string } }).author?.name ?? null,
-      };
+      } satisfies CatalogItem;
     });
-    return JSON.stringify({ products });
   } catch {
     // Search must never crash the chat — an empty result the model can phrase.
-    return JSON.stringify({ products: [] });
+    return [];
   }
 }
 
@@ -146,6 +146,8 @@ export async function POST(req: NextRequest) {
     ];
 
     // Up to 2 tool rounds: search → answer. Enough for every skill flow.
+    // Last round's catalog is kept for grounding the final items below.
+    let catalog: CatalogItem[] = [];
     for (let round = 0; round < 2; round++) {
       const res = await fetch(DEEPSEEK_URL, {
         method: "POST",
@@ -196,36 +198,44 @@ export async function POST(req: NextRequest) {
             totalTokens: data.usage.total_tokens,
           }));
         }
+        // Ground every item against the catalog the model actually saw: id
+        // must match a searched product, and name/price come from the DB, not
+        // the model — a hallucinated price or name never reaches the UI.
+        // Unknown ids are dropped entirely (the text stands on its own).
+        const byId = new Map(catalog.map((c) => [c.id, c]));
+        const groundedItems = (Array.isArray(parsed.items) ? parsed.items : [])
+          .filter((i) => i && typeof i.id === "string" && byId.has(i.id))
+          .slice(0, 4)
+          .map((i) => {
+            const real = byId.get(i.id)!;
+            return {
+              id: i.id,
+              productId: real.productId,
+              name: real.name,
+              price: real.price ?? 0,
+              category: real.category,
+              reason: typeof i.reason === "string" ? i.reason : "",
+            };
+          });
         finish(200);
         return NextResponse.json({
           text: parsed.text?.slice(0, 1500) ?? "Mình chưa hiểu ý bạn, thử diễn đạt khác nhé!",
-          items: Array.isArray(parsed.items)
-            ? parsed.items
-                .filter((i) => i && typeof i.id === "string" && typeof i.name === "string")
-                .slice(0, 4)
-                .map((i) => ({
-                  id: i.id,
-                  productId: typeof i.productId === "string" ? i.productId : i.id,
-                  name: i.name,
-                  price: Number(i.price) || 0,
-                  category: typeof i.category === "string" ? i.category : "Sách",
-                  reason: typeof i.reason === "string" ? i.reason : "",
-                }))
-            : [],
+          items: groundedItems,
         });
       }
 
       // Execute tool calls, append results, loop for the final answer.
       messages.push({ role: "assistant", content: msg.content ?? "", tool_calls: toolCalls });
       for (const call of toolCalls) {
-        let result: string;
+        let result: CatalogItem[];
         try {
           const args = JSON.parse(call.function.arguments || "{}") as { query?: string };
           result = await searchProducts(String(args.query ?? "").slice(0, 80));
         } catch {
-          result = JSON.stringify({ products: [] });
+          result = [];
         }
-        messages.push({ role: "tool", tool_call_id: call.id, content: result });
+        catalog = result;
+        messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ products: result }) });
       }
     }
 
