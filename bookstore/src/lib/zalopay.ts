@@ -69,6 +69,8 @@ export async function buildZaloPayUrl(order: { id: string; number: string; total
   };
   const res = await fetch(CREATE_URL, {
     method: "POST",
+    // PERF-001: bound a hung ZaloPay endpoint (no undici default timeout).
+    signal: AbortSignal.timeout(10_000),
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams(
       Object.fromEntries(Object.entries(body).map(([k, v]) => [k, String(v)]))

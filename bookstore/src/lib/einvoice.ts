@@ -134,6 +134,8 @@ class VnptAdapter implements EInvoiceAdapter {
     };
     const res = await fetch(`${cfg.baseUrl}/InvoiceAPI/InvoiceWS`, {
       method: "POST",
+      // PERF-001: bound a hung T-VAN endpoint (no undici default timeout).
+      signal: AbortSignal.timeout(10_000),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
@@ -145,6 +147,7 @@ class VnptAdapter implements EInvoiceAdapter {
   async query(providerInvoiceId: string, cfg: ProviderConfig): Promise<EQueryResult> {
     const res = await fetch(`${cfg.baseUrl}/InvoiceAPI/InvoiceWS/GetInvoiceLink`, {
       method: "POST",
+      signal: AbortSignal.timeout(10_000), // PERF-001
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: cfg.apiKey, password: cfg.apiSecret, invoiceId: providerInvoiceId }),
     });
@@ -162,6 +165,7 @@ class VnptAdapter implements EInvoiceAdapter {
   async cancel(providerInvoiceId: string, cfg: ProviderConfig): Promise<{ raw: unknown }> {
     const res = await fetch(`${cfg.baseUrl}/InvoiceAPI/InvoiceWS/Cancel`, {
       method: "POST",
+      signal: AbortSignal.timeout(10_000), // PERF-001
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: cfg.apiKey, password: cfg.apiSecret, invoiceId: providerInvoiceId }),
     });

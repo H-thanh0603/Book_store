@@ -66,6 +66,9 @@ export async function buildMomoUrl(order: { id: string; number: string; total: b
   const signature = momoHmac(process.env.MOMO_SECRET_KEY!, raw);
   const res = await fetch(CREATE_URL, {
     method: "POST",
+    // PERF-001: no default timeout in undici — a hung MoMo endpoint would
+    // pin the checkout worker indefinitely.
+    signal: AbortSignal.timeout(10_000),
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       partnerCode: process.env.MOMO_PARTNER_CODE!,
