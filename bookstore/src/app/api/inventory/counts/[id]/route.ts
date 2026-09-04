@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma, prismaRead, withTxRetry, TX_OPTIONS } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
+import { applyMovement } from "@/lib/inventory";
 
 // PUT /api/inventory/counts/[id] — Update count items or post count
 export async function PUT(
@@ -47,58 +48,49 @@ export async function PUT(
   }
 
   if (action === "post") {
-    // Post the count: adjust inventory based on differences
+    // Post the count: adjust inventory based on differences.
+    // Rewrite per audit 2026-08-30 INV-001:
+    //  1. CLAIM the DRAFT→POSTED transition FIRST (conditional updateMany) —
+    //     the old check-then-post let two concurrent posts double-adjust.
+    //  2. Diff against the LIVE balance, not the expectedQty snapshot taken
+    //     when the count was created (snapshot 10, sold 3, counted 7 → the
+    //     old diff −3 set onHand to 4; correct answer is 7). Setting
+    //     onHand := countedQty via applyMovement does this by construction.
     return await withTxRetry(() =>
       prisma.$transaction(
         async (tx) => {
-          const count = await tx.inventoryCount.findUnique({
-            where: { id },
-            include: { items: true },
+          const claimed = await tx.inventoryCount.updateMany({
+            where: { id, status: "DRAFT" },
+            data: { status: "POSTED", postedAt: new Date() },
           });
-          if (!count) return apiError({ status: 404, code: "NOT_FOUND", message: "Count not found" });
-          if (count.status !== "DRAFT") {
-            return apiError({ status: 400, code: "VALIDATION", message: "Already posted" });
-          }
+          if (claimed.count !== 1)
+            return apiError({ status: 409, code: "INVALID_STATUS_TRANSITION", message: "Count was already posted or cancelled" });
+
+          const count = await tx.inventoryCount.findUnique({ where: { id }, include: { items: true } });
+          if (!count) return apiError({ status: 404, code: "NOT_FOUND", message: "Inventory count not found" });
 
           let adjustments = 0;
           for (const item of count.items) {
-            const diff = item.countedQty - item.expectedQty;
+            const balance = await tx.inventoryBalance.findUnique({
+              where: { variantId_locationId: { variantId: item.variantId, locationId: count.locationId } },
+              select: { onHand: true },
+            });
+            const diff = item.countedQty - (balance?.onHand ?? 0);
             if (diff !== 0) {
-              // Get current balance for balanceAfter
-              const balance = await tx.inventoryBalance.findUnique({
-                where: { variantId_locationId: { variantId: item.variantId, locationId: count.locationId } },
-                select: { onHand: true },
+              // A count is ground truth: allowNegative so a shrinkage count
+              // can pull onHand below the reserved level without failing.
+              await applyMovement(tx, {
+                variantId: item.variantId,
+                locationId: count.locationId,
+                type: "STOCK_ADJUSTMENT",
+                quantityDelta: diff,
+                refType: "inventory_count",
+                refId: count.id,
+                allowNegative: true,
               });
-
-              // Create adjustment movement
-              await tx.inventoryMovement.create({
-                data: {
-                  variantId: item.variantId,
-                  locationId: count.locationId,
-                  type: "STOCK_ADJUSTMENT",
-                  quantity: diff, // positive = add, negative = subtract
-                  balanceAfter: (balance?.onHand ?? 0) + diff,
-                  refType: "inventory_count",
-                  refId: count.id,
-                  userId: null,
-                },
-              });
-
-              // Update balance
-              await tx.inventoryBalance.updateMany({
-                where: { variantId: item.variantId, locationId: count.locationId },
-                data: { onHand: { increment: diff } },
-              });
-
               adjustments++;
             }
           }
-
-          // Mark count as posted
-          await tx.inventoryCount.update({
-            where: { id },
-            data: { status: "POSTED", postedAt: new Date() },
-          });
 
           return ok({ message: `Count posted with ${adjustments} adjustments`, adjustments });
         },
@@ -108,10 +100,14 @@ export async function PUT(
   }
 
   if (action === "cancel") {
-    await prisma.inventoryCount.update({
-      where: { id },
+    // Claim the transition too: cancelling an already-POSTED count would wipe
+    // the audit link to the adjustments it posted.
+    const claimed = await prisma.inventoryCount.updateMany({
+      where: { id, status: "DRAFT" },
       data: { status: "CANCELLED" },
     });
+    if (claimed.count !== 1)
+      return apiError({ status: 400, code: "VALIDATION", message: "Only DRAFT counts can be cancelled" });
     return ok({ message: "Count cancelled" });
   }
 
