@@ -21,6 +21,11 @@ export async function POST(req: NextRequest) {
         const order = await tx.order.findUnique({ where: { id: body.orderId }, include: { items: true } });
         if (!order) fail(404, "NOT_FOUND", "Order not found");
         assertStoreAccess(auth, order.storeId, "inventory.adjust");
+        // Audit 2026-08-30 RET-001: a return on a CANCELLED order re-credited
+        // stock the reservation-expiry job had already released (creating
+        // inventory from nothing) and refunded money for goods never delivered.
+        if (order.status === "CANCELLED")
+          fail(400, "INVALID_STATUS_TRANSITION", "Cannot return items on a CANCELLED order");
         // Cumulative over-return guard: total returned per order item (all returns,
         // any status except REJECTED) can never exceed the ordered quantity.
         const priorReturned = new Map<string, number>();
