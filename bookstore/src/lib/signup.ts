@@ -34,6 +34,7 @@ const BASE_PERMS = [
   "purchase.create", "purchase.approve", "purchase.receive",
   "customer.view", "customer.update", "promotion.manage",
   "reports.financial.view", "reports.store.view", "admin.users", "admin.config",
+  "settings.read", "settings.write",
 ];
 
 const ROLE_PERMS: Record<string, string[]> = {

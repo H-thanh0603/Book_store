@@ -27,6 +27,9 @@ const PERMS = [
   "purchase.create", "purchase.approve", "purchase.receive",
   "customer.view", "customer.update", "promotion.manage",
   "reports.financial.view", "reports.store.view", "admin.users", "admin.config",
+  // Referenced by /api/billing + /api/webhooks + /api/payments/refunds but
+  // never seeded before — every settings route 403'd for owner/admin too.
+  "settings.read", "settings.write",
 ];
 
 const ROLE_PERMS: Record<string, string[]> = {

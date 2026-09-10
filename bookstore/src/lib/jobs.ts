@@ -8,6 +8,7 @@ import { processPendingDeliveries } from "./webhook-bus";
 import { rotateInventoryPartitions } from "./partitions";
 import { runDailyMisaExport } from "./exports/misa-job";
 import { suspendOverdueOrgs } from "./billing";
+import { scanRefundRequired } from "./payment-refunds";
 import { randomUUID } from "crypto";
 
 export const JOB_KINDS = {
@@ -20,6 +21,7 @@ export const JOB_KINDS = {
   "partitions.rotate": rotateInventoryPartitions,
   "misa.export": runDailyMisaExport,
   "billing.suspend_overdue": suspendOverdueOrgs,
+  "payments.refund_scan": scanRefundRequired,
   // ponytail: integration dispatch is inline today (integrations route runs jobs on
   // request); add a real queue consumer here when a connector pushes work.
 } as const;
@@ -104,7 +106,7 @@ export async function tickScheduler() {
  * Called by the instrumentation interval; safe to call repeatedly.
  */
 const NIGHTLY: JobKind[] = ["replenishment.generate", "loss.scan", "partitions.rotate", "misa.export", "billing.suspend_overdue"];
-const FREQUENT: JobKind[] = ["order.expire_reservations", "einvoice.issue", "einvoice.poll", "webhook.deliver"];
+const FREQUENT: JobKind[] = ["order.expire_reservations", "einvoice.issue", "einvoice.poll", "webhook.deliver", "payments.refund_scan"];
 const TICK_MS = 5 * 60_000;
 
 export async function scheduleNightly() {

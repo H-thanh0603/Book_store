@@ -24,6 +24,7 @@ import {
   Building2,
   ChevronDown,
   Library,
+  Undo2,
 } from "lucide-react";
 import SupportWidget from "./support-widget";
 
@@ -84,6 +85,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/reports", label: "Báo cáo", icon: Activity },
       { href: "/audit-logs", label: "Audit log", icon: ShieldCheck },
+      { href: "/settings/payments", label: "Hoàn tiền", icon: Undo2 },
     ],
   },
   {

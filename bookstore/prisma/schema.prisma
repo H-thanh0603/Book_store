@@ -982,6 +982,13 @@ model WebPayment {
   txnRef       String    @unique
   amount       BigInt
   status       String    @default("PENDING")
+  // Money captured on a cancelled/expired order lands as REFUND_REQUIRED;
+  // refundStatus tracks the operator flow that gets it back to the buyer:
+  // null (not refundable) → PENDING (needs a refund) → REFUNDED (done).
+  refundStatus String?   // PENDING | REFUNDED
+  refundedAt   DateTime?
+  refundedBy   String?   // userId of the operator who marked it refunded
+  refundNote   String?   // operator note: bank ref, refund voucher, ...
   responseCode String?
   bankCode     String?
   rawParams    Json?
@@ -989,6 +996,7 @@ model WebPayment {
   paidAt       DateTime?
   billingInvoice BillingInvoice?
   @@index([status])
+  @@index([status, refundStatus]) // refund queue scans (job + admin list)
 }
 
 // ── Phase 2: fulfillment, returns, gift cards, supplier returns, counts ──

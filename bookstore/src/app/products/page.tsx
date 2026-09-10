@@ -175,6 +175,7 @@ export default function ProductsPage() {
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           {p.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- remote product cover, arbitrary host; next/image would need a whitelist for every supplier CDN
                             <img
                               src={p.imageUrl}
                               alt={p.name}

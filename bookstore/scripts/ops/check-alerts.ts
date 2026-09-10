@@ -54,6 +54,22 @@ async function main() {
 
   const alerts: string[] = [];
 
+  // ── 0. Refund queue (audit MONEY-001 follow-up) ──────────────────────────
+  // REFUND_REQUIRED captures are money held hostage: the customer paid, the
+  // order was cancelled, and nothing ships. A single open row past a few
+  // minutes means someone's money is stuck — always alert.
+  const refunds = await api(jar, "GET", "/api/payments/refunds");
+  const openRefunds = ((refunds.data.refunds as { txnRef: string; refundStatus: string | null }[]) ?? []).filter(
+    (r) => r.refundStatus !== "REFUNDED"
+  );
+  if (openRefunds.length > 0) {
+    alerts.push(
+      `REFUND_REQUIRED: ${openRefunds.length} captured payment(s) awaiting refund — /settings/payments (oldest: ${
+        openRefunds[0].txnRef
+      })`
+    );
+  }
+
   // ── 1. FAILED jobs (the endpoint ops already poll) ────────────────────────
   const jobs = await api(jar, "GET", "/api/jobs?status=FAILED");
   const runs = (jobs.data.runs as { id: string; kind: string; error: string | null; finishedAt: Date | null }[] | undefined) ?? [];
