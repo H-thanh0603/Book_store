@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { requirePermission, requireAuth, resolveStoreScope } from "@/lib/auth";
+import { assertWithinPlanLimits } from "@/lib/plan-limits";
 import { apiError, ok, fail, reqStr, optBool, requireRef } from "@/lib/api";
 
 export async function GET() {
@@ -23,6 +24,8 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const auth = await requirePermission("admin.config");
+    // Plan limit (BILL-001): FREE orgs can't out-grow their paid tier.
+    await assertWithinPlanLimits(auth, { stores: 1 });
     const b = await req.json();
     const code = reqStr(b.code, "code", 16);
     const name = reqStr(b.name, "name");

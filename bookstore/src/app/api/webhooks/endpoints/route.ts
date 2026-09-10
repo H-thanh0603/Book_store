@@ -13,6 +13,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { withOrg } from "@/lib/org-scope";
+import { assertPlanFeature, assertWithinPlanLimits } from "@/lib/plan-limits";
 import { webhookUrlBlockReason } from "@/lib/ssrf";
 
 function newSecret() {
@@ -36,6 +37,13 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const auth = await requirePermission("settings.write");
+    // Webhook endpoints are org-owned resources — a caller without an org
+    // has nothing to attach the endpoint to (was a raw 500 before).
+    if (!auth.orgId) return ok({ error: "VALIDATION", message: "caller has no organization" }, 400);
+    // Plan gates (BILL-001): webhooks are a paid feature, and even on paid
+    // plans the endpoint count is bounded.
+    await assertPlanFeature(auth, "webhooks");
+    await assertWithinPlanLimits(auth, { webhookEndpoints: 1 });
     const body = (await req.json().catch(() => ({}))) as {
       provider?: string; url?: string; eventTypes?: string[]; description?: string;
     };

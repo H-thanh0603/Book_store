@@ -45,6 +45,13 @@ const ROLE_PERMS: Record<string, string[]> = {
 async function getOrCreateOrg() {
   let org = await prisma.organization.findFirst({ where: { name: "Nhà Sách Melio" } });
   if (!org) org = await prisma.organization.create({ data: { name: "Nhà Sách Melio", slug: "melio" } });
+  // The demo org predates the TRIAL gate: it was created with status TRIAL and
+  // a null trialEndsAt, which the central org gate reads as an EXPIRED trial —
+  // every demo account was locked out at the permission layer. It has an
+  // ACTIVE PRO subscription, so make the org ACTIVE to match billing reality.
+  if (org.status !== "ACTIVE") {
+    org = await prisma.organization.update({ where: { id: org.id }, data: { status: "ACTIVE" } });
+  }
   let region = await prisma.region.findFirst({ where: { name: "Miền Nam", orgId: org.id } });
   if (!region) region = await prisma.region.create({ data: { name: "Miền Nam", orgId: org.id } });
   return { org, region };
@@ -60,6 +67,30 @@ async function main() {
       "Refusing to seed a production database. Set ALLOW_SEED_PRODUCTION=true only if you understand demo accounts will exist."
     );
   const { org, region } = await getOrCreateOrg();
+  // Plans (BILL-001): the tiers plan-limits.ts enforces. Idempotent upserts;
+  // product tweaks (prices, limits) are safe to change here across re-seeds.
+  const plans = [
+    { code: "FREE", name: "Free", monthlyPriceCents: 0, maxStores: 1, maxUsers: 3, features: { eInvoice: false, multiStore: false, webhooks: false, maxWebhookEndpoints: 2 } },
+    { code: "PRO", name: "Pro", monthlyPriceCents: 499000, maxStores: 5, maxUsers: 20, features: { eInvoice: true, multiStore: true, webhooks: true, maxWebhookEndpoints: 10 } },
+    { code: "ENTERPRISE", name: "Enterprise", monthlyPriceCents: 1999000, maxStores: 50, maxUsers: 200, features: { eInvoice: true, multiStore: true, webhooks: true, maxWebhookEndpoints: 50 } },
+  ];
+  for (const p of plans) {
+    await prisma.plan.upsert({
+      where: { code: p.code },
+      update: { name: p.name, monthlyPriceCents: p.monthlyPriceCents, maxStores: p.maxStores, maxUsers: p.maxUsers, features: p.features as object },
+      create: p as typeof p & { features: object },
+    });
+  }
+  // The demo org gets an ACTIVE PRO subscription so the seeded 5 stores are
+  // legal under the plan (FREE would instantly violate on the next create).
+  const proPlan = await prisma.plan.findUniqueOrThrow({ where: { code: "PRO" } });
+  const periodStart = new Date();
+  const periodEnd = new Date(periodStart.getTime() + 30 * 86_400_000);
+  await prisma.subscription.upsert({
+    where: { orgId: org.id },
+    update: {},
+    create: { orgId: org.id, planId: proPlan.id, status: "ACTIVE", currentPeriodStart: periodStart, currentPeriodEnd: periodEnd },
+  });
   // Permissions + roles
   const perms = await Promise.all(
     PERMS.map((code) => prisma.permission.upsert({ where: { code }, create: { code }, update: {} }))
@@ -119,10 +150,13 @@ async function main() {
     // Create-only: re-seeding must NEVER reset an existing account's password
     // (that would silently hand production owner access to whoever ran seed).
     // Local dev: delete the user row if you need a fresh password.
+    // orgId is SET on both paths: users without an org are legacy superusers
+    // that bypass every org gate (status, plan limits, org-scoped queries) —
+    // demo accounts must be ordinary org members.
     const u = await prisma.user.upsert({
       where: { email },
-      create: { email, passwordHash },
-      update: {},
+      create: { email, passwordHash, orgId: org.id },
+      update: { orgId: org.id },
     });
     const r = await prisma.role.findUniqueOrThrow({ where: { name: role } });
     await prisma.userRole.upsert({
