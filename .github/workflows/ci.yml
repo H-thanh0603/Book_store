@@ -9,6 +9,11 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    env:
+      # prisma.config.ts validates DATABASE_URL at `prisma generate` (postinstall).
+      # generate never connects — any parseable URL works; unit tests mock the DB.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      INTEGRATION_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     defaults:
       run:
         working-directory: bookstore
