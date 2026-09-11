@@ -81,8 +81,13 @@ jobs:
           # SQL-managed objects (CHECKs, partial/trgm indexes, extensions) are
           # invisible to the datamodel, so index-level drops here are EXPECTED
           # noise — a bare `prisma migrate dev` would emit them. What must NEVER
-          # appear is anything destroying structure or data.
-          if grep -qE 'DROP TABLE|DROP COLUMN|DELETE FROM|TRUNCATE' /tmp/drift.sql; then
+          # appear is anything destroying structure or data. Exception:
+          # ProductEmbedding is a fully SQL-managed table (pgvector column,
+          # created by raw migration, queried via $queryRaw) — the datamodel
+          # never modeled it, so diff always wants to "drop" it. Filter that
+          # one known line, then apply the strict rule to what remains.
+          grep -vE '^DROP TABLE "ProductEmbedding";' /tmp/drift.sql > /tmp/drift-strict.sql || true
+          if grep -qE 'DROP TABLE|DROP COLUMN|DELETE FROM|TRUNCATE' /tmp/drift-strict.sql; then
             echo "::error::Migration history vs schema.prisma implies destructive DDL (table/column drop or data deletion). Do not run 'prisma migrate dev' against this history until resolved."
             cat /tmp/drift.sql
             exit 1
