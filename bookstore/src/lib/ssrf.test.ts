@@ -1,6 +1,6 @@
 // SEC-006 self-check for the SSRF URL guard. Pure sync functions only —
 // the async DNS path is exercised implicitly by webhook-bus tests.
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { webhookUrlBlockReason, blockedIpReason } from "./ssrf";
 
 describe("webhookUrlBlockReason", () => {
@@ -45,5 +45,43 @@ describe("blockedIpReason", () => {
     expect(blockedIpReason("fd00::1")).toMatch(/ULA/);
     expect(blockedIpReason("::ffff:10.0.0.1")).toMatch(/private/);
     expect(blockedIpReason("2001:db8::1")).toBeNull();
+  });
+});
+
+describe("WEBHOOK_ALLOW_HOSTS operator allowlist", () => {
+  const withAllow = async (env: string | undefined, fn: () => Promise<void> | void) => {
+    const saved = process.env.WEBHOOK_ALLOW_HOSTS;
+    if (env === undefined) delete process.env.WEBHOOK_ALLOW_HOSTS;
+    else process.env.WEBHOOK_ALLOW_HOSTS = env;
+    try {
+      vi.resetModules(); // guard caches ALLOWED at module load — re-import fresh
+      await fn();
+    } finally {
+      if (saved === undefined) delete process.env.WEBHOOK_ALLOW_HOSTS;
+      else process.env.WEBHOOK_ALLOW_HOSTS = saved;
+      vi.resetModules(); // next imports see the restored (original) env
+    }
+  };
+
+  it("admits an allowlisted internal host (CI smoke receivers)", async () => {
+    await withAllow("127.0.0.1", async () => {
+      const fresh = await import("./ssrf");
+      expect(fresh.webhookUrlBlockReason("http://127.0.0.1:3999/hook")).toBeNull();
+      await expect(fresh.assertSafeWebhookTarget("http://127.0.0.1:3999/hook")).resolves.toBeUndefined();
+    });
+  });
+
+  it("still blocks internal hosts when the allowlist is empty", () => {
+    // No env surgery needed — the suite imports (top of file) ran without an
+    // allowlist, so this checks the default behavior directly.
+    expect(webhookUrlBlockReason("http://127.0.0.1/x")).toBeTruthy();
+  });
+
+  it("does not leak the allowlist to OTHER hosts", async () => {
+    await withAllow("127.0.0.1", async () => {
+      const fresh = await import("./ssrf");
+      expect(fresh.webhookUrlBlockReason("http://10.0.0.5/x")).toMatch(/private/);
+      expect(fresh.webhookUrlBlockReason("http://[::1]/x")).toMatch(/loopback/);
+    });
   });
 });

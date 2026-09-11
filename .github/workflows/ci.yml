@@ -33,9 +33,16 @@ jobs:
       DATABASE_URL: postgresql://bookstore:bookstore@localhost:5432/bookstore
       SHADOW_DATABASE_URL: postgresql://bookstore:bookstore@localhost:5432/bookstore_shadow
       SEED_USER_PASSWORD: ci-only-password-123
+      # test:webhooks spins a local receiver on 127.0.0.1 — the SSRF guard
+      # (correctly) blocks loopback targets otherwise. Allowlist is env-only.
+      WEBHOOK_ALLOW_HOSTS: 127.0.0.1
     services:
       postgres:
-        image: postgres:16
+        # pgvector image instead of stock postgres:16 — migration
+        # 20260825100000_vector_embedding runs `CREATE EXTENSION vector` and
+        # stock postgres images don't ship the .so. pg_trgm/unaccent are
+        # postgres-contrib, included here as well.
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: bookstore
           POSTGRES_PASSWORD: bookstore
@@ -91,6 +98,10 @@ jobs:
       - run: npm run test:pos
       - run: npm run test:phase3
       - run: npm run test:promotions
+      - run: npm run test:einvoice
+      - run: npm run test:webhooks
+      - run: npm run test:tenant
+      - run: npm run test:customer
 
   deploy:
     name: Deploy

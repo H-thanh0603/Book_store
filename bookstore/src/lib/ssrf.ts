@@ -11,11 +11,20 @@
 //    internal IP. Endpoints created before this guard existed get re-checked
 //    on their next delivery attempt.
 //
-// ponytail: no allowlist of external domains, no connect-and-verify. If a
-// tenant legitimately needs to reach an internal host, carve out an env var
-// (WEBHOOK_ALLOW_HOSTS) then — nobody has asked for it yet.
+// ponytail: no allowlist of external domains by default; WEBHOOK_ALLOW_HOSTS
+// exists for operator-trusted hosts (CI smoke receivers, on-prem bridges).
 
 import { lookup } from "node:dns/promises";
+
+// Explicit allowlist for hosts the operator trusts — the smoke tests run a
+// local receiver on 127.0.0.1, and the delivery re-check (below) would block
+// it like any other internal target. Comma-separated hostnames/IP literals;
+// empty means "block as before".
+const ALLOWED = (process.env.WEBHOOK_ALLOW_HOSTS ?? "")
+  .split(",")
+  .map((h) => h.trim().toLowerCase())
+  .filter(Boolean);
+const allowlistHas = (host: string): boolean => ALLOWED.includes(host.toLowerCase());
 
 /** Sync check: null = safe, string = block reason. Cheap, no DNS. */
 export function webhookUrlBlockReason(url: string): string | null {
@@ -30,10 +39,10 @@ export function webhookUrlBlockReason(url: string): string | null {
   }
   const host = parsed.hostname.toLowerCase();
   if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) {
-    return `host ${host} is not routable from the server`;
+    if (!allowlistHas(host)) return `host ${host} is not routable from the server`;
   }
   const ipReason = blockedIpReason(host);
-  if (ipReason) return ipReason;
+  if (ipReason && !allowlistHas(host)) return ipReason;
   return null;
 }
 
@@ -42,6 +51,7 @@ export async function assertSafeWebhookTarget(url: string): Promise<void> {
   const sync = webhookUrlBlockReason(url);
   if (sync) throw new Error(sync);
   const { hostname } = new URL(url);
+  if (allowlistHas(hostname)) return; // operator-trusted host, skip the IP checks
   // dns.lookup already returns the first resolved address; no isIP needed.
   const res = await lookup(hostname, { all: true }).catch(() => null);
   if (!res) return; // DNS failure: let the fetch produce its own error

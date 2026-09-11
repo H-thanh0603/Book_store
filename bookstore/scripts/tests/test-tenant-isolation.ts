@@ -41,11 +41,13 @@ async function main() {
     assert.equal(seenByB.length, 1, "B should see exactly one endpoint");
     assert.equal(seenByB[0].id, epB.id);
 
-    // 3. Cross-org eventId never surfaces for A
+    // 3. Cross-org eventId never surfaces for A. WebhookDelivery carries no
+    // direct orgId column (org reached via endpoint), so org-scope through
+    // endpoint: { orgId } — the shape withOrg() produces for direct-org models.
     const eventId = `iso-${Date.now()}`;
     await prisma.webhookDelivery.create({ data: { endpointId: epB.id, eventId, eventType: "iso.x", payload: {} } });
     const aDeliveries = await prisma.webhookDelivery.findMany({
-      where: { ...withOrg(auth(orgA.id)), eventId },
+      where: { endpoint: { orgId: orgA.id }, eventId },
     });
     assert.equal(aDeliveries.length, 0, "A must not see B's delivery");
 
