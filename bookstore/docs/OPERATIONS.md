@@ -204,6 +204,40 @@ Token policy: 256-bit random, stored SHA-256-hashed, 30-minute expiry, single
 use (atomic claim), all sessions revoked on successful reset, rate-limited per
 IP and per account. Verify with `npm run test:reset`.
 
+## Housekeeping — duplicate orgs (seed history)
+
+Phase-1 seed tạo org MỖI LẦN CHẠY (không dedupe), nên DB dev cũ có thể
+chứa vài org `Nhà Sách Melio` trùng tên. Seed hiện tại đã `findFirst`
+theo name (idempotent), nhưng các org rác từ trước đó vẫn nằm lại: TRIAL,
+không user, không store, slug dạng `org-<uuid>` (backfill từ migration
+`20260829080000_signup_trial`).
+
+Nhận diện bản chính: org có users/stores/subscription ACTIVE. Dọn rác
+(trước khi xoá, kiểm lại 2 subquery đầu — nếu org “rác” có store, nó
+không phải rác):
+
+```sql
+-- audit: org nào đang có gì?
+SELECT o.id, o.slug, o.status,
+  (SELECT count(*) FROM "User" u WHERE u."orgId"=o.id) AS users,
+  (SELECT count(*) FROM "Store" s WHERE s."regionId" IN
+     (SELECT id FROM "Region" r WHERE r."orgId"=o.id)) AS stores
+FROM "Organization" o;
+
+-- dọn org rác (đổi IN-list theo audit ở trên):
+BEGIN;
+DELETE FROM "Customer" WHERE "orgId" IN ('<org-rác-1>', '<org-rác-2>');
+DELETE FROM "Region"   WHERE "orgId" IN ('<org-rác-1>', '<org-rác-2>');
+DELETE FROM "Organization" WHERE "id" IN ('<org-rác-1>', '<org-rác-2>');
+COMMIT;
+```
+
+FK RESTRICT sẽ chặn nếu còn bảng con nào tham chiếu — đừng `ON DELETE
+CASCADE` tay; xử lý từng báo lỗi rồi xoá tiếp. Slug của org chính cũng
+nên đổi từ placeholder `org-<uuid>` (backfill) thành slug thật
+(`UPDATE ... SET slug='nha-sach-melio'`) — không có route nào phụ thuộc
+slug hiện tại.
+
 ## Timezone
 
 **Storage is UTC, always.** Datetime columns are `timestamp without time zone`
