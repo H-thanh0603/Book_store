@@ -213,3 +213,46 @@ describe('checkoutStorefrontOrder', () => {
     expect(result.number).toBe('ORD-002')
   })
 })
+
+describe('listStorefrontProducts single-flight', () => {
+  it('coalesces concurrent cache misses into one DB fetch', async () => {
+    vi.resetModules()
+    const mockRead = vi.hoisted(() => {
+      const state = { fetches: 0 }
+      const storeRow = { id: 'store-1' }
+      return {
+        state,
+        prismaRead: {
+          store: { findFirst: vi.fn(async () => storeRow), findMany: vi.fn(async () => [storeRow]) },
+          product: {
+            findMany: vi.fn(async () => {
+              state.fetches += 1
+              await new Promise((r) => setTimeout(r, 30)) // slow query window
+              return []
+            }),
+          },
+          category: { findMany: vi.fn(async () => []) },
+          $queryRaw: vi.fn(async () => []),
+          $transaction: vi.fn(),
+        },
+      }
+    })
+    vi.doMock('./db', () => ({
+      prisma: { order: { findFirst: vi.fn() } },
+      prismaRead: mockRead.prismaRead,
+      withTxRetry: vi.fn((fn: () => Promise<any>) => fn()),
+      TX_OPTIONS: { timeout: 15000, maxWait: 5000 },
+    }))
+    vi.doMock('./redis', () => ({
+      cacheGet: vi.fn(async () => null),
+      cacheSet: vi.fn(async () => {}),
+    }))
+    const { listStorefrontProducts } = await import('./storefront')
+
+    // 20 identical concurrent requests in one TTL window → 1 DB fan-out
+    await Promise.all(Array.from({ length: 20 }, () => listStorefrontProducts({})))
+    expect(mockRead.state.fetches).toBe(1)
+    vi.doUnmock('./db')
+    vi.doUnmock('./redis')
+  })
+})

@@ -18,6 +18,13 @@ type CatalogResult = {
   storeId: string;
 };
 const inProcessCatalog = new Map<string, { value: CatalogResult; expiresAt: number }>();
+// Single-flight: when a cache key expires, the FIRST miss starts the fetch and
+// every other concurrent miss awaits the SAME promise. Without this, a TTL
+// expiry under load turns into a thundering herd — hundreds of identical DB
+// fan-outs (product+categories+stores+fuzzy transaction) pile onto the pool
+// at once and pool-acquire timeouts become 500s (found by the 1000-VU k6 run:
+// 554 connect-timeouts in 3 minutes, all on this route).
+const catalogInflight = new Map<string, Promise<CatalogResult>>();
 
 export async function listStorefrontProducts(input: {
   q?: string | null;
@@ -35,10 +42,14 @@ export async function listStorefrontProducts(input: {
   const cached = inProcessCatalog.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
 
-  // 3. Fetch from DB
-  const result = await listStorefrontProductsUncached(input);
+  // 3. Fetch from DB — single-flight: concurrent misses share one fetch
+  const flight = catalogInflight.get(cacheKey) ?? listStorefrontProductsUncached(input).finally(() => {
+    catalogInflight.delete(cacheKey);
+  });
+  catalogInflight.set(cacheKey, flight);
+  const result = await flight;
 
-  // 4. Populate both caches
+  // 4. Populate both caches (first finisher wins; identical payloads)
   inProcessCatalog.set(cacheKey, { value: result, expiresAt: Date.now() + CATALOG_TTL_SEC * 1000 });
   await cacheSet(redisKey, result, CATALOG_TTL_SEC);
 
