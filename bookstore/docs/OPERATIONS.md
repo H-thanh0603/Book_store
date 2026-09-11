@@ -115,21 +115,43 @@ Credentials/secrets are write-only (never in GET responses).
 
 ## Backups
 
-Postgres logical backup, nightly, keep 14 days:
+**Offsite backup (nightly cron, required in production):**
 
 ```bash
-pg_dump --format=custom "$DATABASE_URL" > "backup-$(date +%F).dump"
-find backups/ -name '*.dump' -mtime +14 -delete
+# .env / crontab
+DATABASE_URL=postgresql://bookstore:...@localhost:5432/bookstore
+RCLONE_REMOTE=s3:bookstore-backups          # rclone config'd S3/B2/GDrive target
+HEALTHCHECK_URL=https://hc-ping.com/<uuid>    # healthchecks.io — pages when the cron dies
+HEALTHCHECK_URL_FAIL=https://hc-ping.com/<uuid>/fail
+
+15 3 * * *  cd /srv/bookstore && ./scripts/ops/backup-offsite.sh
 ```
 
-Restore: `pg_restore --clean --dbname "$DATABASE_URL" backup-YYYY-MM-DD.dump`.
+`backup-offsite.sh` dumps custom-format, verifies the PGDMP magic header,
+uploads via rclone, prunes remote copies at `BACKUP_RETENTION_DAYS` (30)
+and keeps a small local mirror (`BACKUP_LOCAL_KEEP_DAYS`, 3). The
+healthcheck URL is pinged on success — a cron that silently dies must page
+someone, not get discovered at the next incident. Without `RCLONE_REMOTE`
+the script refuses to lie: it warns that the dump is LOCAL ONLY.
+
+A same-box pg_dump is not a backup — one disk failure takes the database
+and its backup together. For point-in-time recovery (WAL archiving /
+continuous archiving to object storage) see the RUNBOOK "future" section.
+
+Restore: `pg_restore --clean --dbname "$DATABASE_URL" backups/bookstore-<stamp>.dump`.
 
 A backup is only as good as its last restore. Run the drill automatically in CI
 and before every major release:
 `./scripts/ops/restore-drill.sh /path/to/backup.dump`
-It restores into a throw-away database `$DB_RESTORE_DRILL=<dbname>`, runs
-`prisma migrate deploy` to confirm migration parity, checks row-counts on the
-core tables, then drops the scratch database. A CI failure here fails the build.
+(with `DATABASE_URL` pointing at the maintenance `postgres` DB — needs CREATEDB)
+It restores into a throw-away scratch database, then runs `prisma migrate
+deploy` to confirm migration parity, checks row-counts on the core tables,
+and drops the scratch database. Two Postgres quirks it handles explicitly:
+restoring into a FRESH db (no `--clean` — dropping inherited partition
+constraints always errors) and pgvector not being a trusted extension (with
+a non-superuser URL the drill excludes `ProductEmbedding` — embeddings are
+derived data, re-embeddable from Product rows — and says so loudly).
+A CI failure here fails the build.
 
 ## Checkout admission control
 
