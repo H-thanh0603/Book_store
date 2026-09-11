@@ -43,6 +43,8 @@ jobs:
       # All HTTP-driving integration suites default to localhost:3000 except
       # test-storefront (3001) — normalize on the port the started app uses.
       BASE_URL: http://localhost:3000
+      # test:einvoice seals the stub provider config via secret-box.
+      INTEGRATION_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       # test:webhooks spins a local receiver on 127.0.0.1 — the SSRF guard
       # (correctly) blocks loopback targets otherwise. Allowlist is env-only.
       WEBHOOK_ALLOW_HOSTS: 127.0.0.1
