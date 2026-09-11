@@ -14,11 +14,11 @@
 
 import { prisma } from "./db";
 import { cacheGet, cacheSet, cacheFlush } from "./redis";
+import { Prisma } from "../generated/prisma/client";
 
 // "COMPLETED" is a PosTransaction status, not an OrderStatus — Order revenue
-// states are CONFIRMED/PAID/SHIPPED/DELIVERED. (The stray "COMPLETED" here
-// broke Prisma's args inference for every builder in this file.)
-const REVENUE_STATUSES = ["CONFIRMED", "PAID", "SHIPPED", "DELIVERED"] as const;
+// states are CONFIRMED/PAID/SHIPPED/DELIVERED — spelled out in the raw SQL
+// below (Postgres IN lists can't bind arrays as one parameter).
 
 export type ReportParams = {
   from: Date;
@@ -32,12 +32,6 @@ export type ReportResult = {
   rows: (string | number)[][];
   summary?: Record<string, string | number>;
 };
-
-function storeScope(orgId: string, storeId?: string) {
-  return {
-    store: { region: { orgId }, ...(storeId ? { id: storeId } : {}) },
-  };
-}
 
 function cacheKey(type: string, p: ReportParams) {
   return `reports:${p.orgId}:${type}:${p.from.toISOString().slice(0, 10)}:${p.to.toISOString().slice(0, 10)}:${p.storeId ?? "*"}`;
@@ -56,100 +50,91 @@ async function cached<T extends ReportResult>(type: string, p: ReportParams, bui
 
 export async function revenueByStore(p: ReportParams): Promise<ReportResult> {
   return cached("revenue-by-store", p, async () => {
-    const orders = await prisma.order.findMany({
-      where: {
-        ...storeScope(p.orgId, p.storeId),
-        createdAt: { gte: p.from, lte: p.to },
-        status: { in: [...REVENUE_STATUSES] },
-      },
-      select: { total: true, storeId: true, store: { select: { id: true, name: true, code: true } } },
-    });
-    const byStore = new Map<string, { id: string; name: string; code: string; revenue: bigint; orders: number }>();
-    for (const o of orders) {
-      const key = o.store?.id ?? "unassigned";
-      const cur = byStore.get(key) ?? { id: key, name: o.store?.name ?? "(unassigned)", code: o.store?.code ?? "—", revenue: 0n, orders: 0 };
-      cur.revenue += o.total;
-      cur.orders += 1;
-      byStore.set(key, cur);
-    }
-    const rows = [...byStore.values()].sort((a, b) => Number(b.revenue - a.revenue))
-      .map((r) => [r.name, r.code, Number(r.revenue), r.orders]);
-    const total = orders.reduce((s, o) => s + o.total, 0n);
+    // SQL GROUP BY rewrite (was: load every order in the window into JS and
+    // reduce — a year of traffic meant hundreds of thousands of rows over
+    // the wire to compute ~5 sums). SUM over bigint comes back as numeric;
+    // ::bigint keeps the BigInt money contract for the JS layer.
+    const rows = await prisma.$queryRaw<{ name: string; code: string; revenue: bigint; orders: bigint }[]>`
+      SELECT s.name, s.code,
+             COALESCE(SUM(o.total), 0)::bigint AS revenue,
+             COUNT(o.id)::bigint AS orders
+      FROM "Store" s
+      LEFT JOIN "Order" o
+        ON o."storeId" = s.id
+       AND o."createdAt" >= ${p.from} AND o."createdAt" <= ${p.to}
+       AND o.status IN ('CONFIRMED','PAID','SHIPPED','DELIVERED')
+      WHERE s.id = ANY(
+        SELECT st.id FROM "Store" st
+        JOIN "Region" r ON r.id = st."regionId"
+        WHERE r."orgId" = ${p.orgId} ${p.storeId ? Prisma.sql`AND st.id = ${p.storeId}` : Prisma.empty}
+      )
+      GROUP BY s.id, s.name, s.code
+      ORDER BY revenue DESC`;
+    const total = rows.reduce((s, r) => s + r.revenue, 0n);
+    const totalOrders = rows.reduce((s, r) => s + r.orders, 0n);
     return {
       columns: ["Cửa hàng", "Mã", "Doanh thu (đ)", "Số đơn"],
-      rows,
-      summary: { totalRevenue: Number(total), totalOrders: orders.length },
+      rows: rows.map((r) => [r.name, r.code, Number(r.revenue), Number(r.orders)]),
+      summary: { totalRevenue: Number(total), totalOrders: Number(totalOrders) },
     };
   });
 }
 
 export async function revenueByCategory(p: ReportParams): Promise<ReportResult> {
   return cached("revenue-by-category", p, async () => {
-    const items = await prisma.orderItem.findMany({
-      where: {
-        order: {
-          ...storeScope(p.orgId, p.storeId),
-          createdAt: { gte: p.from, lte: p.to },
-          status: { in: [...REVENUE_STATUSES] },
-        },
-      },
-      select: {
-        quantity: true,
-        unitPrice: true,
-        discount: true,
-        variant: { select: { product: { select: { category: { select: { name: true } } } } } },
-      },
-    });
-    const byCat = new Map<string, { revenue: bigint; qty: number }>();
-    for (const it of items) {
-      const cat = it.variant.product.category.name;
-      const line = it.unitPrice * BigInt(it.quantity) - it.discount;
-      const cur = byCat.get(cat) ?? { revenue: 0n, qty: 0 };
-      cur.revenue += line;
-      cur.qty += it.quantity;
-      byCat.set(cat, cur);
-    }
-    const rows = [...byCat.entries()].sort((a, b) => Number(b[1].revenue - a[1].revenue))
-      .map(([name, v]) => [name, Number(v.revenue), v.qty]);
-    const total = items.reduce((s, it) => s + it.unitPrice * BigInt(it.quantity) - it.discount, 0n);
+    // SQL GROUP BY rewrite — same shape as revenueByStore: aggregate in the
+    // database, ship ~category-count rows instead of every order item.
+    const rows = await prisma.$queryRaw<{ category: string; revenue: bigint; qty: bigint }[]>`
+      SELECT c.name AS category,
+             SUM(oi."unitPrice" * oi.quantity - oi.discount)::bigint AS revenue,
+             SUM(oi.quantity)::bigint AS qty
+      FROM "OrderItem" oi
+      JOIN "Order" o ON o.id = oi."orderId"
+      JOIN "Store" s ON s.id = o."storeId"
+      JOIN "Region" rg ON rg.id = s."regionId"
+      JOIN "ProductVariant" v ON v.id = oi."variantId"
+      JOIN "Product" pr ON pr.id = v."productId"
+      LEFT JOIN "Category" c ON c.id = pr."categoryId"
+      WHERE rg."orgId" = ${p.orgId}
+        ${p.storeId ? Prisma.sql`AND s.id = ${p.storeId}` : Prisma.empty}
+        AND o."createdAt" >= ${p.from} AND o."createdAt" <= ${p.to}
+        AND o.status IN ('CONFIRMED','PAID','SHIPPED','DELIVERED')
+      GROUP BY c.name
+      ORDER BY revenue DESC`;
+    const total = rows.reduce((s, r) => s + r.revenue, 0n);
+    const totalQty = rows.reduce((s, r) => s + r.qty, 0n);
     return {
       columns: ["Danh mục", "Doanh thu (đ)", "Số lượng"],
-      rows,
-      summary: { totalRevenue: Number(total), totalQuantity: items.reduce((s, i) => s + i.quantity, 0) },
+      rows: rows.map((r) => [r.category ?? "(chưa phân loại)", Number(r.revenue), Number(r.qty)]),
+      summary: { totalRevenue: Number(total), totalQuantity: Number(totalQty) },
     };
   });
 }
 
 export async function topSku(p: ReportParams): Promise<ReportResult> {
   return cached("top-sku", p, async () => {
-    const items = await prisma.orderItem.findMany({
-      where: {
-        order: {
-          ...storeScope(p.orgId, p.storeId),
-          createdAt: { gte: p.from, lte: p.to },
-          status: { in: [...REVENUE_STATUSES] },
-        },
-      },
-      select: {
-        quantity: true,
-        unitPrice: true,
-        discount: true,
-        variant: { select: { sku: true, product: { select: { name: true } } } },
-      },
-    });
-    const bySku = new Map<string, { sku: string; name: string; revenue: bigint; qty: number }>();
-    for (const it of items) {
-      const line = it.unitPrice * BigInt(it.quantity) - it.discount;
-      const cur = bySku.get(it.variant.sku) ?? { sku: it.variant.sku, name: it.variant.product.name, revenue: 0n, qty: 0 };
-      cur.revenue += line;
-      cur.qty += it.quantity;
-      bySku.set(it.variant.sku, cur);
-    }
-    const rows = [...bySku.values()].sort((a, b) => Number(b.revenue - a.revenue)).slice(0, 50)
-      .map((r) => [r.sku, r.name, Number(r.revenue), r.qty]);
+    // SQL GROUP BY rewrite with LIMIT 50 pushed into the query — the JS
+    // version shipped every order item in the window to sort in memory.
+    const rows = await prisma.$queryRaw<{ sku: string; name: string; revenue: bigint; qty: bigint }[]>`
+      SELECT v.sku, pr.name,
+             SUM(oi."unitPrice" * oi.quantity - oi.discount)::bigint AS revenue,
+             SUM(oi.quantity)::bigint AS qty
+      FROM "OrderItem" oi
+      JOIN "Order" o ON o.id = oi."orderId"
+      JOIN "Store" s ON s.id = o."storeId"
+      JOIN "Region" rg ON rg.id = s."regionId"
+      JOIN "ProductVariant" v ON v.id = oi."variantId"
+      JOIN "Product" pr ON pr.id = v."productId"
+      WHERE rg."orgId" = ${p.orgId}
+        ${p.storeId ? Prisma.sql`AND s.id = ${p.storeId}` : Prisma.empty}
+        AND o."createdAt" >= ${p.from} AND o."createdAt" <= ${p.to}
+        AND o.status IN ('CONFIRMED','PAID','SHIPPED','DELIVERED')
+      GROUP BY v.sku, pr.name
+      ORDER BY revenue DESC
+      LIMIT 50`;
     return {
       columns: ["SKU", "Sản phẩm", "Doanh thu (đ)", "Số lượng"],
-      rows,
+      rows: rows.map((r) => [r.sku, r.name, Number(r.revenue), Number(r.qty)]),
     };
   });
 }
