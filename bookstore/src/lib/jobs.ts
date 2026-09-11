@@ -5,10 +5,11 @@ import { generateReplenishmentSuggestions } from "./replenishment";
 import { expireStaleReservations } from "./order-expiry";
 import { issuePendingInvoices, pollPendingInvoices } from "./einvoice-jobs";
 import { processPendingDeliveries } from "./webhook-bus";
-import { rotateInventoryPartitions } from "./partitions";
+import { rotateInventoryPartitions, detachOldInventoryPartitions } from "./partitions";
 import { runDailyMisaExport } from "./exports/misa-job";
 import { suspendOverdueOrgs } from "./billing";
 import { scanRefundRequired } from "./payment-refunds";
+import { pruneAuditLogs, pruneWebhookDeliveries } from "./prune";
 import { randomUUID } from "crypto";
 
 export const JOB_KINDS = {
@@ -19,6 +20,9 @@ export const JOB_KINDS = {
   "einvoice.poll": pollPendingInvoices,
   "webhook.deliver": processPendingDeliveries,
   "partitions.rotate": rotateInventoryPartitions,
+  "partitions.detach_old": detachOldInventoryPartitions,
+  "prune.audit_logs": pruneAuditLogs,
+  "prune.webhook_deliveries": pruneWebhookDeliveries,
   "misa.export": runDailyMisaExport,
   "billing.suspend_overdue": suspendOverdueOrgs,
   "payments.refund_scan": scanRefundRequired,
@@ -66,7 +70,17 @@ export async function runJob(kind: JobKind, runId?: string) {
       where: { id: run.id, status: "RUNNING", workerId: WORKER_ID },
       data: {
         status: "SUCCEEDED", finishedAt: new Date(), leaseExpiresAt: null, workerId: null,
-        result: { count: Array.isArray(result) ? result.length : null },
+        // Preserve the job's own result when it's a plain object (e.g.
+        // {deleted: 12} from the prune jobs, {created: [...]} from rotation) —
+        // ops dashboards read these. Arrays collapse to a count (they were
+        // never stored in full); null/undefined stays {count: null}. The
+        // JSON round-trip is purely a TS-level InputJsonValue cast — the
+        // values are job results we produced ourselves, not user input.
+        result: Array.isArray(result)
+          ? { count: result.length }
+          : result && typeof result === "object"
+            ? JSON.parse(JSON.stringify(result))
+            : { count: null },
       },
     });
     return prisma.jobRun.findUnique({ where: { id: run.id } });
@@ -105,7 +119,7 @@ export async function tickScheduler() {
  * expiry) get one slot per scheduler tick (5 min). Slot ids make both idempotent.
  * Called by the instrumentation interval; safe to call repeatedly.
  */
-const NIGHTLY: JobKind[] = ["replenishment.generate", "loss.scan", "partitions.rotate", "misa.export", "billing.suspend_overdue"];
+const NIGHTLY: JobKind[] = ["replenishment.generate", "loss.scan", "partitions.rotate", "partitions.detach_old", "prune.audit_logs", "prune.webhook_deliveries", "misa.export", "billing.suspend_overdue"];
 const FREQUENT: JobKind[] = ["order.expire_reservations", "einvoice.issue", "einvoice.poll", "webhook.deliver", "payments.refund_scan"];
 const TICK_MS = 5 * 60_000;
 
