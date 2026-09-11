@@ -2,15 +2,26 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { prisma } from "./db";
 import { recordHttpError } from "./metrics";
+import { trackError } from "./error-tracking";
 
 export async function apiError(err: unknown) {
   const e = err as { status?: number; code?: string; message: string; retryAfter?: number; details?: { retryAfter?: number }; stack?: string };
   const malformedJson = err instanceof SyntaxError;
   const status = e.status ?? (malformedJson ? 400 : 500);
   const requestId = (await headers()).get("x-request-id") ?? undefined;
-  if (status === 500) console.error(JSON.stringify({
-    level: "error", event: "api_error", requestId, message: e.message ?? "Unknown error", stack: e.stack,
-  }));
+  if (status === 500) {
+    console.error(JSON.stringify({
+      level: "error", event: "api_error", requestId, message: e.message ?? "Unknown error", stack: e.stack,
+    }));
+    // Ship 500s to the configured transport (Sentry/webhook) — see
+    // error-tracking.ts. Log stays the source of truth; transport is
+    // fire-and-forget, deduped and throttled.
+    trackError(e.stack ? `${e.message ?? "Unknown error"}` : e.message ?? "Unknown error", "error", {
+      component: "api",
+      action: "api_500",
+      metadata: { requestId, status, code: e.code },
+    });
+  }
   // Never leak raw DB errors.
   const known = [
     "INSUFFICIENT_STOCK", "INVALID_STATUS_TRANSITION", "DUPLICATE",

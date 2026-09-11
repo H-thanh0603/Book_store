@@ -8,6 +8,8 @@
 // have no NODE_APP_INSTANCE and behave exactly as before. Override freely:
 //   JOB_SCHEDULER_ENABLED=false → never schedule here (drive /api/jobs from external cron)
 //   JOB_SCHEDULER_ENABLED=true  → always schedule (e.g. a dedicated worker instance)
+import { trackError } from "./lib/error-tracking";
+
 export function schedulerEnabled(): boolean {
   const flag = process.env.JOB_SCHEDULER_ENABLED;
   if (flag === "true") return true;
@@ -33,13 +35,17 @@ export async function register() {
   // OPS-003: server-side global handlers so an unawaited promise can't die
   // silently. PM2 restarts on exit; these handlers log-and-continue instead —
   // a crash-looping process that loses no data is worse than a degraded one.
+  // Routed through trackError so configured transports (SENTRY_DSN /
+  // ERROR_WEBHOOK_URL) actually receive them, with dedup+throttle.
   if (process.env.__UNHANDLED_WIRED__ !== "1") {
     process.env.__UNHANDLED_WIRED__ = "1"; // register() can run per runtime
     process.on("unhandledRejection", (reason) => {
-      console.error(JSON.stringify({ level: "error", event: "unhandled_rejection", message: reason instanceof Error ? reason.stack || reason.message : String(reason) }));
+      trackError(reason instanceof Error ? reason : String(reason), "error", {
+        component: "server", action: "unhandled_rejection",
+      });
     });
     process.on("uncaughtException", (err) => {
-      console.error(JSON.stringify({ level: "error", event: "uncaught_exception", message: err.stack || err.message }));
+      trackError(err, "error", { component: "server", action: "uncaught_exception" });
     });
   }
 
