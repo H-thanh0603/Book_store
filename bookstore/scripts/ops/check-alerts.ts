@@ -54,6 +54,14 @@ async function main() {
 
   const alerts: string[] = [];
 
+  // ── 0a. Benchmark mode left on (ops foot-gun) ────────────────────────
+  // LOADTEST_MODE=1 disables the storefront per-IP rate limiter. If it's
+  // still set on a box we monitor, someone forgot to turn the benchmark
+  // off — the public endpoint is unthrottled.
+  if (process.env.LOADTEST_MODE === "1") {
+    alerts.push("LOADTEST_MODE: storefront rate limiting is DISABLED (LOADTEST_MODE=1) — unset it outside benchmarks");
+  }
+
   // ── 0. Refund queue (audit MONEY-001 follow-up) ──────────────────────────
   // REFUND_REQUIRED captures are money held hostage: the customer paid, the
   // order was cancelled, and nothing ships. A single open row past a few

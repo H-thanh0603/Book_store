@@ -30,9 +30,17 @@ sudo apt update && sudo apt install k6
 
 ```bash
 cd bookstore
-npm run build && npm start &          # hoặc pm2 start ecosystem.config.js
-BASE_URL=http://localhost:3000 k6 run loadtests/k6-catalog-checkout.js
+npm run build
+LOADTEST_MODE=1 npm start &     # bỏ per-IP rate limit CHỈ trên /api/storefront
+BASE_URL=http://localhost:3000 CATALOG_VUS=50 CHECKOUT_VUS=10 DURATION=1m k6 run loadtests/k6-catalog-checkout.js
 ```
+
+⚠️ Bắt buộc `LOADTEST_MODE=1` khi benchmark local: mọi VU của k6 đi từ 1 IP,
+per-IP limiter (đúng theo thiết kế production) sẽ 429 gần như toàn bộ traffic
+và lần chạy đo được đúng... limiter. Chế độ này chỉ tắt limit của route
+storefront; quên tắt trên server thật thì `check-alerts.ts` sẽ alert ngay.
+
+Kết quả tham chiếu và các bug từng bị benchmark bắt: `BASELINE.md`.
 
 Tuỳ biến quy mô:
 

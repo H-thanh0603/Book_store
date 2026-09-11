@@ -12,6 +12,8 @@ const mockPrisma = vi.hoisted(() => ({
   },
   customer: {
     upsert: vi.fn(),
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
   },
 }))
 
@@ -32,7 +34,7 @@ vi.mock('./vnpay', () => ({
 }))
 
 vi.mock('./mail', () => ({
-  sendMail: vi.fn(),
+  sendMail: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('./embeddings', () => ({
@@ -122,6 +124,55 @@ describe('checkoutStorefrontOrder', () => {
 
     const result = await checkoutStorefrontOrder(validInput)
     expect(result.number).toBe('ORD-001')
+  })
+
+  it('recovers from a lost customer-upsert unique race by phone (P2002 on orgId_phone)', async () => {
+    // Two concurrent checkouts with the same phone both miss the read and both
+    // create; the loser gets P2002 on (orgId, phone) and must continue with
+    // the winner's row instead of crashing with a 500 (found by k6).
+    mockPrisma.order.findFirst.mockResolvedValue(null)
+    mockPrisma.store.findFirst.mockResolvedValue({ id: 'store-1', active: true, region: { orgId: 'org-1' } })
+    const { Prisma } = await import('../generated/prisma/client')
+    mockPrisma.customer.upsert.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', { code: 'P2002', clientVersion: 'test' })
+    )
+    mockPrisma.customer.findUnique.mockResolvedValue({ id: 'cust-winner-phone' })
+    mockPrisma.productVariant.findMany.mockResolvedValue([{ id: 'v1', product: { name: 'Test Book' } }])
+    vi.mocked(createReservedOrder).mockResolvedValue({
+      id: 'order-1', number: 'ORD-RACE-1', subtotal: 100000n, discountTotal: 0n,
+      total: 100000n, items: [{ variantId: 'v1', quantity: 1, unitPrice: 100000n, discount: 0n }],
+    } as any)
+
+    const result = await checkoutStorefrontOrder({ ...validInput, customer: { ...validInput.customer, email: 'race@example.com' } })
+    expect(result.number).toBe('ORD-RACE-1')
+    expect(mockPrisma.customer.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { orgId_phone: { orgId: 'org-1', phone: validInput.customer.phone } } })
+    )
+  })
+
+  it('recovers from a lost customer-upsert unique race by email (P2002, no phone row)', async () => {
+    // Repeat guest checkout with a NEW phone but the SAME email hits the
+    // (orgId, email) unique — the phone-keyed read misses, the email-keyed
+    // read must rescue the order (found by k6 VUs reusing one email).
+    mockPrisma.order.findFirst.mockResolvedValue(null)
+    mockPrisma.store.findFirst.mockResolvedValue({ id: 'store-1', active: true, region: { orgId: 'org-1' } })
+    const { Prisma } = await import('../generated/prisma/client')
+    mockPrisma.customer.upsert.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', { code: 'P2002', clientVersion: 'test' })
+    )
+    mockPrisma.customer.findUnique.mockResolvedValue(null) // phone row absent
+    mockPrisma.customer.findFirst.mockResolvedValue({ id: 'cust-winner-email' })
+    mockPrisma.productVariant.findMany.mockResolvedValue([{ id: 'v1', product: { name: 'Test Book' } }])
+    vi.mocked(createReservedOrder).mockResolvedValue({
+      id: 'order-1', number: 'ORD-RACE-2', subtotal: 100000n, discountTotal: 0n,
+      total: 100000n, items: [{ variantId: 'v1', quantity: 1, unitPrice: 100000n, discount: 0n }],
+    } as any)
+
+    const result = await checkoutStorefrontOrder({ ...validInput, customer: { ...validInput.customer, email: 'shared@example.com' } })
+    expect(result.number).toBe('ORD-RACE-2')
+    expect(mockPrisma.customer.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { orgId: 'org-1', email: 'shared@example.com' } })
+    )
   })
 
   it('returns existing order on idempotent retry', async () => {

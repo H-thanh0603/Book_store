@@ -5,11 +5,17 @@ import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 import { withCheckoutSlot } from "@/lib/throttle";
 import { observeRequest } from "@/lib/metrics";
 
+// k6 benchmarks run all VUs through one IP, so the per-IP limiter (correct in
+// production) would cap them at 60 req/min and the run measures 429s, not the
+// app. LOADTEST_MODE=1 skips the limiter on this public route ONLY — it must
+// never be set in production (check-alerts.ts alerts if it is).
+const loadtest = process.env.LOADTEST_MODE === "1";
+
 export async function GET(req: NextRequest) {
   const started = Date.now();
   try {
     // Public endpoint — throttle per IP so scrapes/abuse can't hammer the search.
-    await enforceRateLimit("storefront-catalog", clientIp(req.headers), 60, 60_000);
+    if (!loadtest) await enforceRateLimit("storefront-catalog", clientIp(req.headers), 60, 60_000);
     // Cache at the edge: browser 15s, CDN (Cloudflare) 30s, plus stale-while-revalidate
     // so a cold origin never stalls shoppers. Response varies ONLY on the query string
     // (no auth/cookies on this endpoint), so CDNs can key on the full URL safely.
@@ -32,7 +38,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const started = Date.now();
   try {
-    await enforceRateLimit("storefront-checkout", clientIp(req.headers), 10, 60_000);
+    // Public endpoint — 10 checkouts/min/IP. Skipped under LOADTEST_MODE=1
+    // (benchmark concession; see the comment at the top of this file).
+    if (!loadtest) await enforceRateLimit("storefront-checkout", clientIp(req.headers), 10, 60_000);
     // System-wide concurrency cap so a flash sale doesn't saturate the DB pool
     // or double-fire the payment gateway.
     const body = await req.json();

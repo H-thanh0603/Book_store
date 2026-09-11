@@ -351,14 +351,37 @@ export async function checkoutStorefrontOrder(
 
   // SEC-004: customer identity is scoped per org — the same phone at two
   // tenants is two customers, and this order belongs to this store's org.
+  // Guest upsert race: two concurrent checkouts with the same phone both see
+  // "no row" and both INSERT; one loses the unique race (P2002). The loser
+  // re-reads — the winner's row is committed by then — and continues. Found
+  // by the k6 checkout pressure run (VUs re-use one phone per VU): a raw
+  // P2002 here surfaced as a 500 to real shoppers.
   const orgId = store.region.orgId;
   const customerCode = await nextBusinessNumber("CUS");
-  const customer = await prisma.customer.upsert({
-    where: { orgId_phone: { orgId, phone } },
-    create: { code: customerCode, name, phone, email, address, orgId },
-    // Guest checkout must not overwrite an existing member profile using only a known phone number.
-    update: {},
-  });
+  const customer = await prisma.customer
+    .upsert({
+      where: { orgId_phone: { orgId, phone } },
+      create: { code: customerCode, name, phone, email, address, orgId },
+      // Guest checkout must not overwrite an existing member profile using only a known phone number.
+      update: {},
+    })
+    .catch(async (err: unknown) => {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        // The loser of the create race re-reads by BOTH unique keys: the
+        // conflict may be on (orgId, phone) — same phone, different email —
+        // or (orgId, email) — same email, different phone (repeat guest
+        // checkout with a new phone; k6 exposed exactly this). Prefer the
+        // phone-keyed row so orders keep grouping by the phone the customer
+        // just typed; fall back to the email-keyed one.
+        const byPhone = await prisma.customer.findUnique({ where: { orgId_phone: { orgId, phone } } });
+        if (byPhone) return byPhone;
+        if (email) {
+          const byEmail = await prisma.customer.findFirst({ where: { orgId, email } });
+          if (byEmail) return byEmail;
+        }
+      }
+      throw err;
+    });
 
   // Fetch variant details for email template
   const variantIds = input.items.map((item) => item.variantId);
