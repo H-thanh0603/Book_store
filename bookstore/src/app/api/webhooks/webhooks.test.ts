@@ -83,6 +83,12 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/auth", () => ({ requirePermission: vi.fn(async () => auth) }));
+// The route enforces plan gates (BILL-001) before validation — these tests
+// exercise CRUD/SSRF logic, not billing, so stub the limits open.
+vi.mock("@/lib/plan-limits", () => ({
+  assertPlanFeature: vi.fn(async () => undefined),
+  assertWithinPlanLimits: vi.fn(async () => undefined),
+}));
 
 // --- tests -------------------------------------------------------------------
 

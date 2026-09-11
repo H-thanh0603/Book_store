@@ -47,3 +47,12 @@ vi.mock('@/lib/db', () => ({
     }),
   },
 }))
+
+// next/headers dynamic APIs throw outside a request scope — unit tests
+// invoke route handlers directly, so give them inert defaults. Individual
+// tests that need specific header values override vi.mock in their own file
+// (api-error-wiring.test.ts, customer-auth.test.ts pattern).
+vi.mock('next/headers', () => ({
+  headers: vi.fn(async () => ({ get: () => undefined })),
+  cookies: vi.fn(async () => ({ get: () => undefined, getAll: () => [] })),
+}))
