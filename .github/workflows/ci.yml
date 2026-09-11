@@ -13,7 +13,7 @@ jobs:
       # prisma.config.ts validates DATABASE_URL at `prisma generate` (postinstall).
       # generate never connects — any parseable URL works; unit tests mock the DB.
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
-      INTEGRATION_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      INTEGRATION_ENCRYPTION_KEY: ZGV2LW9ubHkta2V5LW5vLXNlY3JldHMtaGVyZS0zMmI=
     defaults:
       run:
         working-directory: bookstore
@@ -43,8 +43,11 @@ jobs:
       # All HTTP-driving integration suites default to localhost:3000 except
       # test-storefront (3001) — normalize on the port the started app uses.
       BASE_URL: http://localhost:3000
-      # test:einvoice seals the stub provider config via secret-box.
-      INTEGRATION_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      # test:einvoice seals the stub provider config via secret-box, which
+      # requires a base64 32-byte key (the old hex placeholder failed its
+      # own validation). This is a fixed dev-only key — real deployments set
+      # their own secret.
+      INTEGRATION_ENCRYPTION_KEY: ZGV2LW9ubHkta2V5LW5vLXNlY3JldHMtaGVyZS0zMmI=
       # test:webhooks spins a local receiver on 127.0.0.1 — the SSRF guard
       # (correctly) blocks loopback targets otherwise. Allowlist is env-only.
       WEBHOOK_ALLOW_HOSTS: 127.0.0.1
