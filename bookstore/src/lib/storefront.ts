@@ -118,28 +118,46 @@ async function listStorefrontProductsUncached(input: {
   let rows = exactRows;
   // Fuzzy fallback: no exact hit → best word-vs-word trigram similarity on
   // name ("ballo" still finds "Balo học sinh 20L"). Full-scan SIMILARITY is
-  // not index-served but only runs when the indexed pass returned nothing;
-  // every query word must clear 0.3 against SOME word of the product name.
-  if (words.length && rows.length === 0) {
-    const hits = await prismaRead.$queryRaw<{ id: string }[]>`
-      SELECT p.id FROM "Product" p
-      WHERE p.status = 'active' ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
-        AND NOT EXISTS (
-          SELECT 1
-          FROM unnest(${words}::text[]) q(w)
-          WHERE NOT EXISTS (
-            SELECT 1
-            FROM unnest(string_to_array(unaccent(lower(p.name)), ' ')) nw(w)
-            WHERE length(nw.w) >= 3 AND SIMILARITY(nw.w, unaccent(lower(q.w))) > 0.3
-          )
-        )
-      ORDER BY p.name ASC LIMIT 100`;
-    if (hits.length)
-      rows = await prismaRead.product.findMany({
-        where: { id: { in: hits.map((h) => h.id) } },
-        ...catalogSelect,
-        orderBy: { name: "asc" },
+  // not index-served; on a large catalog one adversarial query (many words,
+  // long names) can monopolize a pool connection for minutes. The scan runs
+  // inside an interactive transaction with a 300ms local statement timeout —
+  // on timeout the fuzzy tier simply returns nothing and the request ends
+  // with the exact-match result (empty), instead of pinning the pool.
+  // Single-word queries only: a 3-word fuzzy AND needs every word to clear
+  // 0.3 against some word of the name — that almost never matches on real
+  // catalogs and multiplies the SIMILARITY calls per row.
+  const FUZZY_STATEMENT_TIMEOUT_MS = Math.max(50, Number(process.env.FUZZY_SEARCH_TIMEOUT_MS ?? 300) || 300);
+  if (words.length === 1 && words[0].length >= 3 && rows.length === 0) {
+    try {
+      const hits = await prismaRead.$transaction(async (tx) => {
+        // SET LOCAL cannot take a bind parameter (Prisma 42601) — inline a
+        // validated integer instead. Math.max() above guarantees ≥ 50ms and
+        // Number(...) || 300 rejects non-numeric env values.
+        await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${FUZZY_STATEMENT_TIMEOUT_MS}`);
+        return tx.$queryRaw<{ id: string }[]>`
+          SELECT p.id FROM "Product" p
+          WHERE p.status = 'active' ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
+            AND NOT EXISTS (
+              SELECT 1
+              FROM unnest(${words}::text[]) q(w)
+              WHERE NOT EXISTS (
+                SELECT 1
+                FROM unnest(string_to_array(unaccent(lower(p.name)), ' ')) nw(w)
+                WHERE length(nw.w) >= 3 AND SIMILARITY(nw.w, unaccent(lower(q.w))) > 0.3
+              )
+            )
+          ORDER BY p.name ASC LIMIT 100`;
       });
+      if (hits.length)
+        rows = await prismaRead.product.findMany({
+          where: { id: { in: hits.map((h) => h.id) } },
+          ...catalogSelect,
+          orderBy: { name: "asc" },
+        });
+    } catch {
+      // statement_timeout (57014) or pool pressure — fuzzy is best-effort;
+      // fall through with the exact-match rows (empty) rather than erroring.
+    }
   }
 
   // Semantic tier (pgvector + Gemini embeddings): only on double-miss, so a
