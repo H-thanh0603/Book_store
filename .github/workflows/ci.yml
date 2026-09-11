@@ -25,6 +25,8 @@ jobs:
           cache: npm
           cache-dependency-path: bookstore/package-lock.json
       - run: npm ci
+      - name: Generate Next route types (LayoutProps etc. live in .next/types)
+        run: npx next typegen
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm run test:unit
