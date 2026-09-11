@@ -58,6 +58,10 @@ export default function PosPage() {
   const [customerId, setCustomerId] = useState<string>("");
   const [refundNumber, setRefundNumber] = useState("");
   const [lastTx, setLastTx] = useState<{ number: string; total: number; method: string; items: typeof lines; date: string } | null>(null);
+  // Server-side search overlay: when q has enough characters the grid shows
+  // remote ?q= results instead of filtering the 200-row cache (FE-001:
+  // client-side filter is blind past what the initial take=200 loaded).
+  const [serverSearch, setServerSearch] = useState<{ q: string; products: Product[] } | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [pendingSync, setPendingSync] = useState(0);
@@ -303,18 +307,38 @@ export default function PosPage() {
     }
   }
 
-  // Search: match by name, SKU, or barcode
-  const filtered = products.filter((p) => {
-    const query = q.toLowerCase().trim();
-    if (!query) return true;
-    return (
-      p.name.toLowerCase().includes(query) ||
-      p.variants.some((v) =>
-        v.sku.toLowerCase().includes(query) ||
-        v.barcodes.some((bc) => bc.barcode.includes(query))
-      )
-    );
-  });
+  // Debounced server-side search: 3+ characters triggers a remote ?q= lookup
+  // so matches beyond the initially loaded 200 products are found (the local
+  // filter stays the instant fallback for short queries and offline mode).
+  useEffect(() => {
+    const query = q.trim();
+    if (query.length < 3) { setServerSearch(null); return; }
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/products?q=${encodeURIComponent(query)}&take=200`);
+        if (!r.ok) return;
+        const d = await r.json();
+        setServerSearch({ q: query, products: (d.products as Product[]) ?? [] });
+      } catch { /* offline: keep filtering the local cache */ }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  // Search: match by name, SKU, or barcode. With a server search available
+  // (3+ chars, fetch resolved) its results win — otherwise filter locally.
+  const filtered = serverSearch && serverSearch.q === q.trim()
+    ? serverSearch.products
+    : products.filter((p) => {
+        const query = q.toLowerCase().trim();
+        if (!query) return true;
+        return (
+          p.name.toLowerCase().includes(query) ||
+          p.variants.some((v) =>
+            v.sku.toLowerCase().includes(query) ||
+            v.barcodes.some((bc) => bc.barcode.includes(query))
+          )
+        );
+      });
   const selectedStore = stores.find((s) => s.id === storeId);
 
   function handlePrintReceipt() {
@@ -340,17 +364,12 @@ export default function PosPage() {
   function handleBarcodeScan(barcode: string) {
     setScannerOpen(false);
     setQ(barcode);
-    // Auto-add if exact barcode match in the loaded page...
-    const match = products.find((p) =>
-      p.variants.some((v) => v.barcodes.some((bc) => bc.barcode === barcode))
-    );
-    if (match) { addLine(match); return; }
-    // ...otherwise ask the server — a scan must not depend on which page of
-    // the catalog happens to be loaded (audit FE-001).
+    // A scan always asks the server — matching only against the loaded
+    // page would silently miss products past the first 200 (audit FE-001).
     fetch(`/api/products?barcode=${encodeURIComponent(barcode)}`).then(async (r) => {
       if (!r.ok) { searchRef.current?.focus(); return; }
       const d = await r.json();
-      const remote = (d.products as typeof products).find((p) =>
+      const remote = (d.products as Product[]).find((p) =>
         p.variants.some((v) => v.barcodes.some((bc) => bc.barcode === barcode))
       );
       if (remote) {
