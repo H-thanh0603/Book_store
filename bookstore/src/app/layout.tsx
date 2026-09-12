@@ -15,11 +15,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Melio Books",
+  metadataBase: new URL(process.env.APP_ORIGIN ?? "https://melio.vn"),
+  title: {
+    default: "Melio Books — Nhà sách trực tuyến",
+    template: "%s · Melio Books",
+  },
   description: "Nhà sách trực tuyến Melio — đặt sách giao tận nơi hoặc nhận tại cửa hàng.",
   manifest: "/manifest.json",
   themeColor: "#8c2d19",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+  viewport: "width=device-width, initial-scale=1",
+  openGraph: {
+    type: "website",
+    locale: "vi_VN",
+    siteName: "Melio Books",
+  },
+  robots: { index: true, follow: true },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

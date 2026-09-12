@@ -1,7 +1,19 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
 import { blogArticles } from "@/app/shop/_components/data";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const article = blogArticles.find((a) => a.id === slug);
+  if (!article) return { title: "Không tìm thấy bài viết" };
+  return {
+    title: article.title,
+    description: article.snippet,
+    openGraph: { title: article.title, description: article.snippet, type: "article" },
+  };
+}
 
 const BODIES: Record<string, { paragraphs: string[]; quote: string; cta: { label: string; href: string } }> = {
   art1: {
