@@ -24,6 +24,7 @@ export type QuotePreview = {
   subtotal: number;
   discountTotal: number;
   total: number;
+  shipping: { zone: string; fee: number; freeShip: boolean };
   promotions: { name: string; discountTotal: number }[];
   couponApplied: boolean;
   couponInvalidReason?: string;
@@ -151,6 +152,9 @@ export function useStorefront() {
         params.set("storeId", storeId);
         params.set("items", cart.map((line) => `${line.variantId}:${line.quantity}`).join(","));
         if (couponInput.trim()) params.set("couponCode", couponInput.trim());
+        // N3b: zone fee needs fulfillment + address (debounced with the rest).
+        params.set("fulfillment", fulfillment);
+        if (customer.address.trim()) params.set("address", customer.address.trim());
         const response = await fetch(`/api/storefront/quote?${params}`);
         const data = await response.json();
         if (response.ok) setQuote(data as QuotePreview);
@@ -162,7 +166,7 @@ export function useStorefront() {
       }
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [checkoutOpen, cart, couponInput, storeId]);
+  }, [checkoutOpen, cart, couponInput, storeId, fulfillment, customer.address]);
 
   // Countdown to midnight (store timezone) — a real deadline, not a loop.
   useEffect(() => {
@@ -296,7 +300,8 @@ export function useStorefront() {
   // Prefer the server quote (real promotion engine) when present; the local
   // arithmetic is the no-network fallback so the total never reads 0.
   const discountTotal = quote?.discountTotal ?? 0;
-  const grandTotal = Math.max(0, cartSubtotal - discountTotal + wrappingFee);
+  const shippingFee = fulfillment === "pickup" ? 0 : (quote?.shipping.fee ?? 0);
+  const grandTotal = Math.max(0, cartSubtotal - discountTotal + wrappingFee + shippingFee);
   const activeStore = catalog?.stores.find((store) => store.id === storeId);
   const progressToFreeShipping = Math.min(100, Math.round((cartSubtotal / FREE_SHIPPING_THRESHOLD) * 100));
   const hasActiveFilters =

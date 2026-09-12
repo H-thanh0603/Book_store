@@ -94,6 +94,11 @@ export async function createReservedOrder(
   }, db);
   const discounts = mergeLineDiscounts(applied, lines);
   const subtotal = lines.reduce((sum, line) => sum + line.unitPrice * BigInt(line.quantity), 0n);
+  // N3b: zone-based delivery fee, computed server-side from the address —
+  // never client-supplied. Pickup orders and staff orders without a shipping
+  // address ship free.
+  const { quoteShipping } = await import("./shipping");
+  const shippingFee = input.shipping ? (await quoteShipping({ address: input.shipping.address, subtotal })).fee : 0n;
 
   const create = async (tx: Prisma.TransactionClient) => {
     // Customer must exist and be active-ish (real FK target, not a guessed id).
@@ -117,7 +122,8 @@ export async function createReservedOrder(
         number: await nextBusinessNumber("ORD"), channel: input.channel, type: input.type ?? "delivery",
         storeId: input.storeId ?? null, customerId: input.customerId,
         externalId: input.externalId?.trim() || null, status: "CONFIRMED",
-        subtotal, discountTotal: discounts.total, total: subtotal - discounts.total,
+        subtotal, discountTotal: discounts.total, total: subtotal - discounts.total + shippingFee,
+        shippingFee,
         items: { create: lines.map((line) => ({
           variantId: line.variantId, quantity: line.quantity, unitPrice: line.unitPrice,
           discount: discounts.byVariant.get(line.variantId) ?? 0n,

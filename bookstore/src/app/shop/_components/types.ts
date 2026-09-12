@@ -130,6 +130,7 @@ export type QuotePreview = {
   subtotal: number;
   discountTotal: number;
   total: number;
+  shipping: { zone: string; fee: number; freeShip: boolean };
   promotions: { name: string; discountTotal: number }[];
   couponApplied: boolean;
   couponInvalidReason?: string;

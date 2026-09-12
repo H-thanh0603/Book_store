@@ -22,12 +22,32 @@ type Catalog = { products: Product[]; categories: { id: string; name: string }[]
 // Voucher list mirrors the shop VoucherHub — codes only, no invented discounts;
 // the value each customer actually receives is computed by the promotion
 // engine at checkout.
-const voucherHub = [
+//
+// N3a: the grid below renders REAL active promotions from /api/storefront/deals
+// (code + window + flash flag). The static list is a fallback shown only when
+// the store has no live promos configured.
+const voucherFallback = [
   { code: "MELIODEAL50", title: "Giảm 50.000 ₫", condition: "Cho đơn mua sắm từ 500k" },
   { code: "FREESHIPMAX", title: "Miễn Phí Vận Chuyển", condition: "Toàn quốc không giới hạn số lượng" },
   { code: "BACK2SCHOOL", title: "Giảm 15% Dụng Cụ Học Tập", condition: "Áp dụng cho vở viết, bút Thiên Long" },
   { code: "TOYFEST20", title: "Giảm 20.000 ₫ Đồ Chơi", condition: "Đơn đồ chơi LEGO & Sanrio từ 250k" },
 ];
+
+type LiveDeal = {
+  code: string | null;
+  title: string;
+  kind: string;
+  value: number;
+  startAt: string;
+  endAt: string | null;
+  flash: boolean;
+};
+
+function dealCondition(d: LiveDeal): string {
+  const val = d.kind === "percentage" ? `Giảm ${d.value}%` : d.kind === "fixed" ? `Giảm ${d.value.toLocaleString("vi-VN")} ₫` : "Mua X tặng Y";
+  const until = d.endAt ? ` · đến ${new Date(d.endAt).toLocaleDateString("vi-VN")}` : "";
+  return `${val}${until}`;
+}
 
 function money(v: number) {
   return `${v.toLocaleString("vi-VN")} ₫`;
@@ -36,6 +56,7 @@ function money(v: number) {
 export default function DealsPage() {
   const { cart, addItem, itemCount, subtotal } = useCart();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
+  const [liveDeals, setLiveDeals] = useState<LiveDeal[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -59,7 +80,17 @@ export default function DealsPage() {
   useEffect(() => {
     fetch("/api/storefront")
       .then((r) => r.json())
-      .then((d) => setCatalog(d))
+      .then((d) => {
+        setCatalog(d);
+        // Live promos for this store (N3a) — falls back to static list.
+        const sid = d?.storeId;
+        if (sid) {
+          fetch(`/api/storefront/deals?storeId=${sid}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((dd) => { if (dd && Array.isArray(dd.deals)) setLiveDeals(dd.deals); })
+            .catch(() => {});
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -187,13 +218,26 @@ export default function DealsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {voucherHub.map((v) => (
+            {(liveDeals.length > 0
+              ? liveDeals.filter((d) => d.code).map((d) => ({
+                  code: d.code as string,
+                  title: d.title,
+                  condition: dealCondition(d),
+                  flash: d.flash,
+                }))
+              : voucherFallback.map((v) => ({ ...v, flash: false }))
+            ).map((v) => (
               <div
                 key={v.code}
                 className="rounded-3xl bg-white border border-[#ede5d8] p-5 space-y-3 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all"
               >
                 <div className="flex items-center justify-between">
                   <TicketPercent className="w-4 h-4 text-[#d97706]" />
+                  {v.flash && (
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-red-600 text-white animate-pulse">
+                      ⚡ Giờ vàng
+                    </span>
+                  )}
                 </div>
                 <div>
                   <h4 className="text-lg font-black text-slate-900">{v.title}</h4>

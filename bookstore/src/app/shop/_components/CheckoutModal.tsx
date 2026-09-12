@@ -398,6 +398,13 @@ export default function CheckoutModal({
                 Gói quà +{money(wrappingFee)}
               </span>
             )}
+            {fulfillment === "delivery" && (
+              <span className="block text-[11px] font-semibold text-slate-500">
+                {quote && quote.shipping.fee === 0
+                  ? `Phí ship ${quote.shipping.zone === "FREESHIP" ? "0 ₫ (miễn phí đơn giá trị cao)" : "0 ₫ (nhận tại cửa hàng)"}`
+                  : `Phí ship${quote ? ` (${quote.shipping.zone})` : ""} +${money(quote?.shipping.fee ?? 0)}`}
+              </span>
+            )}
             <span className="text-xs text-slate-500">Tổng thanh toán {paymentMethod === "COD" ? "khi nhận hàng (COD)" : "trực tuyến"}:</span>
             <span className="block text-2xl font-black text-[#1c1917]">{money(grandTotal)}</span>
           </div>

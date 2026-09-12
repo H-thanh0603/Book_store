@@ -367,6 +367,7 @@ model Product {
   variants    ProductVariant[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  reviews     ProductReview[]
   @@index([name])
   @@index([orgId])
   @@index([categoryId])
@@ -404,6 +405,23 @@ model ProductVariant {
   bundles   BundleItem[] @relation("bundle")
   active    Boolean @default(true)
   createdAt DateTime @default(now())
+}
+
+// N3c: customer product reviews. PENDING until staff approve (spam guard) —
+// the public API only ever serves APPROVED rows.
+model ProductReview {
+  id          String @id @default(uuid())
+  productId   String
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  authorName  String
+  rating      Int
+  title       String?
+  body        String
+  status      String @default("PENDING") // PENDING | APPROVED | REJECTED
+  createdAt   DateTime @default(now())
+  @@index([productId, status])
 }
 
 model ProductBarcode {
@@ -702,6 +720,7 @@ model Customer {
   sessions  CustomerSession[]
   supportConversations SupportConversation[]
   promoRedemptions PromotionRedemption[]
+  reviews ProductReview[]
 
   @@unique([orgId, phone])
   @@unique([orgId, email])
@@ -855,6 +874,7 @@ model Order {
   subtotal    BigInt
   discountTotal BigInt @default(0)
   total       BigInt
+  shippingFee BigInt @default(0) // N3b: zone-based delivery fee (0 = pickup/free ship)
   items       OrderItem[]
   statusHistory OrderStatusHistory[]
   shipment    Shipment?

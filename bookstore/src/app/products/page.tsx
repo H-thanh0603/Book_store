@@ -34,6 +34,28 @@ export default function ProductsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  // N3c: review moderation queue
+  type PendingReview = { id: string; authorName: string; rating: number; title: string | null; body: string; createdAt: string; product: { name: string } };
+  const [modOpen, setModOpen] = useState(false);
+  const [pending, setPending] = useState<PendingReview[]>([]);
+  const pendingCount = pending.length;
+
+  async function loadPending() {
+    const r = await fetch("/api/reviews?status=PENDING");
+    if (r.ok) setPending((await r.json()).reviews);
+  }
+  async function moderate(id: string, action: "approve" | "reject") {
+    const r = await fetch("/api/reviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, action }),
+    });
+    if (r.ok) setPending((ls) => ls.filter((x) => x.id !== id));
+  }
+
+  useEffect(() => {
+    if (modOpen) void loadPending();
+  }, [modOpen]);
 
   async function load(p: number, query: string) {
     try {
@@ -241,8 +263,36 @@ export default function ProductsPage() {
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
+              <button
+                onClick={() => setModOpen((v) => !v)}
+                className="ml-2 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold"
+              >
+                Duyệt đánh giá{pendingCount > 0 ? ` (${pendingCount})` : ""}
+              </button>
             </div>
           </div>
+
+          {/* Review moderation queue (N3c) */}
+          {modOpen && (
+            <div className="p-4 border-t border-slate-100 space-y-2">
+              <h3 className="text-xs font-bold text-slate-900">Đánh giá chờ duyệt ({pending.length})</h3>
+              {pending.length === 0 && <p className="text-xs text-slate-400">Không có đánh giá nào chờ.</p>}
+              {pending.map((r) => (
+                <div key={r.id} className="p-3 rounded-xl bg-amber-50/50 border border-amber-100 text-xs space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <b>{r.authorName} · {r.product.name} · {"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</b>
+                    <span className="text-slate-400 shrink-0">{new Date(r.createdAt).toLocaleDateString("vi-VN")}</span>
+                  </div>
+                  {r.title && <p className="font-bold">{r.title}</p>}
+                  <p className="text-slate-600">{r.body}</p>
+                  <div className="flex gap-1.5 pt-1">
+                    <button onClick={() => moderate(r.id, "approve")} className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">Duyệt</button>
+                    <button onClick={() => moderate(r.id, "reject")} className="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold">Từ chối</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

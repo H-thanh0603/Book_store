@@ -249,6 +249,8 @@ export type StorefrontCheckoutInput = {
 export type StorefrontQuoteInput = {
   storeId?: string | null;
   couponCode?: string | null;
+  fulfillment?: "delivery" | "pickup";
+  address?: string | null;
   items: { variantId: string; quantity: number }[];
 };
 
@@ -256,6 +258,7 @@ export type StorefrontQuote = {
   subtotal: number;
   discountTotal: number;
   total: number;
+  shipping: { zone: string; fee: number; freeShip: boolean };
   promotions: { name: string; discountTotal: number }[];
   couponApplied: boolean;
   couponInvalidReason?: string;
@@ -328,6 +331,11 @@ export async function quoteStorefrontOrder(input: StorefrontQuoteInput): Promise
   });
   const discounts = mergeLineDiscounts(applied, lines);
   const subtotal = lines.reduce((sum, line) => sum + line.unitPrice * BigInt(line.quantity), 0n);
+  // N3b: same zone fee the checkout will charge (0 for pickup).
+  const { quoteShipping } = await import("./shipping");
+  const shipping = input.fulfillment === "pickup"
+    ? { zone: "PICKUP", fee: 0n, freeShip: true }
+    : await quoteShipping({ address: input.address, subtotal });
 
   const couponApplied =
     Boolean(coupon) && !couponInvalidReason && applied.some((promo) => promo.discountTotal > 0n);
@@ -341,7 +349,8 @@ export async function quoteStorefrontOrder(input: StorefrontQuoteInput): Promise
   return {
     subtotal: Number(subtotal),
     discountTotal: Number(discounts.total),
-    total: Number(subtotal - discounts.total),
+    total: Number(subtotal - discounts.total + shipping.fee),
+    shipping: { zone: shipping.zone, fee: Number(shipping.fee), freeShip: shipping.freeShip },
     promotions: applied
       .filter((promo) => promo.discountTotal > 0n)
       .map((promo) => ({ name: promo.name, discountTotal: Number(promo.discountTotal) })),

@@ -14,6 +14,8 @@ export async function GET(req: NextRequest) {
     const response = ok(await quoteStorefrontOrder({
       storeId: req.nextUrl.searchParams.get("storeId"),
       couponCode: req.nextUrl.searchParams.get("couponCode"),
+      fulfillment: req.nextUrl.searchParams.get("fulfillment") === "pickup" ? "pickup" : "delivery",
+      address: req.nextUrl.searchParams.get("address"),
       items: (req.nextUrl.searchParams.get("items") ?? "")
         .split(",").filter(Boolean).map((chunk) => {
           const [variantId, quantity] = chunk.split(":");

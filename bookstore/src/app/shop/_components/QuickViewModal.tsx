@@ -1,5 +1,6 @@
 // Section 16: QUICK VIEW PRODUCT MODAL
 import { X, ShoppingBag } from "lucide-react";
+import ProductReviews from "./ProductReviews";
 import type { Product } from "./types";
 
 export default function QuickViewModal({
@@ -123,6 +124,8 @@ export default function QuickViewModal({
             </div>
           </div>
         </div>
+
+        <ProductReviews productId={product.id} />
       </div>
     </div>
   );
