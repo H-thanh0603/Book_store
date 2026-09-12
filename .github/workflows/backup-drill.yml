@@ -38,6 +38,8 @@ jobs:
           cache-dependency-path: bookstore/package-lock.json
       - run: npm ci
       - name: Migrate + seed scratch database
+        env:
+          DATABASE_URL: postgresql://bookstore:bookstore@localhost:5432/bookstore
         run: |
           npx prisma migrate deploy
           npx prisma db seed
