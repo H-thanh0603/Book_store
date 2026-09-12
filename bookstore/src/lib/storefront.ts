@@ -115,12 +115,34 @@ async function listStorefrontProductsUncached(input: {
       },
     },
   };
-  const [exactRows, categories, stores] = await Promise.all([
-    prismaRead.product.findMany({
+  // In-stock gate FIRST: Prisma can't compare two columns (onHand >
+  // reserved) inside a relation filter, so resolve the available variant ids
+  // with one indexed raw query. Without this, `take: 100 ... orderBy: name`
+  // below would page the catalog alphabetically and silently hide in-stock
+  // products sorted past the cutoff.
+  const stocked = await prismaRead.$queryRaw<{ id: string }[]>`
+    SELECT DISTINCT b."variantId" AS id
+    FROM "InventoryBalance" b
+    JOIN "StockLocation" l ON l.id = b."locationId"
+    WHERE l."storeId" = ${store.id} AND l.active
+      AND (b."onHand" - b.reserved) > 0`;
+  const stockedIds = stocked.map((r) => r.id);
+  const [categories, stores] = await Promise.all([
+    prismaRead.category.findMany({
+      where: { products: { some: { status: "active", orgId } } },
+      select: { id: true, name: true }, orderBy: { name: "asc" },
+    }),
+    prismaRead.store.findMany({
+      where: { active: true, orgId }, select: { id: true, name: true, code: true }, orderBy: { code: "asc" },
+    }),
+  ]);
+  if (stockedIds.length === 0) return { products: [], categories, stores, storeId: store.id };
+  const exactRows = await prismaRead.product.findMany({
       where: {
         status: "active",
         orgId,
         categoryId: input.categoryId || undefined,
+        variants: { some: { id: { in: stockedIds }, active: true } },
         ...(words.length ? {
           AND: words.map((w) => ({
             OR: [
@@ -135,15 +157,7 @@ async function listStorefrontProductsUncached(input: {
       },
       ...catalogSelect,
       orderBy: { name: "asc" }, take: 100,
-    }),
-    prismaRead.category.findMany({
-      where: { products: { some: { status: "active", orgId } } },
-      select: { id: true, name: true }, orderBy: { name: "asc" },
-    }),
-    prismaRead.store.findMany({
-      where: { active: true, orgId }, select: { id: true, name: true, code: true }, orderBy: { code: "asc" },
-    }),
-  ]);
+    });
 
   let rows = exactRows;
   // Fuzzy fallback: no exact hit → best word-vs-word trigram similarity on
