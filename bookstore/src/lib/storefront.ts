@@ -91,7 +91,7 @@ async function listStorefrontProductsUncached(input: {
   const now = new Date();
   const catalogSelect = {
     select: {
-      id: true, name: true, description: true, createdAt: true,
+      id: true, name: true, description: true, createdAt: true, imageUrl: true,
       category: { select: { id: true, name: true } },
       brand: { select: { name: true } },
       author: { select: { name: true } }, publisher: { select: { name: true } },
@@ -231,7 +231,7 @@ async function listStorefrontProductsUncached(input: {
         ? [{ id: variant.id, name: variant.name, sku: variant.sku, price: Number(price.amount), available }]
         : [];
     });
-    return variants.length ? [{ ...product, variants }] : [];
+    return variants.length ? [{ ...product, image: product.imageUrl, variants }] : [];
   });
   return { products, categories, stores, storeId: store.id };
 }

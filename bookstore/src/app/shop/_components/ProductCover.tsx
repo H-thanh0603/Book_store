@@ -14,12 +14,12 @@ import Image from "next/image";
 import { useMemo } from "react";
 
 const PLACEHOLDER_GRADIENTS = [
-  "from-[#1c1917] via-[#3b2a1e] to-[#8c2d19]",
-  "from-[#8c2d19] via-[#a63a1f] to-[#d97706]",
-  "from-[#2d2521] via-[#574431] to-[#8c2d19]",
-  "from-[#6b2113] via-[#8c2d19] to-[#1c1917]",
-  "from-[#d97706] via-[#b45309] to-[#6b2113]",
-  "from-[#1c1917] via-[#574431] to-[#d97706]",
+  "from-[#1c1917] via-[#2e2620] to-[#3d2b1f]",
+  "from-[#2b2118] via-[#3a2f26] to-[#243028]",
+  "from-[#1e2b23] via-[#2a3a2e] to-[#33302c]",
+  "from-[#33231c] via-[#40291e] to-[#1c1917]",
+  "from-[#2e2620] via-[#3d2b1f] to-[#2a3a2e]",
+  "from-[#243028] via-[#33302c] to-[#1c1917]",
 ];
 
 function hashCode(str: string): number {
