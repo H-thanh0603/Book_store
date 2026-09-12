@@ -1,8 +1,7 @@
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { prisma } from "@/lib/db";
-import { resolveStoreScope } from "@/lib/auth";
-import { exportData, exportFilename, type ExportFormat } from "./generic";
+import { exportData, type ExportFormat } from "./generic";
 import { EXPORT_TYPES, type ExportTypeName } from "./datasets";
 
 // Async export worker (WS2.1): building a 10k-row xlsx inside the request

@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const storeScope = scope === null ? null : scope
 
     const { columns, fetch } = EXPORT_TYPES[type]
-    const data = await fetch(storeScope)
+    const data = await fetch(storeScope, auth.orgId)
     const result = await exportData(data, columns(), type, format)
 
     return new NextResponse(new Uint8Array(result.buffer), {
