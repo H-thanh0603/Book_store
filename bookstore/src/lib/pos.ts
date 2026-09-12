@@ -232,6 +232,19 @@ export async function completeSale(input: CompleteSaleInput) {
       if (input.customerId) await claimRedemption(tx, ap.promoId, input.customerId, promotion.perCustomerLimit);
     }
 
+    // POS-001: hold the shift OPEN at commit time. closeShift claims
+    // OPEN→CLOSED on this same row, so a concurrent close serializes here:
+    // either this touch wins (the close then aborts) or the close won
+    // (count 0 → this sale aborts instead of landing in a closed shift with
+    // wrong expectedCash). Placed last so every side effect above rolls back
+    // with it.
+    const shiftHeld = await tx.posShift.updateMany({
+      where: { id: input.shiftId, status: "OPEN" },
+      data: { status: "OPEN" },
+    });
+    if (shiftHeld.count !== 1)
+      fail(409, "INVALID_STATUS_TRANSITION", "Shift was closed during checkout");
+
     return txn;
     }, TX_OPTIONS));
     // Fire-and-forget e-invoice enqueue. A T-VAN outage must never block a paid sale;
@@ -390,6 +403,14 @@ export async function refundSale(txNumber: string, shiftId: string, userId: stri
       },
     });
     void opts.reason; // recorded in the audit log by the route
+    // POS-001: same shift-hold as completeSale — the mirrored refund tx lands
+    // on this shift, so it must still be OPEN at commit time.
+    const refundShiftHeld = await tx.posShift.updateMany({
+      where: { id: shiftId, status: "OPEN" },
+      data: { status: "OPEN" },
+    });
+    if (refundShiftHeld.count !== 1)
+      fail(409, "INVALID_STATUS_TRANSITION", "Shift was closed during refund");
     return refund;
   }, TX_OPTIONS));
 }
@@ -411,6 +432,17 @@ export async function openShift(terminalId: string, cashierId: string, openingCa
 export async function closeShift(shiftId: string, closingCash: bigint, userId?: string) {
   return withTxRetry(() =>
     prisma.$transaction(async (tx) => {
+    // POS-001: claim OPEN→CLOSED FIRST, then snapshot the transactions. The
+    // old order (snapshot → claim) let a sale commit in between: missed from
+    // expectedCash yet attached to a closed shift. Claim-first serializes on
+    // the shift row — and every sale/refund path re-holds OPEN before commit
+    // (see completeSale/refundSale), so anything committing after this claim
+    // aborts, and everything snapshotted below is final.
+    const claimed = await tx.posShift.updateMany({
+      where: { id: shiftId, status: "OPEN" },
+      data: { status: "CLOSED", closedAt: new Date() },
+    });
+    if (claimed.count !== 1) fail(400, "VALIDATION", "Shift not open");
     const shift = await tx.posShift.findUnique({
       where: { id: shiftId },
       // A RETURNED (refunded) original still took real cash into the drawer at
@@ -423,23 +455,19 @@ export async function closeShift(shiftId: string, closingCash: bigint, userId?: 
         },
       },
     });
-    if (!shift || shift.status !== "OPEN") fail(400, "VALIDATION", "Shift not open");
+    if (!shift) fail(404, "NOT_FOUND", "Shift not found");
     let cashTotal = 0n;
     for (const t of shift.transactions)
       for (const p of t.payments) if (p.method === "CASH") cashTotal += p.amount;
     const expected = shift.openingCash + cashTotal;
-    const claimed = await tx.posShift.updateMany({
-      where: { id: shiftId, status: "OPEN" },
+    const closed = await tx.posShift.update({
+      where: { id: shiftId },
       data: {
-        status: "CLOSED",
         closingCash,
         expectedCash: expected,
         variance: closingCash - expected,
-        closedAt: new Date(),
       },
     });
-    if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Shift was already closed");
-    const closed = await tx.posShift.findUniqueOrThrow({ where: { id: shiftId } });
     await tx.auditLog.create({
       data: {
         actorId: userId ?? null, action: "shift.close", entity: "PosShift", entityId: shiftId,

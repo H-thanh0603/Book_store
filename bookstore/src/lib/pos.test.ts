@@ -80,14 +80,14 @@ describe('closeShift', () => {
     mockPrisma.$transaction.mockImplementation(async (fn: any) => {
       const tx = {
         posShift: {
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
           findUnique: vi.fn().mockResolvedValue({
-            id: 'shift-1', status: 'OPEN', openingCash: 500000n,
+            id: 'shift-1', status: 'CLOSED', openingCash: 500000n,
             transactions: [{ status: 'COMPLETED', payments: [{ method: 'CASH', amount: 100000n }] }],
           }),
-          findUniqueOrThrow: vi.fn().mockResolvedValue({
+          update: vi.fn().mockResolvedValue({
             id: 'shift-1', status: 'CLOSED', closingCash: 600000n, expectedCash: 600000n, variance: 0n,
           }),
-          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         auditLog: { create: vi.fn() },
       }
@@ -102,9 +102,7 @@ describe('closeShift', () => {
     mockPrisma.$transaction.mockImplementation(async (fn: any) => {
       const tx = {
         posShift: {
-          findUnique: vi.fn().mockResolvedValue({
-            id: 'shift-1', status: 'CLOSED', openingCash: 500000n, transactions: [],
-          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 0 }),
         },
       }
       return fn(tx)
