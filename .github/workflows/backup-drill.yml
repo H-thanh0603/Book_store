@@ -1,0 +1,48 @@
+name: Backup Drill
+
+# Weekly proof that backups are restorable: seed a scratch database, dump it,
+# and run restore-drill.sh (fresh-DB restore + migrate parity + row counts).
+# A red drill must page the on-call before the next release — see
+# bookstore/docs/OPERATIONS.md "Automatic restore drill".
+on:
+  schedule:
+    - cron: "0 1 * * 1"
+  workflow_dispatch:
+
+jobs:
+  restore-drill:
+    name: Restore Drill
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://bookstore:bookstore@localhost:5432/postgres
+      SEED_USER_PASSWORD: ci-only-password-123
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: bookstore
+          POSTGRES_PASSWORD: bookstore
+          POSTGRES_DB: bookstore
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: bookstore
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: bookstore/package-lock.json
+      - run: npm ci
+      - name: Migrate + seed scratch database
+        run: |
+          npx prisma migrate deploy
+          npx prisma db seed
+      - name: Dump + drill
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          pg_dump --format=custom "postgresql://bookstore:bookstore@localhost:5432/bookstore" > /tmp/bookstore-drill.dump
+          ./scripts/ops/restore-drill.sh /tmp/bookstore-drill.dump

@@ -135,8 +135,47 @@ someone, not get discovered at the next incident. Without `RCLONE_REMOTE`
 the script refuses to lie: it warns that the dump is LOCAL ONLY.
 
 A same-box pg_dump is not a backup — one disk failure takes the database
-and its backup together. For point-in-time recovery (WAL archiving /
-continuous archiving to object storage) see the RUNBOOK "future" section.
+and its backup together.
+
+### Point-in-time recovery (WAL archiving)
+
+The nightly dump caps recovery at RPO ~24h. To close the gap to minutes,
+enable WAL archiving on the production Postgres (one-time server setup):
+
+```ini
+# postgresql.conf
+wal_level = replica
+archive_mode = on
+archive_command = '/srv/bookstore/scripts/ops/wal-archive.sh %p %f'
+```
+
+```bash
+# env for wal-archive.sh (same box as Postgres)
+WAL_SPOOL_DIR=/var/lib/bookstore/wal
+RCLONE_REMOTE=s3:bookstore-backups/wal   # off-box copy; without it segments stay LOCAL ONLY
+```
+
+- `wal-archive.sh` spools every segment locally first (Postgres depends on
+  this — it must succeed), then best-effort uploads off-box. It never fails
+  `archive_command` over the network, but logs loudly on upload failure.
+- Monitor: alert if spool size grows unbounded (archiver stuck) or if the
+  newest remote segment is older than 30 minutes.
+- PITR restore: take the latest base dump, `pg_restore` into a fresh DB,
+  then replay archived segments with `recovery_target_time`. Full procedure
+  lives in the RUNBOOK "disaster recovery" section.
+
+### RPO / RTO commitments
+
+| Tier | RPO | RTO | Mechanism |
+|------|-----|-----|-----------|
+| Committed (with WAL archiving on) | ≤ 15 min | ≤ 2 h | nightly dump + WAL replay |
+| Fallback (dump only) | ≤ 24 h | ≤ 4 h | nightly dump, `pg_restore --clean` |
+
+### Automatic restore drill
+
+A CI scheduled workflow (`.github/workflows/backup-drill.yml`, weekly)
+seeds a scratch database, dumps it, and runs `restore-drill.sh` — a red
+drill fails the workflow and must page the on-call before the next release.
 
 Restore: `pg_restore --clean --dbname "$DATABASE_URL" backups/bookstore-<stamp>.dump`.
 
