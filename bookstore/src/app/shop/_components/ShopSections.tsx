@@ -200,21 +200,35 @@ export function ShopFooter({ activeStoreName }: { activeStoreName: string }) {
         <div>
           <h4 className="font-bold text-sm text-slate-900 mb-3">Dịch Vụ Độc Quyền</h4>
           <ul className="space-y-2 text-xs text-slate-500">
-            <li>• Tra cứu vị trí kệ sách tại chi nhánh</li>
-            <li>• Đọc thử trích đoạn sách 3D lật trang</li>
-            <li>• Gói quà Vintage &amp; Thiệp viết tay</li>
-            <li>• Giao hàng hỏa tốc COD 1-3 ngày toàn quốc</li>
+            <li>
+              <Link href="/shop" className="hover:text-[#8c2d19] hover:underline">Tra cứu vị trí kệ sách tại chi nhánh</Link>
+            </li>
+            <li>
+              <Link href="/shop" className="hover:text-[#8c2d19] hover:underline">Đọc thử trích đoạn sách 3D lật trang</Link>
+            </li>
+            <li>
+              <Link href="/gift-finder" className="hover:text-[#8c2d19] hover:underline">Gói quà Vintage &amp; Thiệp viết tay</Link>
+            </li>
+            <li>
+              <Link href="/track" className="hover:text-[#8c2d19] hover:underline">Giao hàng hỏa tốc COD 1-3 ngày toàn quốc</Link>
+            </li>
           </ul>
         </div>
 
         <div>
           <h4 className="font-bold text-sm text-slate-900 mb-3">Hỗ Trợ Bạn Đọc</h4>
           <ul className="space-y-2 text-xs text-slate-500">
-            <li>• Hướng dẫn mua hàng &amp; Thanh toán COD</li>
-            <li>• Đổi trả ấn bản lỗi trong vòng 7 ngày</li>
-            <li>• Đăng ký vé tham gia Workshop tác giả</li>
             <li>
-              • Tra cứu hành trình vận đơn{" "}
+              <Link href="/shop/orders" className="hover:text-[#8c2d19] hover:underline">Hướng dẫn mua hàng &amp; Thanh toán COD</Link>
+            </li>
+            <li>
+              <Link href="/shop/account" className="hover:text-[#8c2d19] hover:underline">Đổi trả ấn bản lỗi trong vòng 7 ngày</Link>
+            </li>
+            <li>
+              <Link href="/stores" className="hover:text-[#8c2d19] hover:underline">Đăng ký vé tham gia Workshop tác giả</Link>
+            </li>
+            <li>
+              Tra cứu hành trình vận đơn{" "}
               <Link href="/track" className="underline text-[#8c2d19] hover:text-[#6b2113] font-bold">trực tuyến</Link>
             </li>
           </ul>
@@ -233,8 +247,18 @@ export function ShopFooter({ activeStoreName }: { activeStoreName: string }) {
         </div>
       </div>
 
-      <div className="border-t border-slate-100 py-6 text-center text-xs text-slate-400 font-medium">
-        © 2026 Melio Bookstore · Hiệu Sách Tri Thức &amp; Nghệ Thuật Đọc
+      <div className="border-t border-slate-100 py-6 text-center space-y-3">
+        <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-500">
+          <Link href="/shop" className="hover:text-[#8c2d19]">Cửa hàng</Link>
+          <Link href="/deals" className="hover:text-[#8c2d19]">Giờ vàng</Link>
+          <Link href="/bestsellers" className="hover:text-[#8c2d19]">Bestsellers</Link>
+          <Link href="/stores" className="hover:text-[#8c2d19]">Chi nhánh</Link>
+          <Link href="/track" className="hover:text-[#8c2d19]">Tra cứu đơn</Link>
+          <Link href="/shop/account" className="hover:text-[#8c2d19]">Tài khoản</Link>
+        </nav>
+        <p className="text-xs text-slate-400 font-medium">
+          © 2026 Melio Bookstore · Hiệu Sách Tri Thức &amp; Nghệ Thuật Đọc
+        </p>
       </div>
     </footer>
   );
