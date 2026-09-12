@@ -123,8 +123,9 @@ export async function getAuth(): Promise<AuthContext | null> {
   };
 }
 
-/** Org-status gate shared by requirePermission and requireOrgActive. */
-function assertOrgUsable(auth: AuthContext) {
+/** Org-status gate shared by requirePermission and requireOrgActive. Exported
+ *  for out-of-session checks (async export worker re-validates the requester). */
+export function assertOrgUsable(auth: AuthContext) {
   if (!auth.orgId) return; // legacy user — bypass
   if (auth.orgStatus === "ACTIVE") return;
   if (auth.orgStatus === "TRIAL" && auth.trialEndsAt && auth.trialEndsAt > new Date()) return;

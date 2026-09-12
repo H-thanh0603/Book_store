@@ -1339,6 +1339,27 @@ model JobRun {
   @@index([kind])
 }
 
+// Async export job (WS2.1): large exports run in the worker instead of the
+// request — the file lands in var/exports/ and the requester polls/downloads.
+// PENDING → RUNNING → SUCCEEDED | FAILED. Rows older than 7 days are pruned
+// by pruneExportJobs (files deleted first, then rows).
+model ExportJob {
+  id          String @id @default(uuid())
+  orgId       String
+  requestedBy String
+  type        String // products | orders | inventory | customers | revenue
+  format      String // csv | xlsx
+  params      Json   // { storeId?: string } — re-resolved to a scope at build time
+  status      String @default("PENDING")
+  filePath    String?
+  rowCount    Int?
+  error       String?
+  createdAt   DateTime @default(now())
+  finishedAt  DateTime?
+  @@index([status, createdAt])
+  @@index([orgId, createdAt])
+}
+
 enum LossAlertStatus {
   OPEN
   REVIEWED
