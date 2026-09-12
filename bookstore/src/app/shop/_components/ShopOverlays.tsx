@@ -384,7 +384,7 @@ export function OrderSuccessModal({  success,
           <p className="text-xs text-slate-500 mt-1">Ấn bản của bạn đang được thủ thư Melio chuẩn bị chu đáo</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-[#8c2d19] via-[#a63a1f] to-[#d97706] text-white space-y-1 shadow-md">
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-[#2b2118] via-[#3a2e24] to-[#4a3b2c] text-white space-y-1 shadow-md">
           <span className="text-[10px] text-white/80 font-mono font-bold">MÃ ĐƠN HÀNG CỦA BẠN</span>
           <div className="flex items-center justify-center gap-2">
             <span className="font-mono text-xl font-black text-yellow-200 tracking-wider">{success.number}</span>

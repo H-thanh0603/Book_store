@@ -98,13 +98,14 @@ export default function ShopHeader({
                   {searchMatches.length > 0 ? (
                     <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                       {searchMatches.map((p) => (
-                        <div
+                        <button
                           key={p.id}
+                          type="button"
                           onClick={() => {
                             onSearchPick(p);
                             setSearchFocused(false);
                           }}
-                          className="flex items-center justify-between p-2 rounded-xl hover:bg-[#faf4ea] transition-colors cursor-pointer group"
+                          className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-[#faf4ea] transition-colors cursor-pointer group text-left"
                         >
                           <div className="flex items-center gap-3">
                             <div className="size-10 rounded-xl bg-gradient-to-tr from-[#8c2d19] to-[#d97706] text-white flex items-center justify-center shadow-xs" aria-hidden="true">
@@ -127,7 +128,7 @@ export default function ShopHeader({
                               {(p.variants[0]?.available ?? 0) > 0 ? `Còn ${p.variants[0].available}` : "Hết hàng"}
                             </span>
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   ) : (

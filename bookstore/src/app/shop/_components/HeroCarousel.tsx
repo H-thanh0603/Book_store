@@ -147,7 +147,8 @@ export default function HeroCarousel({
                 <button
                   key={idx}
                   onClick={() => onSlide(idx)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  aria-pressed={currentSlide === idx}
+                  className={`px-3 py-1.5 touch-44 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                     currentSlide === idx
                       ? "bg-white text-slate-950 shadow-md font-black scale-105"
                       : "bg-white/20 text-white hover:bg-white/30"
@@ -164,14 +165,14 @@ export default function HeroCarousel({
               <button
                 onClick={onPrev}
                 aria-label="Chiến dịch trước"
-                className="size-10 rounded-full bg-white/20 hover:bg-white text-white hover:text-slate-950 flex items-center justify-center transition-all cursor-pointer shadow-md"
+                className="size-10 touch-44 rounded-full bg-white/20 hover:bg-white text-white hover:text-slate-950 flex items-center justify-center transition-all cursor-pointer shadow-md"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
                 onClick={onNext}
                 aria-label="Chiến dịch kế tiếp"
-                className="size-10 rounded-full bg-white/20 hover:bg-white text-white hover:text-slate-950 flex items-center justify-center transition-all cursor-pointer shadow-md"
+                className="size-10 touch-44 rounded-full bg-white/20 hover:bg-white text-white hover:text-slate-950 flex items-center justify-center transition-all cursor-pointer shadow-md"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -179,7 +180,7 @@ export default function HeroCarousel({
                 onClick={paused ? onResume : onPause}
                 aria-label={paused ? "Bật tự động chuyển chiến dịch" : "Dừng tự động chuyển chiến dịch"}
                 aria-pressed={paused}
-                className="size-10 rounded-full bg-white/20 hover:bg-white text-white hover:text-slate-950 flex items-center justify-center transition-all cursor-pointer shadow-md"
+                className="size-10 touch-44 rounded-full bg-white/20 hover:bg-white text-white hover:text-slate-950 flex items-center justify-center transition-all cursor-pointer shadow-md"
               >
                 {paused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
               </button>

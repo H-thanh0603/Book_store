@@ -121,7 +121,8 @@ export default function CatalogSection({
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           <button
             onClick={() => onCategory("")}
-            className={`px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+            aria-pressed={!categoryId}
+            className={`px-4 py-2 touch-44 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
               !categoryId
                 ? "bg-[#1c1917] text-[#ffd56a] shadow-md"
                 : "bg-[#faf4ea] hover:bg-[#ede5d8] text-slate-700 border border-[#ede5d8]"
@@ -133,7 +134,8 @@ export default function CatalogSection({
             <button
               key={c.id}
               onClick={() => onCategory(c.id)}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              aria-pressed={categoryId === c.id}
+              className={`px-4 py-2 touch-44 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
                 categoryId === c.id
                   ? "bg-[#1c1917] text-[#ffd56a] shadow-md font-black"
                   : "bg-[#faf4ea] hover:bg-[#ede5d8] text-slate-700 border border-[#ede5d8]"
@@ -152,7 +154,8 @@ export default function CatalogSection({
               <button
                 key={pr.id}
                 onClick={() => onPriceRange(pr.id)}
-                className={`px-3 py-1.5 rounded-xl transition-all font-semibold cursor-pointer ${
+                aria-pressed={priceRange === pr.id}
+                className={`px-3 py-1.5 touch-44 rounded-xl transition-all font-semibold cursor-pointer ${
                   priceRange === pr.id
                     ? "bg-[#8c2d19] text-white font-black shadow-xs"
                     : "bg-[#faf4ea] text-slate-700 hover:bg-[#ede5d8] border border-[#ede5d8]"

@@ -55,7 +55,7 @@ export function VoucherHub({ vouchers, onApply }: { vouchers: Voucher[]; onApply
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const handleCopy = (code: string) => {
-    onApply(code);
+    navigator.clipboard.writeText(code);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2500);
   };
@@ -74,7 +74,7 @@ export function VoucherHub({ vouchers, onApply }: { vouchers: Voucher[]; onApply
           </h2>
         </div>
         <p className="text-xs text-[#f3e5d0] font-medium">
-          Sao chép mã và dán vào ô &ldquo;Mã giảm giá&rdquo; ở bước thanh toán
+          Sao chép mã, dán vào ô &ldquo;Mã giảm giá&rdquo; ở bước thanh toán
         </p>
       </div>
 
@@ -84,7 +84,7 @@ export function VoucherHub({ vouchers, onApply }: { vouchers: Voucher[]; onApply
           return (
             <div
               key={v.code}
-              className="p-5 rounded-3xl bg-white text-slate-900 border border-[#ede5d8] flex items-center justify-between gap-3 group transition-all shadow-md hover:shadow-xl hover:-translate-y-1 relative"
+              className="p-5 rounded-3xl bg-white text-slate-900 border border-[#ede5d8] flex flex-col gap-3 group transition-all shadow-md hover:shadow-xl hover:-translate-y-1 relative"
             >
               <div className="space-y-1">
                 <b className="block text-base font-bold text-slate-900 group-hover:text-[#8c2d19] transition-colors">
@@ -96,26 +96,34 @@ export function VoucherHub({ vouchers, onApply }: { vouchers: Voucher[]; onApply
                   <span>{v.code}</span>
                 </div>
               </div>
-              <button
-                onClick={() => handleCopy(v.code)}
-                className={`px-4 py-2.5 rounded-2xl font-bold text-xs shadow-md transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                  isCopied
-                    ? "bg-[#14532d] text-white"
-                    : "bg-[#1c1917] hover:bg-[#8c2d19] text-white"
-                }`}
-              >
-                {isCopied ? (
-                  <>
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Đã chép + điền sẵn!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Lấy mã</span>
-                  </>
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleCopy(v.code)}
+                  className={`flex-1 px-3 py-2 rounded-2xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer ${
+                    isCopied
+                      ? "bg-[#14532d] text-white"
+                      : "bg-[#1c1917] hover:bg-[#8c2d19] text-white"
+                  }`}
+                >
+                  {isCopied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Đã chép!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Sao chép</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => onApply(v.code)}
+                  className="px-3 py-2 rounded-2xl font-bold text-xs bg-[#faf4ea] hover:bg-[#ede5d8] text-[#8c2d19] border border-[#e8dac5] transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  <span>Áp dụng</span>
+                </button>
+              </div>
             </div>
           );
         })}

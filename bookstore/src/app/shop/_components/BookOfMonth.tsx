@@ -18,7 +18,7 @@ export default function BookOfMonth({
   const isAvailable = Boolean(variant && variant.available > 0);
 
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#8c2d19] via-[#a63a1f] to-[#d97706] text-white p-8 sm:p-14 shadow-xl border border-[#e8dac5]">
+    <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2b2118] via-[#3a2e24] to-[#4a3b2c] text-white p-8 sm:p-14 shadow-xl border border-[#e8dac5]">
       {/* Ambient Glows */}
       <div className="absolute top-0 right-0 -mt-16 -mr-16 size-96 bg-white/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-1/4 -mb-16 size-80 bg-yellow-300/25 rounded-full blur-3xl pointer-events-none" />
