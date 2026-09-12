@@ -232,7 +232,7 @@ describe('listStorefrontProducts single-flight', () => {
             }),
           },
           category: { findMany: vi.fn(async () => []) },
-          $queryRaw: vi.fn(async () => []),
+          $queryRaw: vi.fn(async () => [{ id: "v1" }]),
           $transaction: vi.fn(),
         },
       }
