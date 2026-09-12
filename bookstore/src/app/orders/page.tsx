@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Nav from "../nav";
 import Pager from "@/components/Pager";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   ShoppingBag,
   Truck,
@@ -52,6 +53,9 @@ export default function OrdersPage() {
   const [searchFilter, setSearchFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [pendingCancel, setPendingCancel] = useState<Order[]>([]);
+  const [pendingReturn, setPendingReturn] = useState<Order | null>(null);
+  const [pendingShip, setPendingShip] = useState<Order | null>(null);
 
   async function loadOrders(p = 1) {
     const r = await fetch(`/api/orders?page=${p}&pageSize=${PAGE_SIZE}`);
@@ -134,10 +138,9 @@ export default function OrdersPage() {
     }
   }
 
-  async function fulfill(order: Order, action: "ship" | "collect" | "cancel") {
+  async function runFulfill(order: Order, action: "ship" | "collect" | "cancel", address?: string) {
     const body: Record<string, unknown> = { orderId: order.id, action };
     if (action === "ship") {
-      const address = window.prompt("Nhập địa chỉ giao hàng:", "123 Đường Sách, Q.1, TP.HCM");
       if (!address) return;
       Object.assign(body, {
         recipientName: order.customer.name,
@@ -145,7 +148,6 @@ export default function OrdersPage() {
         address,
       });
     }
-    if (action === "cancel" && !window.confirm(`Xác nhận huỷ đơn hàng ${order.number}?`)) return;
     const r = await fetch("/api/fulfillment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -158,6 +160,12 @@ export default function OrdersPage() {
     } else {
       setMsg({ text: d.message, type: "error" });
     }
+  }
+
+  function fulfill(order: Order, action: "ship" | "collect" | "cancel") {
+    if (action === "cancel") { setPendingCancel([order]); return; }
+    if (action === "ship") { setPendingShip(order); return; }
+    void runFulfill(order, action);
   }
 
   async function issueInvoice(order: Order) {
@@ -186,7 +194,6 @@ export default function OrdersPage() {
   }
 
   async function createReturn(order: Order) {
-    if (!window.confirm(`Tạo yêu cầu đổi trả hàng cho đơn ${order.number} (toàn bộ các món)?`)) return;
     const locations = await (await fetch("/api/refs?kind=locations")).json();
     const locationId = locations.locations?.[0]?.id;
     if (!locationId) {
@@ -469,14 +476,13 @@ export default function OrdersPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
-                        selectedOrders.forEach((id) => {
-                          const order = orders.find((o) => o.id === id);
-                          if (order && ["CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(order.status)) {
-                            fulfill(order, "cancel");
-                          }
-                        });
+                        const targets = [...selectedOrders]
+                          .map((id) => orders.find((o) => o.id === id))
+                          .filter((o): o is Order => !!o && ["CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(o.status));
+                        if (targets.length > 0) setPendingCancel(targets);
                         setSelectedOrders(new Set());
                       }}
+                      aria-label="Huỷ các đơn hàng đã chọn"
                       className="px-3 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                     >
                       Huỷ đã chọn
@@ -568,12 +574,14 @@ export default function OrdersPage() {
                             <>
                               <button
                                 onClick={() => fulfill(o, "ship")}
+                                aria-label={`Giao đơn ${o.number} qua hãng vận chuyển`}
                                 className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
                               >
                                 Giao HVC
                               </button>
                               <button
                                 onClick={() => fulfill(o, "cancel")}
+                                aria-label={`Huỷ đơn hàng ${o.number}`}
                                 className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                               >
                                 Huỷ
@@ -597,7 +605,8 @@ export default function OrdersPage() {
                                 Phát hành HĐ
                               </button>
                               <button
-                                onClick={() => createReturn(o)}
+                                onClick={() => setPendingReturn(o)}
+                                aria-label={`Tạo yêu cầu trả hàng cho đơn ${o.number}`}
                                 className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors"
                               >
                                 Trả hàng
@@ -624,6 +633,31 @@ export default function OrdersPage() {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        request={pendingShip ? {
+          title: `Giao đơn ${pendingShip.number}?`,
+          body: `Nhập địa chỉ giao hàng cho khách ${pendingShip.customer.name}. Đơn chuyển sang hãng vận chuyển sau khi xác nhận.`,
+          confirmLabel: "Giao hàng",
+          input: { label: "Địa chỉ giao hàng", defaultValue: "123 Đường Sách, Q.1, TP.HCM", required: true },
+        } : pendingCancel.length > 0 ? {
+          title: pendingCancel.length === 1 ? `Huỷ đơn ${pendingCancel[0].number}?` : `Huỷ ${pendingCancel.length} đơn hàng?`,
+          body: pendingCancel.length === 1
+            ? `Đơn ${pendingCancel[0].number} (${Number(pendingCancel[0].total).toLocaleString("vi-VN")} ₫) sẽ bị huỷ và tồn kho được hoàn lại. Không thể hoàn tác.`
+            : `Các đơn ${pendingCancel.map((o) => o.number).join(", ")} sẽ bị huỷ và tồn kho được hoàn lại. Không thể hoàn tác.`,
+          confirmLabel: pendingCancel.length === 1 ? "Huỷ đơn" : `Huỷ ${pendingCancel.length} đơn`,
+        } : pendingReturn ? {
+          title: `Trả hàng đơn ${pendingReturn.number}?`,
+          body: "Tạo yêu cầu đổi trả cho toàn bộ món trong đơn, nhận hàng về kho và hoàn nhập tồn kho.",
+          confirmLabel: "Tạo yêu cầu trả hàng",
+        } : null}
+        onConfirm={(value) => {
+          if (pendingShip) void runFulfill(pendingShip, "ship", value);
+          else if (pendingCancel.length > 0) void (async () => { for (const o of pendingCancel) await runFulfill(o, "cancel"); })();
+          else if (pendingReturn) void createReturn(pendingReturn);
+          setPendingShip(null); setPendingCancel([]); setPendingReturn(null);
+        }}
+        onCancel={() => { setPendingShip(null); setPendingCancel([]); setPendingReturn(null); }}
+      />
     </main>
   );
 }

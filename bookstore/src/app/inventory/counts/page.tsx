@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../../nav";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   ClipboardCheck,
   Plus,
@@ -45,6 +46,8 @@ export default function InventoryCountPage() {
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
   // loading value unused in JSX; keep the setter for the fetch guard
   const [, setLoading] = useState(false);
+  const [confirmPost, setConfirmPost] = useState(false);
+  const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -115,7 +118,6 @@ export default function InventoryCountPage() {
 
   async function postCount() {
     if (!viewCount) return;
-    if (!window.confirm("Xác nhận đăng kiểm kê? Hệ thống sẽ tự động điều chỉnh tồn kho.")) return;
     const r = await fetch(`/api/inventory/counts/${viewCount.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
@@ -132,7 +134,6 @@ export default function InventoryCountPage() {
   }
 
   async function cancelCount(id: string) {
-    if (!window.confirm("Hủy phiếu kiểm kê này?")) return;
     const r = await fetch(`/api/inventory/counts/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
@@ -218,7 +219,7 @@ export default function InventoryCountPage() {
                         <button onClick={() => viewCountDetail(c)} className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors">
                           <Eye className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => cancelCount(c.id)} className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors">
+                        <button onClick={() => setPendingCancelId(c.id)} aria-label={`Hủy phiếu kiểm kê ${c.number}`} className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors">
                           <XCircle className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -275,7 +276,7 @@ export default function InventoryCountPage() {
                       <button onClick={saveCountItems} className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold">
                         Lưu kết quả
                       </button>
-                      <button onClick={postCount} className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">
+                      <button onClick={() => setConfirmPost(true)} aria-label={`Đăng phiếu ${viewCount.number}, điều chỉnh tồn kho`} className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">
                         Đăng (điều chỉnh kho)
                       </button>
                     </>
@@ -338,6 +339,23 @@ export default function InventoryCountPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        request={confirmPost && viewCount ? {
+          title: `Đăng phiếu ${viewCount.number}?`,
+          body: `Hệ thống sẽ tự động điều chỉnh tồn kho theo số đã đếm (${viewCount.items.length} mặt hàng). Phiếu đã đăng không thể sửa.`,
+          confirmLabel: "Đăng kiểm kê",
+        } : pendingCancelId ? {
+          title: "Hủy phiếu kiểm kê này?",
+          body: "Kết quả đếm đã nhập sẽ mất. Phiếu ở trạng thái DRAFT khác không bị ảnh hưởng.",
+          confirmLabel: "Hủy phiếu",
+        } : null}
+        onConfirm={() => {
+          if (confirmPost) void postCount();
+          else if (pendingCancelId) void cancelCount(pendingCancelId);
+          setConfirmPost(false); setPendingCancelId(null);
+        }}
+        onCancel={() => { setConfirmPost(false); setPendingCancelId(null); }}
+      />
     </main>
   );
 }

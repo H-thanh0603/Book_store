@@ -7,6 +7,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../../nav";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { ShieldAlert, AlertCircle, Loader2, RotateCcw, Save } from "lucide-react";
 
 type Kind = "LARGE_REFUND" | "EXCESSIVE_DISCOUNT" | "CASH_VARIANCE" | "STOCK_SHRINKAGE";
@@ -15,10 +16,10 @@ type Override = { id: string; kind: Kind; threshold: number; active: boolean };
 type Draft = { threshold: string; active: boolean; id: string | null };
 
 const META: Record<Kind, { label: string; unit: string; hint: string }> = {
-  LARGE_REFUND: { label: "Hoan tien lon", unit: "d", hint: "Return co refundTotal >= nguong tao canh bao HIGH." },
-  EXCESSIVE_DISCOUNT: { label: "Chiet khau qua cao", unit: "%", hint: "PosTransaction discount/subtotal * 100 >= nguong (%) bi canh bao." },
-  CASH_VARIANCE: { label: "Chenh lech ca cuoi ca", unit: "d", hint: "PosShift dong ca |variance| >= nguong bi canh bao." },
-  STOCK_SHRINKAGE: { label: "Hao hut ton kho", unit: "cuon", hint: "InventoryMovement LOST/STOCK_ADJUST |quantity| >= nguong bi canh bao." },
+  LARGE_REFUND: { label: "Hoàn tiền lớn", unit: "đ", hint: "Phiếu trả hàng có tổng hoàn tiền ≥ ngưỡng sẽ tạo cảnh báo HIGH." },
+  EXCESSIVE_DISCOUNT: { label: "Chiết khấu quá cao", unit: "%", hint: "Giao dịch POS có chiết khấu/tổng ≥ ngưỡng (%) sẽ bị cảnh báo." },
+  CASH_VARIANCE: { label: "Chênh lệch tiền cuối ca", unit: "đ", hint: "Đóng ca có |lệch| ≥ ngưỡng sẽ bị cảnh báo." },
+  STOCK_SHRINKAGE: { label: "Hao hụt tồn kho", unit: "cuốn", hint: "Phiếu kho LOST/STOCK_ADJUST có |số lượng| ≥ ngưỡng sẽ bị cảnh báo." },
 };
 
 export default function LossPreventionPage() {
@@ -28,6 +29,7 @@ export default function LossPreventionPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [savedKind, setSavedKind] = useState<Kind | null>(null);
+  const [pendingReset, setPendingReset] = useState<Kind | null>(null);
 
   async function load() {
     setLoading(true); setErr(null);
@@ -55,12 +57,12 @@ export default function LossPreventionPage() {
     const d = drafts[kind];
     if (!d) return;
     const num = Number(d.threshold);
-    if (!Number.isFinite(num) || num < 0) { setErr(kind + ": nguong phai la so khong am"); return; }
+    if (!Number.isFinite(num) || num < 0) { setErr(kind + ": ngưỡng phải là số không âm"); return; }
     setErr(null);
     const res = d.id
       ? await fetch("/api/loss-prevention/rules/" + d.id, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ threshold: num, active: d.active }) })
       : await fetch("/api/loss-prevention/rules", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind, threshold: num, active: d.active }) });
-    if (!res.ok) { setErr("Luu " + kind + " that bai: HTTP " + res.status); return; }
+    if (!res.ok) { setErr("Lưu " + kind + " thất bại: HTTP " + res.status); return; }
     setSavedKind(kind); setTimeout(() => setSavedKind(null), 1500); load();
   }
 
@@ -70,9 +72,8 @@ export default function LossPreventionPage() {
       updateDraft(kind, { threshold: String(effective.find((e) => e.kind === kind)?.threshold ?? 0), active: false });
       return;
     }
-    if (!confirm("Xoa override cho " + META[kind].label + "? Quay ve mac dinh he thong.")) return;
     const res = await fetch("/api/loss-prevention/rules/" + d.id, { method: "DELETE" });
-    if (!res.ok) { setErr("Xoa " + kind + " that bai: HTTP " + res.status); return; }
+    if (!res.ok) { setErr("Xoá " + kind + " thất bại: HTTP " + res.status); return; }
     load();
   }
 
@@ -82,16 +83,16 @@ export default function LossPreventionPage() {
       <main className="max-w-5xl mx-auto px-4 py-8">
         <header className="flex items-center gap-3 mb-2">
           <ShieldAlert className="w-7 h-7 text-slate-700" />
-          <h1 className="text-2xl font-bold text-slate-800">Nguong chong that thoat</h1>
+          <h1 className="text-2xl font-bold text-slate-800">Ngưỡng chống thất thoát</h1>
         </header>
-        <p className="text-sm text-slate-500 mb-6">Dieu chinh nguong canh bao cho to chuc cua ban. Khong bat = dung mac dinh he thong.</p>
+        <p className="text-sm text-slate-500 mb-6">Điều chỉnh ngưỡng cảnh báo cho tổ chức của bạn. Không bật = dùng mặc định hệ thống.</p>
         {err && (
           <div className="mb-4 flex items-center gap-2 text-rose-700 bg-rose-50 border border-rose-200 rounded px-3 py-2 text-sm">
             <AlertCircle className="w-4 h-4" /> {err}
           </div>
         )}
         {loading ? (
-          <div className="flex items-center gap-2 text-slate-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Dang tai...</div>
+          <div className="flex items-center gap-2 text-slate-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Đang tải...</div>
         ) : (
           <div className="bg-white border rounded overflow-hidden">
             <table className="w-full text-sm">
@@ -122,21 +123,21 @@ export default function LossPreventionPage() {
                       </td>
                       <td className="px-3 py-2">
                         <div className="text-sm font-mono">{e.threshold.toLocaleString("vi-VN")} {m.unit}</div>
-                        <div className="text-[11px] text-slate-500">{e.isOverride ? "override" : "mac dinh"}</div>
+                        <div className="text-[11px] text-slate-500">{e.isOverride ? "override" : "mặc định"}</div>
                       </td>
                       <td className="px-3 py-2">
-                        <button onClick={() => updateDraft(e.kind, { active: !(d?.active ?? false) })} className={"px-2 py-0.5 rounded text-xs border " + (d?.active ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-white text-slate-700 border-slate-300")}>
-                          {d?.active ? "BAT" : "TAT"}
+                        <button onClick={() => updateDraft(e.kind, { active: !(d?.active ?? false) })} aria-label={`${d?.active ? "Tắt" : "Bật"} quy tắc ${m.label}`} className={"px-2 py-0.5 rounded text-xs border " + (d?.active ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-white text-slate-700 border-slate-300")}>
+                          {d?.active ? "BẬT" : "TẮT"}
                         </button>
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">
-                        <button onClick={() => save(e.kind)} className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700">
-                          <Save className="w-3 h-3" /> Luu
+                        <button onClick={() => save(e.kind)} className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#8c2d19] text-white rounded text-xs hover:bg-[#7a2816]">
+                          <Save className="w-3 h-3" /> Lưu
                         </button>
-                        <button onClick={() => reset(e.kind)} className="ml-1 inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-700 rounded text-xs hover:bg-slate-200" title="Xoa override, dung mac dinh">
+                        <button onClick={() => { if (!drafts[e.kind]?.id) reset(e.kind); else setPendingReset(e.kind); }} className="ml-1 inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-700 rounded text-xs hover:bg-slate-200" title="Xoá override, dùng mặc định">
                           <RotateCcw className="w-3 h-3" /> Reset
                         </button>
-                        {savedKind === e.kind && <span className="ml-2 text-xs text-emerald-600">Da luu</span>}
+                        {savedKind === e.kind && <span className="ml-2 text-xs text-emerald-600">Đã lưu</span>}
                       </td>
                     </tr>
                   );
@@ -146,9 +147,18 @@ export default function LossPreventionPage() {
           </div>
         )}
         {overrides.length > 0 && (
-          <p className="text-xs text-slate-500 mt-3">{overrides.length} override dang hoat dong cho to chuc nay.</p>
+          <p className="text-xs text-slate-500 mt-3">{overrides.length} override đang hoạt động cho tổ chức này.</p>
         )}
       </main>
+      <ConfirmDialog
+        request={pendingReset ? {
+          title: `Xoá override “${META[pendingReset].label}”?`,
+          body: "Ngưỡng sẽ quay về mặc định hệ thống. Thay đổi có hiệu lực ngay cho các giao dịch mới.",
+          confirmLabel: "Xoá override",
+        } : null}
+        onConfirm={() => { if (pendingReset) void reset(pendingReset); setPendingReset(null); }}
+        onCancel={() => setPendingReset(null)}
+      />
     </div>
   );
 }

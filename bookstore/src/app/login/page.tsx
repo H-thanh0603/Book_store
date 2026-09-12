@@ -28,15 +28,20 @@ export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [resetToken, setResetToken] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const [fromPath, setFromPath] = useState<string | null>(null);
   const router = useRouter();
 
   // Deep links: /login?reset=<token> opens the set-new-password form directly.
+  // ?from=<path> (set by proxy) remembers where the user was headed.
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get("reset");
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("reset");
     if (t) {
       setResetToken(t);
       setMode("reset");
     }
+    const from = params.get("from");
+    if (from && from.startsWith("/") && !from.startsWith("//")) setFromPath(from);
   }, []);
 
   async function submit(e: React.FormEvent) {
@@ -50,7 +55,7 @@ export default function LoginPage() {
         body: JSON.stringify({ action: "login", email, password }),
       });
       if (res.ok) {
-        router.push("/");
+        router.push(fromPath ?? "/");
       } else {
         const d = await res.json();
         setError(d.message ?? "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.");
@@ -143,6 +148,13 @@ export default function LoginPage() {
                       : "Nhập mật khẩu mới cho tài khoản của bạn"}
                 </p>
               </div>
+
+              {fromPath && mode === "login" && (
+                <div className="mb-4 p-3 rounded-xl bg-[#faf4ea] border border-[#e8dac5] flex items-center gap-2.5 text-xs text-[#574431]">
+                  <ShieldCheck className="w-4 h-4 text-[#8c2d19] shrink-0" />
+                  <span>Vui lòng đăng nhập để mở <span className="font-mono font-bold">{fromPath}</span>.</span>
+                </div>
+              )}
 
               {notice && (
                 <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center gap-2.5 text-xs text-emerald-700">

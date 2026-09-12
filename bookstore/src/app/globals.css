@@ -298,6 +298,24 @@ textarea:focus-visible,
   outline-offset: 2px;
 }
 
+/* Browser surfaces carry the heritage world too: selection, caret,
+   scrollbar and tabular numerals. */
+::selection {
+  background: #8c2d19;
+  color: #faf7f2;
+}
+input, textarea {
+  caret-color: #8c2d19;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Editorial serif voice: Playfair Display for display/headings. */
+.font-serif {
+  font-family: var(--font-serif-display), "Playfair Display", Georgia, "Times New Roman", serif;
+}
+
 /* Touch targets: bump sub-44px steppers/closes/favs to 44px minimum
    without redesigning their rows. */
 .touch-44 {

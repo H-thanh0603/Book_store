@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { printReceipt, type ReceiptData } from "@/lib/receipt";
 import BarcodeScanner from "@/components/BarcodeScanner";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 type Product = {
@@ -57,6 +58,8 @@ export default function PosPage() {
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
   const [customerId, setCustomerId] = useState<string>("");
   const [refundNumber, setRefundNumber] = useState("");
+  const [confirmCloseShift, setConfirmCloseShift] = useState(false);
+  const [confirmRefund, setConfirmRefund] = useState(false);
   const [lastTx, setLastTx] = useState<{ number: string; total: number; method: string; items: typeof lines; date: string } | null>(null);
   const [coupon, setCoupon] = useState("");
   // Held bills (N1): park the current cart in localStorage slots when the
@@ -239,7 +242,6 @@ export default function PosPage() {
   }
 
   async function closeShift() {
-    if (!window.confirm("Kết thúc ca làm việc?")) return;
     const r = await fetch("/api/pos", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
@@ -386,7 +388,6 @@ export default function PosPage() {
 
   async function refund() {
     if (!refundNumber.trim()) return;
-    if (!window.confirm(`Hoàn tiền giao dịch ${refundNumber}?`)) return;
     const r = await fetch("/api/pos", {
       method: "PUT",
       headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
@@ -520,7 +521,8 @@ export default function PosPage() {
           <div className="flex items-center gap-2">
             {shiftId && (
               <button
-                onClick={closeShift}
+                onClick={() => setConfirmCloseShift(true)}
+                aria-label="Kết thúc ca làm việc hiện tại"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -605,7 +607,8 @@ export default function PosPage() {
                 />
                 <button
                   disabled={!refundNumber.trim()}
-                  onClick={refund}
+                  onClick={() => setConfirmRefund(true)}
+                  aria-label={`Hoàn tiền giao dịch ${refundNumber.trim()}`}
                   className="px-3 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-white/50 text-white rounded-lg text-xs font-semibold transition-colors"
                 >
                   Hoàn tiền
@@ -625,7 +628,7 @@ export default function PosPage() {
                   <input
                     ref={searchRef}
                     autoFocus
-                    className="w-full bg-white border-2 border-indigo-200 rounded-2xl pl-12 pr-4 py-3.5 text-base text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                    className="w-full bg-white border-2 border-[#e8dac5] rounded-2xl pl-12 pr-4 py-3.5 text-base text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:border-[#8c2d19] focus:ring-4 focus:ring-[#8c2d19]/10"
                     placeholder="Quét mã barcode hoặc gõ tên sách..."
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
@@ -724,11 +727,11 @@ export default function PosPage() {
                         onClick={() => { setSplitMode(!splitMode); setSplitSel(new Set()); }}
                         disabled={!lines.length}
                         title="Chọn món để tách thành hóa đơn riêng"
-                        className={`text-[10px] font-bold px-2 py-1 rounded border disabled:opacity-40 ${splitMode ? "bg-indigo-600 text-white border-indigo-600" : "bg-slate-50 text-slate-600 border-slate-200"}`}
+                        className={`text-[10px] font-bold px-2 py-1 rounded border disabled:opacity-40 ${splitMode ? "bg-[#8c2d19] text-white border-[#8c2d19]" : "bg-slate-50 text-slate-600 border-slate-200"}`}
                       >
                         Tách đơn
                       </button>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#8c2d19]/10 text-[#8c2d19]">
                         {itemCount} món
                       </span>
                     </div>
@@ -897,6 +900,23 @@ export default function PosPage() {
       {scannerOpen && (
         <BarcodeScanner onScan={handleBarcodeScan} onClose={() => setScannerOpen(false)} />
       )}
+      <ConfirmDialog
+        request={confirmCloseShift ? {
+          title: "Kết thúc ca làm việc?",
+          body: "Ca hiện tại sẽ đóng và chốt số liệu tiền mặt. Giỏ hàng đang dở sẽ giữ nguyên để ca sau tiếp tục.",
+          confirmLabel: "Đóng ca",
+        } : confirmRefund && refundNumber.trim() ? {
+          title: `Hoàn tiền giao dịch ${refundNumber.trim()}?`,
+          body: "Tiền sẽ được hoàn cho khách theo phương thức gốc và giao dịch được ghi nhận vào ca hiện tại.",
+          confirmLabel: "Hoàn tiền",
+        } : null}
+        onConfirm={() => {
+          if (confirmCloseShift) void closeShift();
+          else if (confirmRefund) void refund();
+          setConfirmCloseShift(false); setConfirmRefund(false);
+        }}
+        onCancel={() => { setConfirmCloseShift(false); setConfirmRefund(false); }}
+      />
     </main>
   );
 }

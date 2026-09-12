@@ -166,7 +166,10 @@ export default function Nav() {
                   <button
                     onClick={() => setOpenGroup(isGroupOpen ? null : group.label)}
                     onMouseEnter={() => setOpenGroup(group.label)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    aria-expanded={isGroupOpen}
+                    aria-controls={`nav-group-${group.label}`}
+                    aria-label={`Nhóm ${group.label}`}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8c2d19] ${
                       isGroupActive
                         ? "bg-[#8c2d19] text-white shadow-sm"
                         : "text-[#574431] hover:text-[#1c1917] hover:bg-[#faf4ea]"
@@ -180,6 +183,9 @@ export default function Nav() {
                   {/* Dropdown */}
                   {isGroupOpen && (
                     <div
+                      id={`nav-group-${group.label}`}
+                      role="menu"
+                      aria-label={group.label}
                       className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-[#ede5d8] py-1.5 min-w-[160px] z-50"
                       onMouseLeave={() => setOpenGroup(null)}
                     >
@@ -190,8 +196,10 @@ export default function Nav() {
                           <Link
                             key={item.href}
                             href={item.href}
+                            role="menuitem"
+                            aria-current={isActive ? "page" : undefined}
                             onClick={() => setOpenGroup(null)}
-                            className={`flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors ${
+                            className={`flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#8c2d19] ${
                               isActive
                                 ? "bg-[#8c2d19] text-white"
                                 : item.highlight
@@ -229,9 +237,10 @@ export default function Nav() {
                 <button
                   onClick={handleLogout}
                   title="Đăng xuất"
-                  className="w-10 h-10 flex items-center justify-center text-[#574431] hover:text-[#c83f49] hover:bg-red-50 rounded-lg transition-colors"
+                  aria-label="Đăng xuất khỏi hệ thống"
+                  className="w-10 h-10 flex items-center justify-center text-[#574431] hover:text-[#c83f49] hover:bg-red-50 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-[#8c2d19]"
                 >
-                  <LogOut className="w-5 h-5" />
+                  <LogOut className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
             ) : (
@@ -247,15 +256,18 @@ export default function Nav() {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="xl:hidden w-10 h-10 flex items-center justify-center text-[#574431] hover:bg-[#faf4ea] rounded-lg"
+              aria-expanded={mobileOpen}
+              aria-controls="melio-mobile-nav"
+              aria-label={mobileOpen ? "Đóng menu điều hướng" : "Mở menu điều hướng"}
+              className="xl:hidden w-10 h-10 flex items-center justify-center text-[#574431] hover:bg-[#faf4ea] rounded-lg focus-visible:outline-2 focus-visible:outline-[#8c2d19]"
             >
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileOpen ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
             </button>
           </div>
         </div>
 
         {/* Sub-nav bar for large screens under XL */}
-        <div className="hidden md:flex xl:hidden overflow-x-auto gap-1 py-2 border-t border-[#ede5d8]">
+        <nav aria-label="Điều hướng phụ" className="hidden md:flex xl:hidden overflow-x-auto gap-1 py-2 border-t border-[#ede5d8]">
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="flex items-center gap-1">
               <span className="text-[10px] font-bold text-[#574431]/60 uppercase tracking-wider px-1.5">
@@ -268,7 +280,8 @@ export default function Nav() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.2 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
+                    aria-current={isActive ? "page" : undefined}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all focus-visible:outline-2 focus-visible:outline-[#8c2d19] ${
                       isActive
                         ? "bg-[#8c2d19] text-white"
                         : item.highlight
@@ -283,12 +296,12 @@ export default function Nav() {
               })}
             </div>
           ))}
-        </div>
+        </nav>
       </div>
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="xl:hidden bg-[#fbf8f3] border-b border-[#ede5d8] px-4 pt-2 pb-4 space-y-1">
+        <div id="melio-mobile-nav" className="xl:hidden bg-[#fbf8f3] border-b border-[#ede5d8] px-4 pt-2 pb-4 space-y-1">
           {NAV_GROUPS.map((group) => {
             const GroupIcon = group.icon;
             return (

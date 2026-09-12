@@ -97,9 +97,10 @@ export function proxy(req: NextRequest) {
     }
   }
 
-  // Public paths pass through
-  if (isPublicPath(pathname)) {
-    const requestId = crypto.randomUUID();
+  // Root decides by session: guests are sent to /shop, staff see the
+  // workspace (see src/app/page.tsx). Let it through so guests land on
+  // the storefront instead of bouncing to /login.
+  if (pathname === "/" || isPublicPath(pathname)) {    const requestId = crypto.randomUUID();
     const headers = new Headers(req.headers);
     headers.set("x-request-id", requestId);
     if (pathname.startsWith("/api/")) console.info(JSON.stringify({

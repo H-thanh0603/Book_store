@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Nav from "../../nav";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { ArrowLeft, FileText, AlertCircle, CheckCircle2, ExternalLink, Loader2 } from "lucide-react";
 
 type Attempt = {
@@ -41,6 +42,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const [row, setRow] = useState<Detail | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   useEffect(() => {
     params.then(({ id }) => {
@@ -53,7 +55,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
   async function cancel() {
     if (!row) return;
-    if (!confirm("Hủy hóa đơn điện tử này?")) return;
     setBusy(true);
     try {
       const r = await fetch(`/api/invoices/${row.id}/cancel`, { method: "POST" });
@@ -136,8 +137,9 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
         {row.status === "ISSUED" && (
           <button
-            onClick={cancel}
+            onClick={() => setConfirmCancel(true)}
             disabled={busy}
+            aria-label={`Hủy hóa đơn ${row.invoiceNumber ?? row.id.slice(0, 8)}`}
             className="mb-6 px-4 py-2 bg-rose-600 text-white rounded text-sm hover:bg-rose-700 disabled:opacity-50 inline-flex items-center gap-1"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
@@ -175,6 +177,15 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </section>
       </main>
+      <ConfirmDialog
+        request={confirmCancel && row ? {
+          title: `Hủy hóa đơn #${row.invoiceNumber ?? row.id.slice(0, 8)}?`,
+          body: `Hóa đơn ${row.total.toLocaleString("vi-VN")} đ cho ${row.customerName} sẽ bị hủy trên hệ thống thuế. Đơn hàng gốc giữ nguyên. Không thể hoàn tác.`,
+          confirmLabel: "Hủy hóa đơn",
+        } : null}
+        onConfirm={() => { setConfirmCancel(false); void cancel(); }}
+        onCancel={() => setConfirmCancel(false)}
+      />
     </div>
   );
 }

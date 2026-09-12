@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../nav";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   Truck,
   Plus,
@@ -38,6 +39,7 @@ export default function SuppliersPage() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editSupplier, setEditSupplier] = useState<Supplier | null>(null);
+  const [pendingDeactivate, setPendingDeactivate] = useState<Supplier | null>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -94,7 +96,6 @@ export default function SuppliersPage() {
   }
 
   async function deactivateSupplier(id: string) {
-    if (!window.confirm("Vô hiệu hóa nhà cung cấp này?")) return;
     const r = await fetch(`/api/suppliers/${id}`, {
       method: "DELETE",
       headers: { "x-csrf-check": "1" },
@@ -159,7 +160,7 @@ export default function SuppliersPage() {
                     <Edit2 className="w-3 h-3" />
                   </button>
                   {s.active && (
-                    <button onClick={() => deactivateSupplier(s.id)} className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600">
+                    <button onClick={() => setPendingDeactivate(s)} aria-label={`Vô hiệu hóa nhà cung cấp ${s.name}`} className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600">
                       <XCircle className="w-3 h-3" />
                     </button>
                   )}
@@ -289,6 +290,15 @@ export default function SuppliersPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        request={pendingDeactivate ? {
+          title: `Vô hiệu hóa ${pendingDeactivate.name}?`,
+          body: "Nhà cung cấp sẽ không còn dùng được cho đơn nhập hàng mới. Các đơn đã tạo giữ nguyên. Có thể kích hoạt lại sau.",
+          confirmLabel: "Vô hiệu hóa",
+        } : null}
+        onConfirm={() => { if (pendingDeactivate) void deactivateSupplier(pendingDeactivate.id); setPendingDeactivate(null); }}
+        onCancel={() => setPendingDeactivate(null)}
+      />
     </main>
   );
 }

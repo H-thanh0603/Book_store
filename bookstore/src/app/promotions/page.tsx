@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../nav";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   Tag,
   Plus,
@@ -47,6 +48,7 @@ export default function PromotionsPage() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editPromo, setEditPromo] = useState<Promotion | null>(null);
+  const [pendingDeactivate, setPendingDeactivate] = useState<Promotion | null>(null);
 
   const [form, setForm] = useState({
     name: "", code: "", type: "percentage", value: 10, buyQty: 2, getQty: 1,
@@ -118,7 +120,6 @@ export default function PromotionsPage() {
   }
 
   async function deactivatePromo(id: string) {
-    if (!window.confirm("Tắt khuyến mãi này?")) return;
     const r = await fetch(`/api/promotions/${id}`, {
       method: "DELETE",
       headers: { "x-csrf-check": "1" },
@@ -210,7 +211,7 @@ export default function PromotionsPage() {
                           <Edit2 className="w-3 h-3" />
                         </button>
                         {p.active && (
-                          <button onClick={() => deactivatePromo(p.id)} className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600">
+                          <button onClick={() => setPendingDeactivate(p)} aria-label={`Tắt khuyến mãi ${p.name}`} className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600">
                             <XCircle className="w-3 h-3" />
                           </button>
                         )}
@@ -331,6 +332,15 @@ export default function PromotionsPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        request={pendingDeactivate ? {
+          title: `Tắt khuyến mãi “${pendingDeactivate.name}”?`,
+          body: "Mã đang chạy sẽ ngừng áp dụng cho đơn mới ngay lập tức. Đơn đã dùng mã giữ nguyên. Có thể bật lại sau.",
+          confirmLabel: "Tắt khuyến mãi",
+        } : null}
+        onConfirm={() => { if (pendingDeactivate) void deactivatePromo(pendingDeactivate.id); setPendingDeactivate(null); }}
+        onCancel={() => setPendingDeactivate(null)}
+      />
     </main>
   );
 }

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Nav from "../../nav";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { Webhook, Plus, AlertCircle, Loader2, Trash2, ExternalLink } from "lucide-react";
 
 type Endpoint = {
@@ -19,6 +20,7 @@ export default function WebhooksPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
+  const [pendingRemove, setPendingRemove] = useState<Endpoint | null>(null);
 
   async function load() {
     setLoading(true); setErr(null);
@@ -40,7 +42,6 @@ export default function WebhooksPage() {
     load();
   }
   async function remove(id: string) {
-    if (!confirm("Xoá endpoint này? Lịch sử delivery cũng sẽ mất.")) return;
     await fetch(`/api/webhooks/${id}`, { method: "DELETE" });
     load();
   }
@@ -107,7 +108,7 @@ export default function WebhooksPage() {
                       <Link href={`/settings/webhooks/${r.id}`} className="text-blue-600 hover:underline text-xs inline-flex items-center gap-1">
                         Chi tiết <ExternalLink className="w-3 h-3" />
                       </Link>
-                      <button onClick={() => remove(r.id)} className="text-rose-600 hover:underline text-xs inline-flex items-center gap-1">
+                      <button onClick={() => setPendingRemove(r)} aria-label={`Xoá endpoint ${r.provider}`} className="text-rose-600 hover:underline text-xs inline-flex items-center gap-1">
                         <Trash2 className="w-3 h-3" /> Xoá
                       </button>
                     </td>
@@ -118,6 +119,15 @@ export default function WebhooksPage() {
           </div>
         )}
       </main>
+      <ConfirmDialog
+        request={pendingRemove ? {
+          title: `Xoá endpoint ${pendingRemove.provider}?`,
+          body: `URL ${pendingRemove.url} sẽ ngừng nhận sự kiện và toàn bộ lịch sử delivery cũng mất. Không thể hoàn tác.`,
+          confirmLabel: "Xoá endpoint",
+        } : null}
+        onConfirm={() => { if (pendingRemove) void remove(pendingRemove.id); setPendingRemove(null); }}
+        onCancel={() => setPendingRemove(null)}
+      />
     </div>
   );
 }
