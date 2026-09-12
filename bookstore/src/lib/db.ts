@@ -43,15 +43,40 @@ function createPool(connectionString: string, max: number) {
  * becomes a 500 storm. pg has no acquire event, so we wrap `pool.connect()`
  * (the single entry point PrismaPg's adapter uses) and record how long the
  * caller waited plus how deep the queue was on arrival. Feeds /api/metrics.
+ *
+ * The same wrapper carries a circuit breaker (REL-003): without it a
+ * hanging/dead database makes EVERY request wait out the 5s connect timeout,
+ * exhausting the Node thread pool. After N consecutive checkout failures the
+ * breaker opens and fails fast with 503 for COOLDOWN_MS — one probe per
+ * cooldown is let through (half-open) to detect recovery.
  */
+const BREAKER_FAILURES = Number(process.env.DB_BREAKER_FAILURES ?? 5);
+const BREAKER_COOLDOWN_MS = Number(process.env.DB_BREAKER_COOLDOWN_MS ?? 30_000);
+let breakerFailures = 0;
+let breakerOpenedAt = 0;
+
+export function dbBreakerState(): { failures: number; open: boolean } {
+  const open = breakerFailures >= BREAKER_FAILURES && Date.now() - breakerOpenedAt < BREAKER_COOLDOWN_MS;
+  return { failures: breakerFailures, open };
+}
+
 function instrumentPoolWait(pool: pg.Pool) {
   const original = pool.connect.bind(pool);
   const wrapped = async (...args: Parameters<typeof original>) => {
+    if (dbBreakerState().open)
+      throw Object.assign(new Error("Database unavailable (circuit open)"), { status: 503, code: "UNAVAILABLE" });
     const waitingAtArrival = pool.waitingCount;
     const started = Date.now();
-    const client = await original(...args);
-    observePoolAcquire(Date.now() - started, waitingAtArrival);
-    return client;
+    try {
+      const client = await original(...args);
+      breakerFailures = 0; // a successful checkout closes the breaker
+      observePoolAcquire(Date.now() - started, waitingAtArrival);
+      return client;
+    } catch (err) {
+      breakerFailures += 1;
+      if (breakerFailures >= BREAKER_FAILURES) breakerOpenedAt = Date.now();
+      throw err;
+    }
   };
   // Keep the property shape pg users expect (sync overload still available).
   (pool as unknown as { connect: typeof wrapped }).connect = wrapped;
