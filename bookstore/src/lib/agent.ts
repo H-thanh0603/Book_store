@@ -3,7 +3,7 @@
 // Design: read-only discovery + quote. Consequential actions (checkout,
 // payment, refund) REQUIRE human approval — agents must hand control back
 // to the shopper instead of calling them directly.
-export const AGENT_MANIFEST_VERSION = "1.0.0";
+export const AGENT_MANIFEST_VERSION = "1.1.0";
 
 export type AgentTool = {
   name: string;
@@ -74,19 +74,31 @@ export function buildAgentManifest(baseUrl: string) {
 
   return {
     $comment:
-      "Melio Bookstore Agent layer v1 — read-only discovery. WebMCP vẫn là draft W3C nên manifest này mô tả REST hiện có dưới dạng agent tools, không tự nhận là WebMCP standard.",
+      "Melio Bookstore Agent layer v1.1 — read-only discovery. MCP clients: POST /.well-known/mcp-server discovery, then JSON-RPC to /api/mcp (no SSE handshake). ask_concierge is HTTP-only by design (token streaming).",
     name: "Melio Bookstore",
     version: AGENT_MANIFEST_VERSION,
     humanEntry: "/shop",
     machineEntry: "/llms.txt",
+    discovery: {
+      mcpServer: "/.well-known/mcp-server",
+      aiCatalog: "/.well-known/ai-catalog.json",
+      mcpEndpoint: "/api/mcp",
+    },
+    auth: {
+      type: "api-key",
+      header: "x-agent-key",
+      required: false,
+      notes:
+        "Registered keys get a private per-minute quota and a verifiable session log. Anonymous callers share per-IP buckets. Ask a Melio admin to issue/revoke keys.",
+    },
     policies: {
       consequentialActions:
         "CHECKOUT, PAYMENT và REFUND là consequential actions: agent TUYỆT ĐỐI KHÔNG tự gọi POST /api/storefront. Hiển thị quote + chuyển quyền điều khiển cho con người bấm Thanh toán.",
       grounding:
-        "Mọi tên sách/giá/tác giả agent nhắc tới PHẢI đến từ search_products hoặc ask_concierge. Không bịa catalogue.",
-      provenance: "Dữ liệu tồn kho/giá phản ánh đúng chi nhánh đang chọn, cache tối đa 30s.",
+        "Mọi tên sách/giá/tác giả agent nhắc tới PHẢI đến từ search_products hoặc ask_concierge items. Concierge `text` mang nhãn W3C PROV humanVerified:false — không trích text làm fact, chỉ trích items.",
+      provenance: "Dữ liệu tồn kho/giá phản ánh đúng chi nhánh đang chọn, cache tối đa 30s. Mọi tool call ghi vào hash-chain, verify tại GET /api/agent-events/verify (staff).",
       rateLimits:
-        "storefront-catalog 60 req/phút/IP, quote 60 req/phút/IP, track 20 req/phút/IP, concierge 20 req/phút/IP.",
+        "Anonymous per IP: storefront-catalog 60 req/phút, quote 60 req/phút, track 20 req/phút, concierge 20 req/phút. Keyed: quota riêng theo key.",
       privacy:
         "track_order không bao giờ trả về tên/SĐT/địa chỉ khách. Không thu thập dữ liệu không cần thiết.",
     },

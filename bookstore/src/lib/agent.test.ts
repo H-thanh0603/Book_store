@@ -19,4 +19,12 @@ describe("agent manifest", () => {
     expect(manifest.policies.consequentialActions).toMatch(/KHÔNG.*POST \/api\/storefront/);
     expect(manifest.docs).toBe("https://example.com/llms.txt");
   });
+
+  it("v1.1 advertises MCP + ARD discovery and key auth", () => {
+    const manifest = buildAgentManifest("https://example.com");
+    expect(manifest.version).toBe("1.1.0");
+    expect(manifest.discovery.mcpEndpoint).toBe("/api/mcp");
+    expect(manifest.discovery.aiCatalog).toBe("/.well-known/ai-catalog.json");
+    expect(manifest.auth.header).toBe("x-agent-key");
+  });
 });
