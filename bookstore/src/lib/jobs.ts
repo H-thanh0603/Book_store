@@ -32,7 +32,12 @@ export const JOB_KINDS = {
 
 export type JobKind = keyof typeof JOB_KINDS;
 const WORKER_ID = `${process.env.HOSTNAME ?? "local"}:${randomUUID()}`;
-const LEASE_MS = 30 * 60_000;
+// Takeover window for a dead worker (REL-001): a RUNNING run whose lease
+// expired is claimable by another worker. 30 min stalled everything on a
+// worker-0 crash; 5 min bounds the stall. Long jobs renew the lease via
+// heartbeat below, so a short window never double-runs healthy work — only
+// genuinely dead workers lose their runs. Override with JOB_LEASE_MS.
+const LEASE_MS = Number(process.env.JOB_LEASE_MS ?? 5 * 60_000);
 
 /**
  * Run one job kind under the JobRun ledger: attempts++, RUNNING while in flight,
@@ -63,6 +68,18 @@ export async function runJob(kind: JobKind, runId?: string) {
       leaseExpiresAt: new Date(Date.now() + LEASE_MS),
     } });
   if (!run) return null;
+
+  // Heartbeat: renew our own lease while the job runs, so a healthy long job
+  // (replenishment, MISA export) is never reaped by the takeover above.
+  // Only the owning workerId can renew; a dead worker's timer dies with it.
+  const heartbeat = setInterval(() => {
+    void prisma.jobRun.updateMany({
+      where: { id: run.id, status: "RUNNING", workerId: WORKER_ID },
+      data: { leaseExpiresAt: new Date(Date.now() + LEASE_MS) },
+    }).catch(() => {});
+  }, Math.max(30_000, Math.floor(LEASE_MS / 3)));
+  if (typeof (heartbeat as unknown as { unref?: () => void }).unref === "function")
+    (heartbeat as unknown as { unref: () => void }).unref();
 
   try {
     const result = await JOB_KINDS[kind]();
@@ -97,6 +114,8 @@ export async function runJob(kind: JobKind, runId?: string) {
       },
     });
     return prisma.jobRun.findUnique({ where: { id: run.id } });
+  } finally {
+    clearInterval(heartbeat);
   }
 }
 

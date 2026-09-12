@@ -10,10 +10,11 @@
  *   Each worker opens DB_POOL_MAX Postgres connections; put PgBouncer in front
  *   of Postgres once workers × DB_POOL_MAX approaches max_connections.
  *
- * Scheduler: instrumentation.ts ticks the job queue. In cluster mode every
- * worker would race for the same JobRun rows — safe (DB claims) but wasteful,
- * so by default ONLY worker NODE_APP_INSTANCE=0 schedules (see schedulerEnabled).
- * Set JOB_SCHEDULER_ENABLED=false to outsource jobs to external cron instead.
+ * Scheduler: the dedicated `bookstore-worker` app below owns the job queue.
+ * The web cluster sets JOB_SCHEDULER_ENABLED=false so it never schedules —
+ * DB claims would keep a double-scheduler safe but wasteful. If you run
+ * without the worker app, unset the flag: worker NODE_APP_INSTANCE=0
+ * schedules as before.
  *
  * Log rotation (OPS-002): PM2 itself never rotates ./logs/*. One-time on the
  * server: `pm2 install pm2-logrotate` (defaults: 10MB × 30 files per stream
@@ -33,8 +34,8 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: 3000,
-        // Default gate resolves per-worker via NODE_APP_INSTANCE; leave unset here.
-        // JOB_SCHEDULER_ENABLED: "false",
+        // Jobs are owned by the bookstore-worker app below.
+        JOB_SCHEDULER_ENABLED: "false",
       },
       env_production: {
         NODE_ENV: "production",
@@ -56,6 +57,31 @@ module.exports = {
       kill_timeout: 30000,
       // Wait for /api/health/live between restarts during reload.
       wait_ready: false,
+    },
+    {
+      // Dedicated job worker (WS1.2 / REL-001): standalone tsx loop, outside
+      // the HTTP cluster. A dead web worker can no longer stall background
+      // work; a dead job worker is restarted by PM2 and another claimant
+      // picks up expired leases within JOB_LEASE_MS (default 5 min).
+      name: "bookstore-worker",
+      script: "npx",
+      args: "tsx scripts/worker.ts",
+      instances: 1,
+      exec_mode: "fork",
+      watch: false,
+      max_memory_restart: "512M",
+      env: {
+        NODE_ENV: "production",
+      },
+      env_production: {
+        NODE_ENV: "production",
+        // JOB_TICK_MS / JOB_LEASE_MS optional overrides (defaults: 5 min).
+      },
+      error_file: "./logs/pm2-worker-error.log",
+      out_file: "./logs/pm2-worker-out.log",
+      log_date_format: "YYYY-MM-DD HH:mm:ss Z",
+      merge_logs: true,
+      kill_timeout: 60000, // let the in-flight tick finish before SIGKILL
     },
   ],
 };
