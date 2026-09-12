@@ -9,17 +9,19 @@ import { sendMail } from "./mail";
 import { orderConfirmationEmail, type OrderEmailData } from "./email-templates";
 import { cacheGet, cacheSet } from "./redis";
 
-// In-process fuzzy gate cache (SCALE-003): { count, at }. Redis is optional
-// here — a per-process 5-min TTL is fine because the gate is approximate.
-let fuzzyCountCache: { count: number; at: number } | null = null;
-async function fuzzyAllowed(): Promise<boolean> {
+// In-process fuzzy gate cache (SCALE-003): per-org { count, at }. Redis is
+// optional here — a per-process 5-min TTL is fine because the gate is approximate.
+const fuzzyCountCache = new Map<string, { count: number; at: number }>();
+async function fuzzyAllowed(orgId: string): Promise<boolean> {
   const FUZZY_MAX_ROWS = Math.max(1000, Number(process.env.FUZZY_MAX_ROWS ?? 50_000) || 50_000);
   const now = Date.now();
-  if (!fuzzyCountCache || now - fuzzyCountCache.at > 5 * 60_000) {
-    const count = await prismaRead.product.count({ where: { status: "active" } });
-    fuzzyCountCache = { count, at: now };
+  const cached = fuzzyCountCache.get(orgId);
+  if (!cached || now - cached.at > 5 * 60_000) {
+    const count = await prismaRead.product.count({ where: { status: "active", orgId } });
+    fuzzyCountCache.set(orgId, { count, at: now });
+    return count <= FUZZY_MAX_ROWS;
   }
-  return fuzzyCountCache.count <= FUZZY_MAX_ROWS;
+  return cached.count <= FUZZY_MAX_ROWS;
 }
 
 // Cache layer: Redis (shared across instances) with in-process fallback.
@@ -80,9 +82,12 @@ async function listStorefrontProductsUncached(input: {
   // so word order no longer matters ("potter hary" works).
   const words = q ? q.split(/\s+/).slice(0, 6) : [];
   const store = input.storeId
-    ? await prismaRead.store.findFirst({ where: { id: input.storeId, active: true }, select: { id: true } })
-    : await prismaRead.store.findFirst({ where: { active: true }, orderBy: { code: "asc" }, select: { id: true } });
+    ? await prismaRead.store.findFirst({ where: { id: input.storeId, active: true }, select: { id: true, orgId: true } })
+    : await prismaRead.store.findFirst({ where: { active: true }, orderBy: { code: "asc" }, select: { id: true, orgId: true } });
   if (!store) fail(404, "NOT_FOUND", "No active store available");
+  // SEC-004: the public catalog shows only the selected store's org —
+  // one tenant's assortment never leaks into another tenant's storefront.
+  const orgId = store.orgId;
   const now = new Date();
   const catalogSelect = {
     select: {
@@ -114,6 +119,7 @@ async function listStorefrontProductsUncached(input: {
     prismaRead.product.findMany({
       where: {
         status: "active",
+        orgId,
         categoryId: input.categoryId || undefined,
         ...(words.length ? {
           AND: words.map((w) => ({
@@ -131,11 +137,11 @@ async function listStorefrontProductsUncached(input: {
       orderBy: { name: "asc" }, take: 100,
     }),
     prismaRead.category.findMany({
-      where: { products: { some: { status: "active" } } },
+      where: { products: { some: { status: "active", orgId } } },
       select: { id: true, name: true }, orderBy: { name: "asc" },
     }),
     prismaRead.store.findMany({
-      where: { active: true }, select: { id: true, name: true, code: true }, orderBy: { code: "asc" },
+      where: { active: true, orgId }, select: { id: true, name: true, code: true }, orderBy: { code: "asc" },
     }),
   ]);
 
@@ -155,7 +161,7 @@ async function listStorefrontProductsUncached(input: {
   // a 300ms gamble and becomes a guaranteed pool pin — skip the fuzzy tier
   // entirely and return the exact result. Count is cached 5 min in-process
   // (a count(*) per search would itself scan on huge catalogs).
-  if (words.length === 1 && words[0].length >= 3 && rows.length === 0 && (await fuzzyAllowed())) {
+  if (words.length === 1 && words[0].length >= 3 && rows.length === 0 && (await fuzzyAllowed(orgId))) {
     try {
       const hits = await prismaRead.$transaction(async (tx) => {
         // SET LOCAL cannot take a bind parameter (Prisma 42601) — inline a
@@ -164,7 +170,7 @@ async function listStorefrontProductsUncached(input: {
         await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${FUZZY_STATEMENT_TIMEOUT_MS}`);
         return tx.$queryRaw<{ id: string }[]>`
           SELECT p.id FROM "Product" p
-          WHERE p.status = 'active' ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
+          WHERE p.status = 'active' AND p."orgId" = ${orgId} ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
             AND NOT EXISTS (
               SELECT 1
               FROM unnest(${words}::text[]) q(w)
@@ -178,7 +184,7 @@ async function listStorefrontProductsUncached(input: {
       });
       if (hits.length)
         rows = await prismaRead.product.findMany({
-          where: { id: { in: hits.map((h) => h.id) } },
+          where: { id: { in: hits.map((h) => h.id) }, orgId },
           ...catalogSelect,
           orderBy: { name: "asc" },
         });
@@ -200,13 +206,13 @@ async function listStorefrontProductsUncached(input: {
           SELECT e."productId" AS id
           FROM "ProductEmbedding" e
           JOIN "Product" p ON p.id = e."productId"
-          WHERE p.status = 'active'
+          WHERE p.status = 'active' AND p."orgId" = ${orgId}
             ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
           ORDER BY e.embedding <=> ${`[${vec.join(",")}]`}::vector
           LIMIT 100`;
         if (hits.length)
           rows = await prismaRead.product.findMany({
-            where: { id: { in: hits.map((h) => h.id) } },
+            where: { id: { in: hits.map((h) => h.id) }, orgId },
             ...catalogSelect,
             orderBy: { name: "asc" },
           });
@@ -280,8 +286,19 @@ export async function quoteStorefrontOrder(input: StorefrontQuoteInput): Promise
       couponInvalidReason = "Mã đã hết lượt sử dụng";
   }
 
+  // SEC-004: cart variant ids are client-controlled — resolve the store's org
+  // first and price only that org's variants. A crafted quote for another
+  // tenant's variant fails closed (unknown variant) instead of pricing
+  // foreign goods.
+  const quoteStore = input.storeId
+    ? await prismaRead.store.findFirst({ where: { id: input.storeId, active: true }, select: { orgId: true } })
+    : null;
   const variants = await prismaRead.productVariant.findMany({
-    where: { id: { in: input.items.map((item) => item.variantId) }, active: true },
+    where: {
+      id: { in: input.items.map((item) => item.variantId) },
+      active: true,
+      ...(quoteStore ? { orgId: quoteStore.orgId } : {}),
+    },
     include: {
       product: { select: { categoryId: true } },
       prices: {
@@ -411,10 +428,10 @@ export async function checkoutStorefrontOrder(
       throw err;
     });
 
-  // Fetch variant details for email template
+  // Fetch variant details for email template (org-scoped like the quote).
   const variantIds = input.items.map((item) => item.variantId);
   const variants = await prisma.productVariant.findMany({
-    where: { id: { in: variantIds } },
+    where: { id: { in: variantIds }, orgId },
     select: { id: true, product: { select: { name: true } } },
   });
 

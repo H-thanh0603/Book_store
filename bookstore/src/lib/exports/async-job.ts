@@ -83,7 +83,7 @@ async function buildExportFile(jobId: string): Promise<number> {
   const entry = EXPORT_TYPES[job.type as ExportTypeName];
   const { storeScope } = await resolveExportScope(job, entry.permission);
 
-  const data = await fetch(storeScope);
+  const data = await fetch(storeScope, job.orgId);
   if (data.length > MAX_ROWS_ASYNC)
     throw new Error(`Export too large: ${data.length} rows (limit ${MAX_ROWS_ASYNC})`);
   const result = await exportData(

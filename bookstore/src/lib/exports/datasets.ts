@@ -79,9 +79,13 @@ export const EXPORT_TYPES = {
   revenue: { permission: 'reports.financial.view', columns: () => revenueColumns, fetch: fetchRevenue },
 } as const
 
-async function fetchProducts(storeScope: string[] | null) {
+async function fetchProducts(storeScope: string[] | null, orgId?: string | null) {
   const products = await prisma.product.findMany({
-    where: { status: 'active', ...(storeScope ? { variants: { some: { balances: { some: { location: { storeId: { in: storeScope } } } } } } } : {}) },
+    where: {
+      status: 'active',
+      ...(orgId ? { orgId } : {}),
+      ...(storeScope ? { variants: { some: { balances: { some: { location: { storeId: { in: storeScope } } } } } } } : {}),
+    },
     include: {
       category: { select: { name: true } },
       brand: { select: { name: true } },
@@ -154,12 +158,13 @@ async function fetchInventory(storeScope: string[] | null) {
   return balances
 }
 
-async function fetchCustomers() {
-  // ponytail: Customer has no orgId column yet (shared global catalog), so
-  // this export is org-gated by the customer.view permission only. The old
-  // shape loaded up to 1000 orders PER customer in one query — replaced with
-  // a single grouped aggregation over the same take:10000 customer page.
+async function fetchCustomers(_storeScope?: string[] | null, orgId?: string | null) {
+  // SEC-004: Customer.orgId exists — scope the export instead of relying on
+  // the permission alone. The old shape loaded up to 1000 orders PER customer
+  // in one query — replaced with a single grouped aggregation over the same
+  // take:10000 customer page.
   const customers = await prisma.customer.findMany({
+    where: orgId ? { orgId } : {},
     select: {
       id: true, code: true, name: true, phone: true, email: true,
       loyalty: { select: { points: true } },

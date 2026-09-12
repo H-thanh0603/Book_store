@@ -39,8 +39,27 @@ export async function createReservedOrder(
       fail(400, "VALIDATION", "Each item needs a variantId and positive integer quantity");
 
   const db = client ?? prisma;
+  // SEC-004: variant ids are client-controlled — scope them to the fulfillment
+  // org (store's org, or the location's store org). Cross-tenant variant ids
+  // fail closed as unknown variants below.
+  let orderOrgId: string | null = null;
+  if (input.storeId) {
+    const s = await db.store.findUnique({ where: { id: input.storeId }, select: { orgId: true } });
+    if (!s) fail(404, "NOT_FOUND", "Store not found");
+    orderOrgId = s.orgId;
+  } else if (input.locationId) {
+    const l = await db.stockLocation.findUnique({
+      where: { id: input.locationId },
+      select: { store: { select: { orgId: true } } },
+    });
+    orderOrgId = l?.store?.orgId ?? null;
+  }
   const variants = await db.productVariant.findMany({
-    where: { id: { in: input.items.map((item) => item.variantId) }, active: true },
+    where: {
+      id: { in: input.items.map((item) => item.variantId) },
+      active: true,
+      ...(orderOrgId ? { orgId: orderOrgId } : {}),
+    },
     include: {
       product: true,
       prices: {
