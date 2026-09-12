@@ -177,6 +177,45 @@ A CI scheduled workflow (`.github/workflows/backup-drill.yml`, weekly)
 seeds a scratch database, dumps it, and runs `restore-drill.sh` — a red
 drill fails the workflow and must page the on-call before the next release.
 
+### SEC-004 backfill (multi-org production)
+
+Migration `20260912060000_sec004_org_scope` assigns pre-existing catalog
+rows to the oldest org (stores follow their region — always correct).
+Single-org deployments need nothing. **Multi-org databases: before going
+live, reassign products/variants to their owning org**, e.g.:
+
+```sql
+UPDATE "Product" SET "orgId" = '<org-B>' WHERE ...;
+UPDATE "ProductVariant" v SET "orgId" = p."orgId" FROM "Product" p WHERE p.id = v."productId";
+```
+
+Verify no two orgs share a code/sku afterwards:
+`SELECT code, COUNT(DISTINCT "orgId") FROM "Store" GROUP BY code HAVING COUNT(DISTINCT "orgId") > 1;`
+(same shape for `ProductVariant` on `sku`).
+
+## SLA tiers
+
+Commitments per subscription plan (WS3.3 — put the tier in the customer contract):
+
+| Tier | Uptime/mo | p95 checkout | Support response | Backup |
+|------|-----------|--------------|------------------|--------|
+| FREE/TRIAL | best-effort | — | community | nightly dump |
+| PRO | 99.5% | < 3s | 1 business day | dump + WAL (RPO ≤ 15 min) |
+| ENTERPRISE | 99.9% | < 2s | 4 business hours, on-call phone | dump + WAL + offsite |
+
+Exclusions: payment-gateway / T-VAN / shipping-carrier outages, customer
+network, force majeure. Planned maintenance windows (announced 72h ahead)
+don't count against uptime.
+
+### On-call flow
+
+1. Alert fires (healthchecks.io / cron mail / red backup-drill workflow).
+2. Acknowledge in 15 min (Enterprise) / 2h (Pro): `/api/health/ready`,
+   `JobRun` FAILED rows, `pm2 logs --lines 200`.
+3. Mitigate first (rollback to last SHA, disable integration), diagnose second.
+4. Post-mortem within 48h for any data-loss or >30-min outage: timeline,
+   root cause, action items with owners. File under `docs/incidents/`.
+
 Restore: `pg_restore --clean --dbname "$DATABASE_URL" backups/bookstore-<stamp>.dump`.
 
 A backup is only as good as its last restore. Run the drill automatically in CI

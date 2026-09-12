@@ -67,3 +67,16 @@ offboarding, periodic policy):
 4. Verify an inbound webhook still verifies (or re-trigger a signed test event).
 
 The old key is safe to discard only after step 4 passes.
+
+## Release changelog (template)
+
+Every production deploy records one entry in `docs/CHANGELOG.md` (create on
+first use):
+
+```markdown
+## 2026-09-12 — <short title>
+- App SHA: <git sha> · Migrations: <names or "none">
+- Changes: <1 line each, user-visible first>
+- Rollback: <forward-fix plan or "redeploy <previous SHA>">
+- Verified: <smoke checks run + by whom>
+```
