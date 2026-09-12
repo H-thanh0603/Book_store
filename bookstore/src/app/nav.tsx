@@ -25,6 +25,8 @@ import {
   ChevronDown,
   Library,
   Undo2,
+  Receipt,
+  MapPin,
 } from "lucide-react";
 import SupportWidget from "./support-widget";
 
@@ -48,6 +50,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/pos", label: "POS Bán Hàng", icon: Store, highlight: true },
       { href: "/orders", label: "Đơn hàng", icon: ShoppingBag },
+      { href: "/invoices", label: "Hóa đơn", icon: Receipt },
     ],
   },
   {
@@ -67,6 +70,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/purchase-orders", label: "Nhập hàng", icon: Truck },
       { href: "/suppliers", label: "NCC", icon: Building2 },
       { href: "/transfers", label: "Điều chuyển", icon: ArrowLeftRight },
+      { href: "/stores", label: "Chi nhánh", icon: MapPin },
     ],
   },
   {
