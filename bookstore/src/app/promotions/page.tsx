@@ -12,6 +12,7 @@ import {
   Percent,
   DollarSign,
   Gift,
+  Sparkles,
 } from "lucide-react";
 
 type Promotion = {
@@ -49,6 +50,11 @@ export default function PromotionsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editPromo, setEditPromo] = useState<Promotion | null>(null);
   const [pendingDeactivate, setPendingDeactivate] = useState<Promotion | null>(null);
+  const [candidates, setCandidates] = useState<{ variantId: string; sku: string; name: string; onHand: number; price: number | null }[]>([]);
+  const [scanning, setScanning] = useState(false);
+  const [scanned, setScanned] = useState(false);
+  const [advice, setAdvice] = useState<string | null>(null);
+  const [advising, setAdvising] = useState(false);
 
   const [form, setForm] = useState({
     name: "", code: "", type: "percentage", value: 10, buyQty: 2, getQty: 1,
@@ -136,6 +142,65 @@ export default function PromotionsPage() {
     return "BOGO";
   }
 
+  async function scanSlowMovers() {
+    setScanning(true);
+    try {
+      const r = await fetch("/api/merchant/slow-movers");
+      if (r.ok) {
+        setCandidates((await r.json()).candidates ?? []);
+        setScanned(true);
+      } else {
+        setMsg({ text: (await r.json()).message ?? "Lỗi quét hàng chậm", type: "error" });
+      }
+    } catch {
+      setMsg({ text: "Không thể kết nối đến máy chủ.", type: "error" });
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  async function makeDraft(c: { sku: string; name: string; onHand: number; price: number | null }, withCode: boolean) {
+    const value = c.onHand > 50 ? 15 : 10;
+    const codeBytes = new Uint32Array(1);
+    crypto.getRandomValues(codeBytes);
+    const code = withCode ? `XA-${codeBytes[0].toString(36).toUpperCase().slice(-4).padStart(4, "0")}` : undefined;
+    const r = await fetch("/api/promotions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      body: JSON.stringify({
+        name: `[AI] Xả hàng: ${c.name} (-${value}%)`,
+        type: "percentage",
+        value,
+        code,
+        usageLimit: withCode ? 100 : 0,
+        active: false,
+      }),
+    });
+    if (r.ok) {
+      setMsg({ text: `Đã tạo nháp “${c.name}” ở trạng thái TẮT — bật thủ công khi muốn chạy`, type: "success" });
+      void load();
+    } else {
+      setMsg({ text: (await r.json()).message ?? "Lỗi tạo nháp", type: "error" });
+    }
+  }
+
+  async function advise() {
+    setAdvising(true);
+    try {
+      const r = await fetch("/api/merchant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skill: "promo", messages: [{ role: "user", content: "Tư vấn đợt xả hàng chậm tháng này." }] }),
+      });
+      const d = await r.json();
+      setAdvice(r.ok ? d.text : `Lỗi: ${d.message ?? r.status}`);
+    } catch {
+      setAdvice("Lỗi: không thể kết nối đến trợ lý.");
+    } finally {
+      setAdvising(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-50/60 pb-16">
       <Nav />
@@ -164,6 +229,70 @@ export default function PromotionsPage() {
             <button onClick={() => setMsg(null)} className="ml-auto"><XCircle className="w-3.5 h-3.5" /></button>
           </div>
         )}
+
+        {/* AI Slow-mover Drafts */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-rose-600" aria-hidden="true" />
+                Gợi Ý Xả Hàng Chậm
+              </h2>
+              <p className="text-[11px] text-slate-500 mt-0.5">Tồn cao + 30 ngày không bán — mọi đợt tạo ở trạng thái TẮT, bật thủ công mới chạy</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={advise}
+                disabled={advising}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors disabled:opacity-50"
+              >
+                {advising ? "Đang tư vấn…" : "Nhờ AI tư vấn"}
+              </button>
+              <button
+                onClick={scanSlowMovers}
+                disabled={scanning}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white hover:bg-slate-700 transition-colors disabled:opacity-50"
+              >
+                {scanning ? "Đang quét…" : "Quét hàng chậm"}
+              </button>
+            </div>
+          </div>
+          {advice && (
+            <div className="px-4 py-3 border-b border-slate-100 bg-rose-50/40" role="status">
+              <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">{advice}</p>
+            </div>
+          )}
+          {scanned && candidates.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs">Không có hàng chậm (tồn ≥ 10 mà 30 ngày không bán). Kho đang khỏe!</div>
+          ) : scanned && (
+            <div className="divide-y divide-slate-100">
+              {candidates.map((c) => (
+                <div key={c.variantId} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-slate-900 truncate">{c.name}</p>
+                    <p className="text-[10px] text-slate-500 font-mono">{c.sku} · tồn {c.onHand}{c.price ? ` · ${c.price.toLocaleString("vi-VN")} ₫` : ""}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => makeDraft(c, false)}
+                      aria-label={`Tạo nháp giảm giá cho ${c.name}`}
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                    >
+                      Nháp −{c.onHand > 50 ? 15 : 10}%
+                    </button>
+                    <button
+                      onClick={() => makeDraft(c, true)}
+                      aria-label={`Tạo mã coupon nháp cho ${c.name}`}
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                    >
+                      Nháp mã coupon
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Promo List */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">

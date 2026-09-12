@@ -45,9 +45,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const { name, code, type, value, buyQty, getQty, categoryId, minQty, channel, stackable, usageLimit, memberOnly, priority, startAt, endAt, storeIds } = body;
-
-  if (!name?.trim()) return apiError({ status: 400, code: "VALIDATION", message: "Name is required" });
+  const { name, code, type, value, buyQty, getQty, categoryId, minQty, channel, stackable, usageLimit, memberOnly, priority, startAt, endAt, storeIds, active } = body;  if (!name?.trim()) return apiError({ status: 400, code: "VALIDATION", message: "Name is required" });
   if (!["percentage", "fixed", "buy_x_get_y"].includes(type)) return apiError({ status: 400, code: "VALIDATION", message: "Invalid type" });
   if (type !== "buy_x_get_y" && (typeof value !== "number" || value < 0)) {
     return apiError({ status: 400, code: "VALIDATION", message: "Value must be a positive number" });
@@ -72,6 +70,9 @@ export async function POST(req: NextRequest) {
       usageLimit: usageLimit || null,
       memberOnly: Boolean(memberOnly),
       priority: priority || 0,
+      // AI drafts pass active:false so nothing goes live without human review.
+      // Default true preserves the manual create flow.
+      active: active !== false,
       startAt: startAt ? new Date(startAt) : new Date(),
       endAt: endAt ? new Date(endAt) : null,
       stores: storeIds?.length ? { create: storeIds.map((sid: string) => ({ storeId: sid })) } : undefined,
