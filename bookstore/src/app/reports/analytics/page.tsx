@@ -8,13 +8,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Nav from "../../nav";
 
-type Tab = "revenue-by-store" | "revenue-by-category" | "top-sku" | "stock-on-hand";
+type Tab = "revenue-by-store" | "revenue-by-category" | "top-sku" | "stock-on-hand" | "store-pnl" | "top-staff" | "slow-stock";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "revenue-by-store", label: "Doanh thu theo cửa hàng" },
   { id: "revenue-by-category", label: "Doanh thu theo danh mục" },
   { id: "top-sku", label: "Top SKU" },
   { id: "stock-on-hand", label: "Tồn kho" },
+  { id: "store-pnl", label: "Lãi lỗ cửa hàng" },
+  { id: "top-staff", label: "Top nhân viên" },
+  { id: "slow-stock", label: "Tồn chậm" },
 ];
 
 type ReportResponse = {
