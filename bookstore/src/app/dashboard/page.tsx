@@ -282,6 +282,7 @@ export default function DashboardPage() {
                       <p className="text-xs text-[#574431]">Sản phẩm cần bổ sung nhập kho</p>
                     </div>
                   </div>
+                  <div className="flex items-center gap-3 shrink-0">
                   <Link
                     href="/purchase-orders"
                     className="inline-flex items-center gap-1 text-xs font-semibold text-[#8c2d19] hover:underline"
@@ -289,6 +290,14 @@ export default function DashboardPage() {
                     <Truck className="w-3.5 h-3.5" />
                     Tạo PO
                   </Link>
+                  <Link
+                    href="/inventory/suggestions"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-[#8c2d19] hover:underline"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Gợi ý AI
+                  </Link>
+                  </div>
                 </div>
 
                 {d.lowStock.length === 0 ? (

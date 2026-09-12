@@ -67,6 +67,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/inventory", label: "Tồn kho", icon: Boxes },
       { href: "/inventory/counts", label: "Kiểm kê", icon: ClipboardCheck },
+      { href: "/inventory/suggestions", label: "Gợi ý nhập hàng", icon: Sparkles },
       { href: "/purchase-orders", label: "Nhập hàng", icon: Truck },
       { href: "/suppliers", label: "NCC", icon: Building2 },
       { href: "/transfers", label: "Điều chuyển", icon: ArrowLeftRight },
