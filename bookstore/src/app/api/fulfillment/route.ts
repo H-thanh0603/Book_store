@@ -12,6 +12,48 @@ export async function POST(req: NextRequest) {
     const auth = await requirePermission("inventory.adjust");
     if (!body.orderId) fail(400, "VALIDATION", "orderId required");
 
+    // R1: book a carrier shipment via provider API (GHTK / ViettelPost).
+    // Booking happens OUTSIDE the DB transaction (external HTTP call), then
+    // the tracking number is attached — a provider outage never blocks the
+    // manual ship flow below.
+    if (body.action === "book_carrier") {
+      const { CARRIERS, bookCarrierShipment, attachCarrierBooking } = await import("@/lib/carriers");
+      const carrier = String(body.carrier ?? "").toUpperCase();
+      if (!(CARRIERS as readonly string[]).includes(carrier) || carrier === "MANUAL")
+        fail(400, "VALIDATION", "carrier must be GHTK or VTP");
+      const order = await prisma.order.findUnique({
+        where: { id: body.orderId },
+        include: {
+          shipment: true,
+          items: true,
+          webPayments: { select: { status: true } },
+          store: { select: { name: true, region: { select: { orgId: true } } } },
+        },
+      });
+      if (!order) fail(404, "NOT_FOUND", "Order not found");
+      assertStoreAccess(auth, order.storeId, "inventory.adjust");
+      if (order.type === "pickup") fail(409, "INVALID_STATUS_TRANSITION", "Pickup orders need no carrier");
+      if (!order.shipment) fail(400, "VALIDATION", "Ship the order first (creates the recipient address)");
+      // COD = nothing captured online yet.
+      const paidOnline = order.webPayments.some((w) => w.status === "PAID");
+      const cod = paidOnline ? 0 : Number(order.total);
+      const booking = await bookCarrierShipment(carrier as "GHTK" | "VTP", {
+        orderId: order.id,
+        orderNumber: order.number,
+        recipientName: order.shipment.recipientName,
+        recipientPhone: order.shipment.recipientPhone,
+        address: order.shipment.address,
+        codAmount: cod,
+        weightGrams: Number(body.weightGrams ?? 500),
+        storeAddress: order.store?.name ?? "Melio Bookstore",
+      });
+      await attachCarrierBooking(order.id, carrier as "GHTK" | "VTP", booking);
+      await audit(auth.userId, "order.book_carrier", "Order", order.id, {
+        number: order.number, carrier, trackingNumber: booking.trackingNumber,
+      });
+      return ok({ number: order.number, carrier, trackingNumber: booking.trackingNumber, fee: booking.fee });
+    }
+
     if (body.action === "deliver") {
       const order = await prisma.$transaction(async (tx) => {
         const current = await tx.order.findUnique({ where: { id: body.orderId }, include: { shipment: true } });
