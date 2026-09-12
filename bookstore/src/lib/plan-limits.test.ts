@@ -9,7 +9,7 @@ const mockPrisma = vi.hoisted(() => ({
 
 vi.mock('./db', () => ({ prisma: mockPrisma }))
 
-import { assertWithinPlanLimits, assertPlanFeature } from './plan-limits'
+import { assertWithinPlanLimits, assertPlanFeature, planHasFeature } from './plan-limits'
 
 const auth = { orgId: 'org-1' } as Parameters<typeof assertWithinPlanLimits>[0]
 
@@ -108,5 +108,28 @@ describe('assertPlanFeature', () => {
   it('is a no-op without a subscription', async () => {
     mockPrisma.subscription.findUnique.mockResolvedValue(null)
     await expect(assertPlanFeature(auth, 'webhooks')).resolves.toBeUndefined()
+  })
+})
+
+describe('planHasFeature (background path)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('returns false when the plan excludes the feature', async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue({
+      plan: planFixture({ features: { eInvoice: false } }),
+    })
+    await expect(planHasFeature('org-1', 'eInvoice')).resolves.toBe(false)
+  })
+
+  it('returns true when the plan includes the feature', async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue({
+      plan: planFixture({ features: { eInvoice: true } }),
+    })
+    await expect(planHasFeature('org-1', 'eInvoice')).resolves.toBe(true)
+  })
+
+  it('returns true without a subscription (unlimited legacy orgs)', async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(null)
+    await expect(planHasFeature('org-1', 'eInvoice')).resolves.toBe(true)
   })
 })

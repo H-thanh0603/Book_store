@@ -229,6 +229,14 @@ export async function enqueueEinvoice(input: {
   lines: { name: string; quantity: number; unitPrice: bigint; total: bigint }[];
 }, client?: Prisma.TransactionClient) {
   const db = client ?? prisma;
+  // WS3.2: e-invoicing is a paid-plan feature (FREE excludes it). Gate at the
+  // single enqueue choke point — both POS and web checkout funnel through
+  // here. Skip quietly (log): a billing gate must never break a paid sale.
+  const { planHasFeature } = await import("./plan-limits");
+  if (!(await planHasFeature(input.orgId, "eInvoice"))) {
+    console.log(JSON.stringify({ level: "info", event: "einvoice_skipped_plan", orderId: input.orderId, orgId: input.orgId }));
+    return null;
+  }
   // Idempotent on orderId: a duplicate enqueue (POS retry, webhook replay) is a
   // silent no-op so we never issue two tax invoices for the same sale.
   const existing = await db.eInvoice.findFirst({ where: { orderId: input.orderId } });

@@ -15,6 +15,11 @@
 //
 // Orgs without a Subscription row (legacy/admin orgs) are unlimited —
 // limits are a billing construct, not a hard system cap.
+//
+// Known gap (WS3.2 audit): maxUsers has no growth path to guard — there is
+// no staff-invite route (users only arrive via self-signup into their own
+// org), so the users counter can never increment today. When an invite API
+// lands, it must call assertWithinPlanLimits(auth, { users: 1 }) first.
 
 import { prisma } from "./db";
 import type { AuthContext } from "./auth";
@@ -109,4 +114,18 @@ function featureNumber(features: unknown, key: string, fallback: number): number
   const v = (features as Record<string, unknown>)[key];
   if (typeof v === "number" && Number.isInteger(v) && v >= 0) return v;
   return fallback;
+}
+
+/**
+ * Background-path feature check (WS3.2): fire-and-forget jobs have no session,
+ * so they can't use assertPlanFeature(auth). Returns false when the org's plan
+ * excludes the feature — the caller must skip quietly (log, never throw:
+ * billing gates must not break paid sales). Orgs without a subscription are
+ * unlimited, same rule as the request path.
+ */
+export async function planHasFeature(orgId: string | null | undefined, feature: string): Promise<boolean> {
+  const plan = await loadPlan(orgId);
+  if (!plan) return true;
+  const features = (plan.features ?? {}) as Record<string, unknown>;
+  return !(feature in features && features[feature] === false);
 }
