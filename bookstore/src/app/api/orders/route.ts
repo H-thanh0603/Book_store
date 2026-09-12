@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { assertStoreAccess, requirePermission, resolveStoreScope } from "@/lib/auth";
-import { apiError, ok, fail } from "@/lib/api";
+import { apiError, ok, fail, optPage } from "@/lib/api";
 import { createReservedOrder, type CreateOrderInput } from "@/lib/orders";
 
 // POST /api/orders — create order (WEB/APP), reserve stock at store/warehouse
@@ -48,12 +48,17 @@ export async function GET(req: NextRequest) {
     const sp = req.nextUrl.searchParams;
     const auth = await requirePermission("reports.store.view");
     const scope = resolveStoreScope(auth, sp.get("storeId") ?? undefined, "reports.store.view");
-    const orders = await prisma.order.findMany({
-      where: scope ? { storeId: { in: scope } } : undefined,
-      include: { customer: true, items: { include: { variant: true } } },
-      orderBy: { createdAt: "desc" }, take: 50,
-    });
-    return ok({ orders });
+    const where = scope ? { storeId: { in: scope } } : undefined;
+    const { page, pageSize, skip } = optPage(sp);
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        include: { customer: true, items: { include: { variant: true } } },
+        orderBy: { createdAt: "desc" }, skip, take: pageSize,
+      }),
+      prisma.order.count({ where }),
+    ]);
+    return ok({ orders, page, pageSize, total });
   } catch (err) {
     return apiError(err);
   }

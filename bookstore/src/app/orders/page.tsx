@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../nav";
+import Pager from "@/components/Pager";
 import {
   ShoppingBag,
   Truck,
@@ -45,13 +46,21 @@ export default function OrdersPage() {
   const [couponCode, setCouponCode] = useState("");
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 25;
   const [searchFilter, setSearchFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
 
-  async function loadOrders() {
-    const r = await fetch("/api/orders");
-    if (r.ok) setOrders((await r.json()).orders);
+  async function loadOrders(p = 1) {
+    const r = await fetch(`/api/orders?page=${p}&pageSize=${PAGE_SIZE}`);
+    if (r.ok) {
+      const d = await r.json();
+      setOrders(d.orders);
+      setPage(d.page);
+      setTotal(d.total);
+    }
   }
 
   useEffect(() => {
@@ -608,6 +617,9 @@ export default function OrdersPage() {
                   Không tìm thấy đơn hàng nào phù hợp với bộ lọc.
                 </div>
               )}
+              <div className="border-t border-slate-100">
+                <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={(p) => loadOrders(p)} />
+              </div>
             </div>
           </div>
         </div>

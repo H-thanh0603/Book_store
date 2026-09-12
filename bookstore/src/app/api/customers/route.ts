@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma, prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
-import { apiError, ok, fail, getSystemConfig, nextBusinessNumber } from "@/lib/api";
+import { apiError, ok, fail, getSystemConfig, nextBusinessNumber, optPage } from "@/lib/api";
 import { Prisma } from "../../../generated/prisma/client";
 
 type Tx = Prisma.TransactionClient;
@@ -27,15 +27,20 @@ export async function GET(req: NextRequest) {
   try {
     await requirePermission("customer.view");
     const q = req.nextUrl.searchParams.get("q");
-    const customers = await prismaRead.customer.findMany({
-      where: q
-        ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { phone: { contains: q } }, { code: { contains: q, mode: "insensitive" } }] }
-        : {},
-      include: { loyalty: true },
-      orderBy: { code: "desc" },
-      take: 50,
-    });
-    return ok({ customers });
+    const where = q
+      ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { phone: { contains: q } }, { code: { contains: q, mode: "insensitive" as const } }] }
+      : {};
+    const { page, pageSize, skip } = optPage(req.nextUrl.searchParams);
+    const [customers, total] = await Promise.all([
+      prismaRead.customer.findMany({
+        where,
+        include: { loyalty: true },
+        orderBy: { code: "desc" },
+        skip, take: pageSize,
+      }),
+      prismaRead.customer.count({ where }),
+    ]);
+    return ok({ customers, page, pageSize, total });
   } catch (err) {
     return apiError(err);
   }

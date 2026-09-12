@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../nav";
+import Pager from "@/components/Pager";
 import {
   Users,
   UserPlus,
@@ -32,6 +33,9 @@ type LoyaltyTx = {
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 25;
   const [q, setQ] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -43,9 +47,14 @@ export default function CustomersPage() {
     transactions: LoyaltyTx[];
   } | null>(null);
 
-  async function load(query: string) {
-    const r = await fetch(`/api/customers?q=${encodeURIComponent(query)}`);
-    if (r.ok) setCustomers((await r.json()).customers);
+  async function load(query: string, p = 1) {
+    const r = await fetch(`/api/customers?q=${encodeURIComponent(query)}&page=${p}&pageSize=${PAGE_SIZE}`);
+    if (r.ok) {
+      const d = await r.json();
+      setCustomers(d.customers);
+      setPage(d.page);
+      setTotal(d.total);
+    }
   }
 
   useEffect(() => {
@@ -205,7 +214,8 @@ export default function CustomersPage() {
                     value={q}
                     onChange={(e) => {
                       setQ(e.target.value);
-                      load(e.target.value);
+                      setPage(1);
+                      load(e.target.value, 1);
                     }}
                   />
                 </div>
@@ -258,6 +268,9 @@ export default function CustomersPage() {
                   Không tìm thấy khách hàng nào.
                 </div>
               )}
+              <div className="border-t border-slate-100">
+                <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={(p) => load(q, p)} />
+              </div>
             </div>
           </div>
 

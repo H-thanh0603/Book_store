@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Nav from "../nav";
+import Pager from "@/components/Pager";
 import { FileText, Search, ExternalLink, AlertCircle, Loader2 } from "lucide-react";
 
 type EInvoice = {
@@ -30,25 +31,33 @@ const STATUS_COLOR: Record<EInvoice["status"], string> = {
 
 export default function InvoicesPage() {
   const [rows, setRows] = useState<EInvoice[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 25;
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("");
 
-  async function load() {
+  async function load(p = 1) {
     setLoading(true); setErr(null);
     try {
       const url = new URL("/api/invoices", window.location.origin);
       if (status) url.searchParams.set("status", status);
+      url.searchParams.set("page", String(p));
+      url.searchParams.set("pageSize", String(PAGE_SIZE));
       const r = await fetch(url.toString());
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      setRows(await r.json());
+      const d = await r.json();
+      setRows(d.rows);
+      setPage(d.page);
+      setTotal(d.total);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Load failed");
     } finally { setLoading(false); }
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-fetch; load() is not memoized, adding it would refetch every render
-  useEffect(() => { load(); }, [status]);
+  useEffect(() => { setPage(1); load(1); }, [status]);
 
   const filtered = q
     ? rows.filter((r) => [r.orderId, r.invoiceNumber, r.customerName].some((v) => v?.toLowerCase().includes(q.toLowerCase())))
@@ -61,7 +70,7 @@ export default function InvoicesPage() {
         <header className="flex items-center gap-3 mb-6">
           <FileText className="w-7 h-7 text-slate-700" />
           <h1 className="text-2xl font-bold text-slate-800">Hóa đơn điện tử</h1>
-          <span className="ml-auto text-sm text-slate-500">{rows.length} bản ghi</span>
+          <span className="ml-auto text-sm text-slate-500">{total.toLocaleString("vi-VN")} bản ghi</span>
         </header>
 
         <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -83,7 +92,7 @@ export default function InvoicesPage() {
             <option value="CANCELED">CANCELED</option>
             <option value="ERROR">ERROR</option>
           </select>
-          <button className="text-sm text-blue-600 hover:underline" onClick={load}>Làm mới</button>
+          <button className="text-sm text-blue-600 hover:underline" onClick={() => load(page)}>Làm mới</button>
         </div>
 
         {err && (
@@ -131,6 +140,9 @@ export default function InvoicesPage() {
                 ))}
               </tbody>
             </table>
+            <div className="border-t border-slate-100">
+              <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={(p) => load(p)} />
+            </div>
           </div>
         )}
       </main>

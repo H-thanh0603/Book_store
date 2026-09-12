@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../nav";
+import Pager from "@/components/Pager";
 import {
   Search,
   AlertTriangle,
@@ -24,6 +25,9 @@ type Balance = {
 
 export default function InventoryPage() {
   const [balances, setBalances] = useState<Balance[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 50;
   const [q, setQ] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,13 +35,15 @@ export default function InventoryPage() {
   const [poCreated, setPoCreated] = useState(false);
   const [poCode, setPoCode] = useState("");
 
-  async function loadData() {
+  async function loadData(p = 1) {
     setLoading(true);
     try {
-      const r = await fetch("/api/inventory");
+      const r = await fetch(`/api/inventory?page=${p}&pageSize=${PAGE_SIZE}`);
       const d = await r.json();
       if (r.ok) {
         setBalances(d.balances);
+        setPage(d.page);
+        setTotal(d.total);
         setErr(null);
       } else {
         setErr(d.message);
@@ -85,7 +91,7 @@ export default function InventoryPage() {
               </h1>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
                 <Sparkles className="w-3 h-3" />
-                {balances.length} vị trí lưu trữ
+                {total.toLocaleString("vi-VN")} vị trí lưu trữ
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
@@ -103,7 +109,7 @@ export default function InventoryPage() {
             </button>
 
             <button
-              onClick={loadData}
+              onClick={() => loadData(page)}
               disabled={loading}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
             >
@@ -210,6 +216,9 @@ export default function InventoryPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="border-t border-slate-100">
+            <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={(p) => loadData(p)} />
           </div>
         </div>
       </div>

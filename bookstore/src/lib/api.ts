@@ -91,6 +91,20 @@ export function optDate(v: unknown, field: string): Date | null {
   return d;
 }
 
+/** Parse ?page=&pageSize= for offset pagination (FE-002/WS2.1). Defaults
+ *  page 1, pageSize 25, pageSize capped at 100 so a client can't ask for a
+ *  full-table scan in one request. Garbage becomes 400, never a skip bomb. */
+export function optPage(sp: URLSearchParams, defaultSize = 25): { page: number; pageSize: number; skip: number } {
+  const rawPage = sp.get("page") ?? "1";
+  const rawSize = sp.get("pageSize") ?? String(defaultSize);
+  const page = Number(rawPage);
+  const pageSize = Number(rawSize);
+  if (!Number.isInteger(page) || page < 1) fail(400, "VALIDATION", "page must be an integer >= 1");
+  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100)
+    fail(400, "VALIDATION", "pageSize must be an integer between 1 and 100");
+  return { page, pageSize, skip: (page - 1) * pageSize };
+}
+
 /** Assert an FK target exists; turns would-be P2003 500s into clean 404s. */
 export function requireRef<T>(row: T | null, label: string): T {
   if (!row) fail(404, "NOT_FOUND", `${label} not found`);
