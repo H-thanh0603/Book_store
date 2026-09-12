@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listStorefrontProducts } from "@/lib/storefront";
 import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
+import { agentRateLimit, finishAgentCall, type ResolvedAgentKey } from "@/lib/agent-auth";
 import { apiError } from "@/lib/api";
 import { observeRequest } from "@/lib/metrics";
 
@@ -116,12 +117,14 @@ export async function POST(req: NextRequest) {
   // observeRequest only fires on explicit returns; the throw path is covered
   // by apiError's recordHttpError, so durations stay honest either way.
   const finish = (status: number) => observeRequest("/api/concierge", "POST", status, Date.now() - startedAt);
+  let agentKey: ResolvedAgentKey | null = null;
   try {
-    // Public, per-IP: cheap enough to be generous, tight enough to cap cost.
-    await enforceRateLimit("concierge", clientIp(req.headers), 20, 60_000);
+    // Public, per-IP — keyed agents get their own quota instead.
+    agentKey = await agentRateLimit(req, "ask_concierge", "concierge", 20);
 
     if (!conciergeConfigured()) {
       finish(503);
+      await finishAgentCall(req, "ask_concierge", agentKey, startedAt);
       return NextResponse.json(
         { code: "NOT_CONFIGURED", message: "DEEPSEEK_API_KEY chưa cấu hình — thủ thư AI đang chạy chế độ demo." },
         { status: 503 },
@@ -134,6 +137,7 @@ export async function POST(req: NextRequest) {
     const history = body?.messages?.filter((m) => typeof m.content === "string" && m.content.trim()).slice(-8) ?? [];
     if (history.length === 0) {
       finish(400);
+      await finishAgentCall(req, "ask_concierge", agentKey, startedAt);
       return NextResponse.json({ code: "VALIDATION", message: "Thiếu nội dung tin nhắn" }, { status: 400 });
     }
 
@@ -162,6 +166,7 @@ export async function POST(req: NextRequest) {
         const errText = await res.text().catch(() => "");
         console.error(JSON.stringify({ level: "error", event: "concierge_upstream", status: res.status, message: errText.slice(0, 300) }));
         finish(502);
+        await finishAgentCall(req, "ask_concierge", agentKey, startedAt, Object.assign(new Error("upstream"), { status: 502 }));
         return NextResponse.json(
           { code: "UPSTREAM", message: "Thủ thư AI tạm thời không phản hồi, thử lại sau nhé." },
           { status: 502 },
@@ -218,6 +223,7 @@ export async function POST(req: NextRequest) {
             };
           });
         finish(200);
+        await finishAgentCall(req, "ask_concierge", agentKey, startedAt);
         return NextResponse.json({
           text: parsed.text?.slice(0, 1500) ?? "Mình chưa hiểu ý bạn, thử diễn đạt khác nhé!",
           items: groundedItems,
@@ -240,8 +246,10 @@ export async function POST(req: NextRequest) {
     }
 
     finish(200);
+    await finishAgentCall(req, "ask_concierge", agentKey, startedAt);
     return NextResponse.json({ text: "Mình cần thêm thông tin nhé — bạn mô tả cụ thể hơn được không?", items: [] });
   } catch (error) {
+    await finishAgentCall(req, "ask_concierge", agentKey, startedAt, error);
     return apiError(error);
   }
 }

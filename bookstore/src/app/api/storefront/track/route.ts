@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { apiError, fail, ok } from "@/lib/api";
-import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
+import { agentRateLimit, finishAgentCall, type ResolvedAgentKey } from "@/lib/agent-auth";
 
 /**
  * Public delivery tracking. Two-factor lookup: the exact order number AND the
@@ -15,8 +15,10 @@ function normPhone(v: string) {
 }
 
 export async function GET(req: NextRequest) {
+  const started = Date.now();
+  let agentKey: ResolvedAgentKey | null = null;
   try {
-    await enforceRateLimit("storefront-track", clientIp(req.headers), 20, 60_000);
+    agentKey = await agentRateLimit(req, "track_order", "storefront-track", 20);
     const sp = req.nextUrl.searchParams;
     const number = (sp.get("number") ?? "").trim().toUpperCase();
     const phone = (sp.get("phone") ?? "").trim();
@@ -38,8 +40,14 @@ export async function GET(req: NextRequest) {
         },
       },
     });
-    if (!order || !order.customer.phone) return ok({ order: null });
-    if (normPhone(order.customer.phone) !== normPhone(phone)) return ok({ order: null });
+    if (!order || !order.customer.phone) {
+      await finishAgentCall(req, "track_order", agentKey, started);
+      return ok({ order: null });
+    }
+    if (normPhone(order.customer.phone) !== normPhone(phone)) {
+      await finishAgentCall(req, "track_order", agentKey, started);
+      return ok({ order: null });
+    }
 
     const isDelivered = order.status === "DELIVERED";
     const isShipped = order.status === "SHIPPED" || isDelivered;
@@ -54,7 +62,7 @@ export async function GET(req: NextRequest) {
       { label: "Giao thành công", time: "", done: isDelivered, desc: "Hoàn tất đơn hàng" },
     ];
 
-    return ok({
+    const response = ok({
       order: {
         number: order.number,
         status: order.status,
@@ -71,7 +79,10 @@ export async function GET(req: NextRequest) {
         stages,
       },
     });
+    await finishAgentCall(req, "track_order", agentKey, started);
+    return response;
   } catch (err) {
+    await finishAgentCall(req, "track_order", agentKey, started, err);
     return apiError(err);
   }
 }

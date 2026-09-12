@@ -5,12 +5,14 @@
 import { NextRequest } from "next/server";
 import { apiError, ok } from "@/lib/api";
 import { quoteStorefrontOrder } from "@/lib/storefront";
-import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
+import { agentRateLimit, finishAgentCall, type ResolvedAgentKey } from "@/lib/agent-auth";
 
 export async function GET(req: NextRequest) {
+  const started = Date.now();
+  let agentKey: ResolvedAgentKey | null = null;
   try {
     // Generous limit — one preview per coupon keystroke debounce.
-    await enforceRateLimit("storefront-quote", clientIp(req.headers), 60, 60_000);
+    agentKey = await agentRateLimit(req, "quote_order", "storefront-quote", 60);
     const response = ok(await quoteStorefrontOrder({
       storeId: req.nextUrl.searchParams.get("storeId"),
       couponCode: req.nextUrl.searchParams.get("couponCode"),
@@ -22,8 +24,10 @@ export async function GET(req: NextRequest) {
           return { variantId, quantity: Number(quantity) || 0 };
         }).filter((item) => item.variantId && item.quantity > 0),
     }), 200, { "Cache-Control": "no-store" });
+    await finishAgentCall(req, "quote_order", agentKey, started);
     return response;
   } catch (error) {
+    await finishAgentCall(req, "quote_order", agentKey, started, error);
     return apiError(error);
   }
 }

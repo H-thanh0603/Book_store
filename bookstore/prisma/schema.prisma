@@ -30,6 +30,7 @@ model Organization {
   products  Product[]
   subscription Subscription?
   billingInvoices BillingInvoice[]
+  agentKeys AgentKey[]
   supportConversations SupportConversation[]
 }
 
@@ -1225,6 +1226,41 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([actorId])
   @@index([createdAt, id])
+}
+
+// ── Agentic Web: agent API keys + tamper-evident session log ──────────────
+// A1: partners/developers get a key (x-agent-key header) with its own quota,
+// so agent traffic is identifiable and never shares the anonymous IP bucket.
+// A2 (AIVS-inspired): every agent tool call appends a hash-chained event.
+// Anyone can recompute the chain to prove completeness — no network needed.
+model AgentKey {
+  id          String @id @default(uuid())
+  label       String
+  keyHash     String @unique // sha256 hex of the plaintext key (shown once)
+  orgId       String?
+  org         Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  quotaPerMin Int @default(120)
+  status      String @default("ACTIVE") // ACTIVE | REVOKED
+  createdBy   String?
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  events      AgentEvent[]
+  @@index([orgId])
+}
+
+model AgentEvent {
+  id        String @id @default(uuid())
+  keyId     String? // null = anonymous (IP-bucketed) caller
+  key       AgentKey? @relation(fields: [keyId], references: [id], onDelete: SetNull)
+  day       String // YYYY-MM-DD partition: chain is per (key, day)
+  prevHash  String // hash of the previous event in this chain ("GENESIS" first)
+  eventHash String // sha256(prevHash + canonical event JSON)
+  at        String // ISO instant baked into the hash (createdAt is DB time)
+  tool      String // search_products | quote_order | track_order | ask_concierge
+  status    String // OK | RATE_LIMITED | ERROR
+  latencyMs Int?
+  createdAt DateTime @default(now())
+  @@index([keyId, day, createdAt])
 }
 
 // ── Config / Counters ─────────────────────────────────────────

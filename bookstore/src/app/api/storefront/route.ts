@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { apiError, ok } from "@/lib/api";
 import { checkoutStorefrontOrder, listStorefrontProducts } from "@/lib/storefront";
 import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
+import { agentRateLimit, finishAgentCall, type ResolvedAgentKey } from "@/lib/agent-auth";
 import { withCheckoutSlot } from "@/lib/throttle";
 import { observeRequest } from "@/lib/metrics";
 
@@ -13,9 +14,11 @@ const loadtest = process.env.LOADTEST_MODE === "1";
 
 export async function GET(req: NextRequest) {
   const started = Date.now();
+  let agentKey: ResolvedAgentKey | null = null;
   try {
-    // Public endpoint — throttle per IP so scrapes/abuse can't hammer the search.
-    if (!loadtest) await enforceRateLimit("storefront-catalog", clientIp(req.headers), 60, 60_000);
+    // Public endpoint — keyed agents get their own quota, everyone else
+    // shares the per-IP bucket so scrapes can't hammer the search.
+    if (!loadtest) agentKey = await agentRateLimit(req, "search_products", "storefront-catalog", 60);
     // Cache at the edge: browser 15s, CDN (Cloudflare) 30s, plus stale-while-revalidate
     // so a cold origin never stalls shoppers. Response varies ONLY on the query string
     // (no auth/cookies on this endpoint), so CDNs can key on the full URL safely.
@@ -28,9 +31,11 @@ export async function GET(req: NextRequest) {
       Vary: "Accept-Encoding",
     });
     observeRequest("/api/storefront", "GET", response.status, Date.now() - started);
+    await finishAgentCall(req, "search_products", agentKey, started);
     return response;
   } catch (error) {
     observeRequest("/api/storefront", "GET", (error as { status?: number }).status ?? 500, Date.now() - started);
+    await finishAgentCall(req, "search_products", agentKey, started, error);
     return apiError(error);
   }
 }
