@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Nav from "../nav";
 import {
   Search,
@@ -93,6 +94,13 @@ export default function ProductsPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Link
+              href="/products/barcodes"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:border-emerald-500 hover:text-emerald-700 text-slate-700 rounded-xl text-xs font-bold shadow-xs transition-colors"
+            >
+              <Barcode className="w-4 h-4" />
+              Phòng in tem
+            </Link>
             <button
               onClick={() => {
                 if (selectedIds.length === 0) setSelectedIds(products.map((p) => p.id));

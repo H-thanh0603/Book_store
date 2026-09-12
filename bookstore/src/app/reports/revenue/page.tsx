@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Nav from "../../nav";
 import {
   TrendingUp,
@@ -87,6 +88,21 @@ export default function RevenueReportPage() {
     <main className="min-h-screen bg-slate-50/60 pb-16">
       <Nav />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
+        {/* Sub-navigation: các báo cáo liên quan */}
+        <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+          <Link href="/reports" className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-[#8c2d19] hover:border-[#8c2d19]/30 transition-colors">
+            Vận hành & Cảnh báo
+          </Link>
+          <span className="px-3.5 py-2 rounded-xl bg-[#1c1917] text-white shadow-xs">
+            Doanh thu
+          </span>
+          <Link href="/reports/analytics" className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-[#8c2d19] hover:border-[#8c2d19]/30 transition-colors">
+            Phân tích
+          </Link>
+          <Link href="/settings/loss-prevention" className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-[#8c2d19] hover:border-[#8c2d19]/30 transition-colors">
+            Chống thất thoát
+          </Link>
+        </nav>
         {/* Header */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

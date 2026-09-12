@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Nav from "../nav";
 import {
   Activity,
@@ -107,6 +108,22 @@ export default function ReportsPage() {
             Làm mới trạng thái
           </button>
         </div>
+
+        {/* Sub-navigation: các báo cáo liên quan */}
+        <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+          <span className="px-3.5 py-2 rounded-xl bg-[#1c1917] text-white shadow-xs">
+            Vận hành & Cảnh báo
+          </span>
+          <Link href="/reports/revenue" className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-[#8c2d19] hover:border-[#8c2d19]/30 transition-colors">
+            Doanh thu
+          </Link>
+          <Link href="/reports/analytics" className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-[#8c2d19] hover:border-[#8c2d19]/30 transition-colors">
+            Phân tích
+          </Link>
+          <Link href="/settings/loss-prevention" className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-[#8c2d19] hover:border-[#8c2d19]/30 transition-colors">
+            Chống thất thoát
+          </Link>
+        </nav>
 
         {/* 4 Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -5,6 +5,7 @@
 
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Nav from "../../nav";
 
 type Tab = "revenue-by-store" | "revenue-by-category" | "top-sku" | "stock-on-hand";
@@ -61,6 +62,21 @@ export default function AnalyticsPage() {
     <main className="min-h-screen bg-slate-50/60 pb-16">
       <Nav />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
+        {/* Sub-navigation: các báo cáo liên quan */}
+        <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+          <Link href="/reports" className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-[#8c2d19] hover:border-[#8c2d19]/30 transition-colors">
+            Vận hành & Cảnh báo
+          </Link>
+          <Link href="/reports/revenue" className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-[#8c2d19] hover:border-[#8c2d19]/30 transition-colors">
+            Doanh thu
+          </Link>
+          <span className="px-3.5 py-2 rounded-xl bg-[#1c1917] text-white shadow-xs">
+            Phân tích
+          </span>
+          <Link href="/settings/loss-prevention" className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-[#8c2d19] hover:border-[#8c2d19]/30 transition-colors">
+            Chống thất thoát
+          </Link>
+        </nav>
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Báo Cáo Phân Tích</h1>
           <p className="text-xs text-slate-500 mt-1">Doanh thu, danh mục, top sản phẩm và tồn kho — xuất CSV mở bằng Excel.</p>
