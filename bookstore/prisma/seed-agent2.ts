@@ -31,7 +31,7 @@ async function main() {
   const suppliers: string[] = [];
   for (const [code, name] of supplierNames) {
     const sup = await prisma.supplier.upsert({
-      where: { code },
+      where: { orgId_code: { orgId: org.id, code } },
       create: {
         code, name, taxCode: `03${String(Math.floor(rand() * 1e8)).padStart(8, "0")}`,
         paymentTerms: pick(terms), leadTimeDays: 3 + Math.floor(rand() * 18),

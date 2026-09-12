@@ -424,7 +424,7 @@ async function main() {
   ];
   for (const [code, name, taxCode, terms, lead] of supplierData) {
     const s = await prisma.supplier.upsert({
-      where: { code },
+      where: { orgId_code: { orgId: org.id, code } },
       create: { code, name, taxCode, paymentTerms: terms, leadTimeDays: lead, email: `sales@${code.toLowerCase()}.vn`, orgId: org.id },
       update: {},
     });

@@ -551,7 +551,10 @@ model InventoryAdjustmentItem {
 
 model Supplier {
   id           String @id @default(uuid())
-  code         String @unique
+  code         String
+  // R3: supplier codes unique per org (same pattern as Store/Variant).
+  // Codes are system-generated, so no tenant can squat another's code —
+  // this just makes the invariant explicit at the DB layer.
   name         String
   // Audit 2026-08-30 SEC-005: suppliers had no org link, so the [id] route
   // accepted any supplier id from any tenant. Suppliers are now org-scoped.
@@ -570,6 +573,7 @@ model Supplier {
   supplierReturns SupplierReturn[]
   productPrices SupplierProductPrice[]
   @@index([orgId])
+  @@unique([orgId, code])
 }
 
 // Agent 2: supplier-product price history (one row per recorded cost)
