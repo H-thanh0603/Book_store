@@ -89,7 +89,7 @@ export default function GiftFinderPage() {
       {/* 2. HEADER */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-[#ede5d8] shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
-          <Link href="/gift-finder" className="flex items-center gap-2.5 group">
+          <Link href="/shop" className="flex items-center gap-2.5 group" aria-label="Về cửa hàng Melio">
             <div className="size-11 rounded-2xl bg-gradient-to-tr from-rose-500 to-amber-500 text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-all">
               <Gift className="w-6 h-6" />
             </div>
