@@ -16,10 +16,9 @@
 // Orgs without a Subscription row (legacy/admin orgs) are unlimited —
 // limits are a billing construct, not a hard system cap.
 //
-// Known gap (WS3.2 audit): maxUsers has no growth path to guard — there is
-// no staff-invite route (users only arrive via self-signup into their own
-// org), so the users counter can never increment today. When an invite API
-// lands, it must call assertWithinPlanLimits(auth, { users: 1 }) first.
+// Known gap (WS3.2 audit, closed by R2): maxUsers had no growth path to
+// guard — POST /api/team/invite now calls assertWithinPlanLimits(auth,
+// { users: 1 }) before creating the seat.
 
 import { prisma } from "./db";
 import type { AuthContext } from "./auth";
