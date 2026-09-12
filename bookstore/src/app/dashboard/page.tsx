@@ -29,6 +29,8 @@ export default function DashboardPage() {
   const [d, setD] = useState<Dash | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [explaining, setExplaining] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -51,6 +53,28 @@ export default function DashboardPage() {
     const timer = window.setTimeout(() => void loadData(), 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  async function explain() {
+    if (!d || explaining) return;
+    setExplaining(true);
+    try {
+      const r = await fetch("/api/merchant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          skill: "explain",
+          messages: [{ role: "user", content: "Giải thích biến động kinh doanh trong số liệu này." }],
+          context: d,
+        }),
+      });
+      const j = await r.json();
+      setExplanation(r.ok ? j.text : `Lỗi: ${j.message ?? r.status}`);
+    } catch {
+      setExplanation("Lỗi: không thể kết nối đến trợ lý.");
+    } finally {
+      setExplaining(false);
+    }
+  }
 
   const vnd = (n: number) => n.toLocaleString("vi-VN") + " ₫";
 
@@ -89,6 +113,15 @@ export default function DashboardPage() {
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
               Làm mới
             </button>
+            <button
+              onClick={explain}
+              disabled={!d || explaining}
+              aria-label="Nhờ AI giải thích biến động kinh doanh"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-[#8c2d19]/10 hover:bg-[#8c2d19]/15 text-[#8c2d19] transition-colors disabled:opacity-50"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {explaining ? "Đang phân tích…" : "AI giải thích"}
+            </button>
             <Link
               href="/pos"
               className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-[#8c2d19] hover:bg-[#7a2816] text-white shadow-sm"
@@ -103,6 +136,15 @@ export default function DashboardPage() {
           <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-red-500" />
             <span>{err}</span>
+          </div>
+        )}
+
+        {explanation && (
+          <div className="bg-white rounded-2xl border border-[#8c2d19]/20 p-5 shadow-xs" role="status">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#8c2d19] mb-2">
+              Phân tích AI — diễn giải từ số liệu trên, nguyên nhân chỉ là giả thuyết
+            </p>
+            <p className="text-sm text-[#1c1917] leading-relaxed whitespace-pre-line">{explanation}</p>
           </div>
         )}
 
