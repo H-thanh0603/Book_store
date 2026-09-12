@@ -58,6 +58,70 @@ export default function PosPage() {
   const [customerId, setCustomerId] = useState<string>("");
   const [refundNumber, setRefundNumber] = useState("");
   const [lastTx, setLastTx] = useState<{ number: string; total: number; method: string; items: typeof lines; date: string } | null>(null);
+  const [coupon, setCoupon] = useState("");
+  // Held bills (N1): park the current cart in localStorage slots when the
+  // customer walks away — survives reload, per terminal. Split moves checked
+  // lines into a new slot; resume can replace the cart or merge into it.
+  type HeldBill = { id: string; label: string; time: number; lines: Line[]; customerId: string; coupon: string };
+  const HOLD_KEY = "melio.pos.hold.v1";
+  const [held, setHeld] = useState<HeldBill[]>(() => {
+    try { return JSON.parse(localStorage.getItem(HOLD_KEY) ?? "[]"); } catch { return []; }
+  });
+  const [splitMode, setSplitMode] = useState(false);
+  const [splitSel, setSplitSel] = useState<Set<string>>(new Set());
+
+  function persistHeld(next: HeldBill[]) {
+    setHeld(next);
+    try { localStorage.setItem(HOLD_KEY, JSON.stringify(next)); } catch {}
+  }
+  function holdBill() {
+    if (!lines.length) return;
+    const bill: HeldBill = {
+      id: crypto.randomUUID(),
+      label: `Đơn ${held.length + 1} · ${new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`,
+      time: Date.now(), lines: [...lines], customerId, coupon,
+    };
+    persistHeld([...held.slice(-7), bill]);
+    setLines([]); setCustomerId(""); setCoupon(""); setSplitMode(false); setSplitSel(new Set());
+    setMsg({ text: `Đã tạm giữ ${bill.label} (${bill.lines.length} món)`, type: "info" });
+  }
+  function resumeBill(id: string, merge: boolean) {
+    const bill = held.find((h) => h.id === id);
+    if (!bill) return;
+    if (merge) {
+      setLines((ls) => {
+        const next = [...ls];
+        for (const l of bill.lines) {
+          const ex = next.find((x) => x.variantId === l.variantId);
+          if (ex) ex.quantity += l.quantity; else next.push({ ...l });
+        }
+        return next;
+      });
+    } else {
+      setLines([...bill.lines]);
+      setCustomerId(bill.customerId);
+      setCoupon(bill.coupon);
+    }
+    persistHeld(held.filter((h) => h.id !== id));
+    setSplitMode(false); setSplitSel(new Set());
+  }
+  function splitBill() {
+    if (splitSel.size === 0 || splitSel.size === lines.length) {
+      setMsg({ text: "Chọn 1 phần món trong giỏ để tách (không chọn hết)", type: "error" });
+      return;
+    }
+    const moved = lines.filter((l) => splitSel.has(l.variantId));
+    const kept = lines.filter((l) => !splitSel.has(l.variantId));
+    const bill: HeldBill = {
+      id: crypto.randomUUID(),
+      label: `Tách ${new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`,
+      time: Date.now(), lines: moved, customerId, coupon: "",
+    };
+    persistHeld([...held.slice(-7), bill]);
+    setLines(kept);
+    setSplitMode(false); setSplitSel(new Set());
+    setMsg({ text: `Đã tách ${moved.length} món sang ${bill.label}`, type: "info" });
+  }
   // Server-side search overlay: when q has enough characters the grid shows
   // remote ?q= results instead of filtering the 200-row cache (FE-001:
   // client-side filter is blind past what the initial take=200 loaded).
@@ -216,12 +280,43 @@ export default function PosPage() {
 
   const total = lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
   const itemCount = lines.reduce((s, l) => s + l.quantity, 0);
+  // Quoted (post-voucher) total from the server — pay() charges this, never
+  // a client-computed discount (server validates totalPaid === total).
+  const [quote, setQuote] = useState<{ total: number; discountTotal: number; promos: { name: string }[] } | null>(null);
+  const payable = quote ? quote.total : total;
+
+  // A quoted voucher total is only valid for the exact cart it was priced on.
+  useEffect(() => { setQuote(null); }, [lines]);
+
+  async function applyCoupon() {
+    if (!coupon.trim() || !lines.length) return;
+    const r = await fetch("/api/pos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      body: JSON.stringify({
+        action: "quote", storeId,
+        customerId: customerId || undefined,
+        couponCode: coupon.trim().toUpperCase(),
+        items: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
+      }),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      setQuote({ total: d.total, discountTotal: d.discountTotal, promos: d.promos });
+      setMsg({ text: d.discountTotal > 0 ? `Áp dụng voucher: giảm ${d.discountTotal.toLocaleString("vi-VN")} ₫` : "Mã hợp lệ nhưng không giảm cho giỏ này", type: d.discountTotal > 0 ? "success" : "info" });
+    } else {
+      setQuote(null);
+      setMsg({ text: d.message, type: "error" });
+    }
+  }
 
   async function pay(method: string) {
+    const chargeTotal = quote ? quote.total : total;
     const requestBody = {
       action: "sale", shiftId, storeId, customerId: customerId || undefined,
+      couponCode: coupon.trim() ? coupon.trim().toUpperCase() : undefined,
       items: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
-      payments: [{ method, amount: total }],
+      payments: [{ method, amount: chargeTotal }],
     };
     const signature = JSON.stringify(requestBody);
     if (paymentAttemptRef.current?.signature !== signature)
@@ -243,13 +338,10 @@ export default function PosPage() {
       const offlineSale = {
         id: paymentAttemptRef.current.key,
         requestBody,
-        // Event-path only (runs when the fetch throws), never during render —
-        // the purity rule can't see that through the closure.
-        // eslint-disable-next-line react-hooks/purity
         timestamp: Date.now(),
         storeId,
         items: lines.map((l) => ({ ...l })),
-        total,
+        total: chargeTotal,
       };
       if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({
@@ -264,6 +356,7 @@ export default function PosPage() {
       });
       setLines([]);
       setCustomerId("");
+      setCoupon("");
       searchRef.current?.focus();
       return;
     }
@@ -284,6 +377,7 @@ export default function PosPage() {
       });
       setLines([]);
       setCustomerId("");
+      setCoupon("");
       searchRef.current?.focus();
     } else {
       setMsg({ text: d.message, type: "error" });
@@ -617,10 +711,50 @@ export default function PosPage() {
                 <div className="p-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-slate-700">GIỎ HÀNG</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600">
-                      {itemCount} món
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={holdBill}
+                        disabled={!lines.length}
+                        title="Tạm giữ đơn (khách đi lấy thêm đồ)"
+                        className="text-[10px] font-bold px-2 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 disabled:opacity-40"
+                      >
+                        Tạm giữ{held.length > 0 ? ` (${held.length})` : ""}
+                      </button>
+                      <button
+                        onClick={() => { setSplitMode(!splitMode); setSplitSel(new Set()); }}
+                        disabled={!lines.length}
+                        title="Chọn món để tách thành hóa đơn riêng"
+                        className={`text-[10px] font-bold px-2 py-1 rounded border disabled:opacity-40 ${splitMode ? "bg-indigo-600 text-white border-indigo-600" : "bg-slate-50 text-slate-600 border-slate-200"}`}
+                      >
+                        Tách đơn
+                      </button>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600">
+                        {itemCount} món
+                      </span>
+                    </div>
                   </div>
+
+                  {splitMode && lines.length > 0 && (
+                    <button
+                      onClick={splitBill}
+                      className="w-full mb-2 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold"
+                    >
+                      Tách {splitSel.size} món đã chọn thành đơn mới
+                    </button>
+                  )}
+
+                  {held.length > 0 && (
+                    <div className="mb-2 space-y-1 max-h-32 overflow-y-auto">
+                      {held.map((h) => (
+                        <div key={h.id} className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-50/60 border border-amber-100 text-[11px]">
+                          <span className="flex-1 font-semibold text-slate-700 truncate">{h.label} · {h.lines.length} món</span>
+                          <button onClick={() => resumeBill(h.id, false)} className="font-bold text-indigo-600 hover:underline">Mở</button>
+                          <button onClick={() => resumeBill(h.id, true)} className="font-bold text-emerald-600 hover:underline">Gộp</button>
+                          <button onClick={() => persistHeld(held.filter((x) => x.id !== h.id))} className="font-bold text-slate-400 hover:text-red-500">✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
                     {lines.length === 0 ? (
@@ -630,6 +764,20 @@ export default function PosPage() {
                     ) : (
                       lines.map((l) => (
                         <div key={l.variantId} className="py-2 flex items-center gap-2">
+                          {splitMode && (
+                            <input
+                              type="checkbox"
+                              checked={splitSel.has(l.variantId)}
+                              onChange={() => setSplitSel((s) => {
+                                const next = new Set(s);
+                                if (next.has(l.variantId)) next.delete(l.variantId);
+                                else next.add(l.variantId);
+                                return next;
+                              })}
+                              className="w-4 h-4 accent-indigo-600 shrink-0"
+                              aria-label={`Chọn ${l.name} để tách`}
+                            />
+                          )}
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold text-slate-900 truncate">{l.name}</p>
                             <p className="text-[10px] text-slate-500 font-mono">
@@ -673,10 +821,33 @@ export default function PosPage() {
 
                 {/* Total + Payment */}
                 <div className="p-3 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <input
+                      value={coupon}
+                      onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                      placeholder="Mã voucher (VD: MELIOVIP)"
+                      className="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold uppercase placeholder:font-sans placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                    <button
+                      onClick={applyCoupon}
+                      disabled={!coupon.trim() || !lines.length}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs font-bold shrink-0"
+                    >
+                      Áp dụng
+                    </button>
+                  </div>
+                  {quote && quote.discountTotal > 0 && (
+                    <div className="flex items-baseline justify-between mb-1 text-xs">
+                      <span className="font-semibold text-emerald-700">
+                        Voucher {coupon} ({quote.promos.map((p) => p.name).join(", ") || "giảm giá"})
+                      </span>
+                      <span className="font-bold text-emerald-700">−{quote.discountTotal.toLocaleString("vi-VN")} ₫</span>
+                    </div>
+                  )}
                   <div className="flex items-baseline justify-between mb-3">
-                    <span className="text-xs font-semibold text-slate-500">Tổng:</span>
+                    <span className="text-xs font-semibold text-slate-500">Tổng{quote && quote.discountTotal > 0 ? " (sau voucher)" : ""}:</span>
                     <span className="text-2xl font-black text-slate-900">
-                      {total.toLocaleString("vi-VN")} ₫
+                      {payable.toLocaleString("vi-VN")} ₫
                     </span>
                   </div>
 
@@ -685,7 +856,7 @@ export default function PosPage() {
                     {[100000, 200000, 500000, 1000000].map((amt) => (
                       <button
                         key={amt}
-                        disabled={!lines.length || amt < total}
+                        disabled={!lines.length || amt < payable}
                         onClick={() => {
                           // Quick cash: pay with this amount, no change calculation needed server-side
                           // Just use CASH method with the actual total

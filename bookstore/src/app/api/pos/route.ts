@@ -3,7 +3,7 @@ import { PaymentMethod } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { assertStoreAccess, requirePermission } from "@/lib/auth";
 import { apiError, ok, fail, toMoney } from "@/lib/api";
-import { completeSale, openShift, closeShift, refundSale } from "@/lib/pos";
+import { completeSale, openShift, closeShift, refundSale, quoteSale } from "@/lib/pos";
 import { withCheckoutSlot } from "@/lib/throttle";
 
 // PUT /api/pos — full refund of a completed transaction (spec Module 18: POS return)
@@ -66,6 +66,21 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    if (body.action === "quote") {
+      // N1: price preview so the counter can apply a voucher and charge the
+      // discounted total — the client never guesses totals (server is truth).
+      // requirePermission is awaited for its 401/403 side effect only.
+      await requirePermission("pos.sell", body.storeId ?? undefined);
+      if (!Array.isArray(body.items) || body.items.length === 0)
+        fail(400, "VALIDATION", "items required");
+      const q = await quoteSale({
+        items: body.items,
+        storeId: body.storeId,
+        customerId: body.customerId ?? null,
+        couponCode: typeof body.couponCode === "string" ? body.couponCode : undefined,
+      });
+      return ok(q);
+    }
     if (body.action === "sale") {
       if (!body.shiftId || !body.storeId || typeof body.idempotencyKey !== "string" || !body.idempotencyKey.trim())
         fail(400, "VALIDATION", "shiftId, storeId and idempotencyKey required");
@@ -107,6 +122,9 @@ export async function POST(req: NextRequest) {
           items: body.items,
           customerId: body.customerId ?? null,
           redeemPoints: body.redeemPoints,
+          couponCode: typeof body.couponCode === "string" && body.couponCode.trim()
+            ? body.couponCode.trim().toUpperCase().slice(0, 32)
+            : undefined,
           idempotencyKey: body.idempotencyKey.trim().slice(0, 128),
           payments: (body.payments as Record<string, unknown>[]).map((p) => ({
             method: p.method as PaymentMethod, amount: toMoney(p.amount, "payment.amount"),
