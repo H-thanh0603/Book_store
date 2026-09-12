@@ -127,7 +127,7 @@ export default function CheckoutModal({
           <button
             onClick={onClose}
             aria-label="Đóng cửa sổ thanh toán"
-            className="size-9 rounded-full bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center border border-[#ede5d8]"
+            className="size-9 touch-44 rounded-full bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center border border-[#ede5d8]"
           >
             <X className="w-4 h-4" />
           </button>

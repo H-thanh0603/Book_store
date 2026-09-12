@@ -103,7 +103,7 @@ export default function CatalogSection({
                 onClick={() => onViewMode(mode)}
                 aria-label={title}
                 title={title}
-                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                className={`w-9 h-9 touch-44 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
                   viewMode === mode
                     ? "bg-white text-[#8c2d19] shadow-xs font-black scale-105"
                     : "text-slate-500 hover:text-slate-900"
@@ -331,7 +331,7 @@ function ProductRow({
             onClick={() => onToggleFavorite(product.id)}
             aria-label={isFav ? `Bỏ yêu thích ${product.name}` : `Lưu ${product.name} vào tủ sách`}
             aria-pressed={isFav}
-            className={`size-10 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
+            className={`size-10 touch-44 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
               isFav ? "bg-[#8c2d19] text-white shadow-md" : "bg-[#faf4ea] hover:bg-[#ede5d8] hover:text-[#8c2d19] text-slate-600 border border-[#ede5d8]"
             }`}
           >
@@ -377,7 +377,7 @@ function ProductCard({
         }}
         aria-label={isFav ? `Bỏ yêu thích ${product.name}` : `Lưu ${product.name} vào tủ sách`}
         aria-pressed={isFav}
-        className={`absolute top-3 right-3 z-20 size-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+        className={`absolute top-3 right-3 z-20 size-9 touch-44 rounded-full flex items-center justify-center transition-all cursor-pointer ${
           isFav ? "bg-[#8c2d19] text-white" : "bg-white/95 hover:bg-white text-slate-600 hover:text-[#8c2d19] border border-[#ede5d8] shadow-sm"
         }`}
       >

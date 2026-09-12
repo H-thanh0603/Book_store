@@ -22,7 +22,7 @@ function Stars({ value, onPick }: { value: number; onPick?: (v: number) => void 
           disabled={!onPick}
           onClick={() => onPick?.(s)}
           aria-label={`${s} sao`}
-          className={onPick ? "cursor-pointer" : "cursor-default"}
+          className={onPick ? "cursor-pointer p-1.5 -m-1.5 touch-44" : "cursor-default"}
         >
           <Star
             className={`w-4 h-4 ${s <= value ? "fill-amber-400 text-amber-400" : "text-slate-300"}`}
@@ -126,18 +126,20 @@ export default function ProductReviews({ productId }: { productId: string }) {
           <div className="flex items-center gap-2">
             <input
               value={name}
+              aria-label="Tên của bạn"
               onChange={(e) => setName(e.target.value)}
               placeholder="Tên của bạn"
-              className="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+              className="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20"
             />
             <Stars value={rating} onPick={setRating} />
           </div>
           <textarea
             value={body}
+            aria-label="Nội dung đánh giá"
             onChange={(e) => setBody(e.target.value)}
             placeholder="Chia sẻ cảm nhận về tác phẩm..."
             rows={2}
-            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20"
           />
           {err && <p className="text-xs text-rose-600 font-semibold">{err}</p>}
           <button

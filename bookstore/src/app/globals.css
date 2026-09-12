@@ -284,3 +284,23 @@ button, a, input, select, textarea {
   }
 }
 
+
+/* Critique a11y: visible keyboard focus everywhere (crimson token).
+   Buttons/chips previously had hover-only styles — keyboard users got
+   browser-default or nothing. One global rule beats 40 local edits. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid #8c2d19;
+  outline-offset: 2px;
+}
+
+/* Touch targets: bump sub-44px steppers/closes/favs to 44px minimum
+   without redesigning their rows. */
+.touch-44 {
+  min-width: 44px;
+  min-height: 44px;
+}

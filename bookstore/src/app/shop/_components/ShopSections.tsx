@@ -107,12 +107,12 @@ export function VoucherHub({ vouchers, onApply }: { vouchers: Voucher[]; onApply
                 {isCopied ? (
                   <>
                     <Check className="w-3.5 h-3.5" />
-                    <span>Đã chép!</span>
+                    <span>Đã chép + điền sẵn!</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-3.5 h-3.5" />
-                    <span>Sao chép</span>
+                    <span>Lấy mã</span>
                   </>
                 )}
               </button>
@@ -158,10 +158,11 @@ export function NewsletterBox() {
             <input
               type="email"
               required
+              aria-label="Địa chỉ email nhận bản tin"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Nhập địa chỉ email của bạn..."
-              className="flex-1 bg-white border border-slate-300 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500"
+              className="flex-1 bg-white border border-slate-300 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20 focus:border-[#8c2d19]"
             />
             <button
               type="submit"

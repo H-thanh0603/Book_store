@@ -60,7 +60,7 @@ export function WishlistDrawer({
           </div>
           <button
             onClick={onClose}
-            className="size-9 rounded-full bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center border border-[#ede5d8]"
+            className="size-9 touch-44 rounded-full bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center border border-[#ede5d8]"
             aria-label="Đóng tủ sách"
           >
             <X className="w-4 h-4" />
@@ -181,7 +181,7 @@ export function CartDrawer({
           <button
             onClick={onClose}
             aria-label="Đóng giỏ hàng"
-            className="size-9 rounded-full bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center border border-[#ede5d8]"
+            className="size-9 touch-44 rounded-full bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center border border-[#ede5d8]"
           >
             <X className="w-4 h-4" />
           </button>
@@ -229,7 +229,7 @@ export function CartDrawer({
                     <button
                       onClick={() => onChangeQuantity(line.variantId, -1)}
                       aria-label={`Giảm số lượng ${line.name}`}
-                      className="w-8 h-8 rounded-lg hover:bg-white flex items-center justify-center text-slate-700 cursor-pointer"
+                      className="w-8 h-8 touch-44 rounded-lg hover:bg-white flex items-center justify-center text-slate-700 cursor-pointer"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
@@ -238,7 +238,7 @@ export function CartDrawer({
                       onClick={() => onChangeQuantity(line.variantId, 1)}
                       disabled={line.quantity >= line.available}
                       aria-label={`Tăng số lượng ${line.name}`}
-                      className="w-8 h-8 rounded-lg hover:bg-white disabled:opacity-30 flex items-center justify-center text-slate-700 cursor-pointer"
+                      className="w-8 h-8 touch-44 rounded-lg hover:bg-white disabled:opacity-30 flex items-center justify-center text-slate-700 cursor-pointer"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -247,7 +247,7 @@ export function CartDrawer({
                   <button
                     onClick={() => onRemoveLine(line.variantId)}
                     aria-label={`Xóa ${line.name} khỏi giỏ`}
-                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-[#8c2d19] transition-colors cursor-pointer"
+                    className="w-8 h-8 touch-44 flex items-center justify-center text-slate-400 hover:text-[#8c2d19] transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -361,6 +361,7 @@ export function OrderSuccessModal({  success,
   copiedOrder,
   onCopy,
   onClose,
+  paymentMethod,
 }: {
   success: { number: string; total: number };
   storeName: string;
@@ -368,10 +369,12 @@ export function OrderSuccessModal({  success,
   copiedOrder: boolean;
   onCopy: () => void;
   onClose: () => void;
+  paymentMethod?: string;
 }) {
+  const paidOnline = paymentMethod === "VNPAY";
   return (
     <div className="fixed inset-0 z-50 bg-[#1c1917]/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-[#fbf9f5] rounded-3xl p-8 text-center shadow-2xl border border-[#ede5d8] space-y-4 animate-in zoom-in-95 duration-200 font-serif">
+      <div role="dialog" aria-modal="true" aria-label="Đặt hàng thành công" className="w-full max-w-md bg-[#fbf9f5] rounded-3xl p-8 text-center shadow-2xl border border-[#ede5d8] space-y-4 animate-in zoom-in-95 duration-200 font-serif">
         <div className="size-16 rounded-full bg-[#faf4ea] text-[#8c2d19] flex items-center justify-center mx-auto border border-[#e8dac5]">
           <CheckCircle2 className="w-8 h-8" />
         </div>
@@ -387,7 +390,8 @@ export function OrderSuccessModal({  success,
             <span className="font-mono text-xl font-black text-yellow-200 tracking-wider">{success.number}</span>
             <button
               onClick={onCopy}
-              className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer"
+              aria-label="Sao chép mã đơn hàng"
+              className="p-1.5 touch-44 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer"
               title="Sao chép mã đơn hàng"
             >
               {copiedOrder ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
@@ -397,9 +401,14 @@ export function OrderSuccessModal({  success,
 
         <div className="text-xs text-slate-600 bg-white p-3.5 rounded-2xl border border-slate-200 text-left space-y-1 shadow-xs">
           <div className="flex justify-between">
-            <span>Tổng tiền thu khi giao (COD):</span>
+            <span>{paidOnline ? "Đã thanh toán trực tuyến ✓" : "Tổng tiền thu khi giao (COD):"}</span>
             <b className="text-[#8c2d19] font-bold">{money(success.total)}</b>
           </div>
+          {paidOnline && (
+            <p className="text-[11px] text-[#14532d] font-semibold pt-1">
+              Không thu thêm khi giao hàng — đơn của bạn đã được thanh toán.
+            </p>
+          )}
           <p className="text-[11px] text-slate-500 pt-1">
             📞 Thủ thư chi nhánh <b>{storeName}</b> sẽ sớm liên hệ xác nhận đơn hàng với bạn.
           </p>

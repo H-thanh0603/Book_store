@@ -177,42 +177,8 @@ export default function ShopPage() {
           activeDepartment={s.activeDepartment}
         />
 
-        {/* 5. FLASH SALE */}
-        <FlashSale
-          products={s.allProducts}
-          countdown={s.countdown}
-          activeStoreName={s.activeStore?.name ?? "tất cả chi nhánh"}
-          money={money}
-          onAddToCart={s.addToCart}
-        />
-
-        {/* 6. READING LOUNGE */}
-        <ReadingLounge
-          atmospheres={readingAtmospheres}
-          activeMood={s.activeMood}
-          onMood={s.setActiveMood}
-          products={s.moodFilteredProducts}
-          money={money}
-          onQuickView={s.setQuickViewProduct}
-        />
-
-        {/* 7. AUTHOR SPOTLIGHT */}
-        <AuthorSpotlightSection spotlight={authorSpotlight} />
-
-        {/* 8. COMBO BUNDLES */}
-        <ComboBundlesSection bundles={comboBundles} money={money} onAddCombo={s.addComboToCart} />
-
-        {/* 9. BOOK OF THE MONTH */}
-        {s.spotlightProduct && (
-          <BookOfMonth
-            product={s.spotlightProduct}
-            money={money}
-            onAddToCart={s.addToCart}
-            onFlipbook={s.setFlipbookProduct}
-          />
-        )}
-
-        {/* 10. FULL CATALOG */}
+        {/* 5. FULL CATALOG — moved up: the money section sits right after
+            discovery instead of at position #10 (critique P1). */}
         <CatalogSection
           products={s.filteredProducts}
           allCount={s.allProducts.length}
@@ -242,6 +208,42 @@ export default function ShopPage() {
           onAddToCart={s.addToCart}
         />
 
+        {/* 6. FLASH SALE */}
+        <FlashSale
+          products={s.allProducts}
+          countdown={s.countdown}
+          activeStoreName={s.activeStore?.name ?? "tất cả chi nhánh"}
+          money={money}
+          onAddToCart={s.addToCart}
+          voucherCode={vouchers[0]?.code ?? null}
+        />
+
+        {/* 7. READING LOUNGE */}
+        <ReadingLounge
+          atmospheres={readingAtmospheres}
+          activeMood={s.activeMood}
+          onMood={s.setActiveMood}
+          products={s.moodFilteredProducts}
+          money={money}
+          onQuickView={s.setQuickViewProduct}
+        />
+
+        {/* 8. AUTHOR SPOTLIGHT */}
+        <AuthorSpotlightSection spotlight={authorSpotlight} />
+
+        {/* 9. COMBO BUNDLES */}
+        <ComboBundlesSection bundles={comboBundles} money={money} onAddCombo={s.addComboToCart} />
+
+        {/* 10. BOOK OF THE MONTH */}
+        {s.spotlightProduct && (
+          <BookOfMonth
+            product={s.spotlightProduct}
+            money={money}
+            onAddToCart={s.addToCart}
+            onFlipbook={s.setFlipbookProduct}
+          />
+        )}
+
         {/* 11. BLOG */}
         <BlogSection articles={blogArticles} />
 
@@ -258,10 +260,12 @@ export default function ShopPage() {
       {/* 16. QUICK VIEW MODAL */}
       {s.quickViewProduct && (
         <QuickViewModal
+          key={s.quickViewProduct.id}
           product={s.quickViewProduct}
           storeName={s.activeStore?.name ?? "Melio Central"}
           money={money}
           onClose={() => s.setQuickViewProduct(null)}
+          onViewCart={() => s.setCartOpen(true)}
           onShelfFinder={(p) => {
             s.setQuickViewProduct(null);
             s.setShelfProduct(p);
@@ -351,6 +355,7 @@ export default function ShopPage() {
           storeName={s.activeStore?.name ?? "Melio"}
           money={money}
           copiedOrder={copiedOrder}
+          paymentMethod={s.paymentMethod}
           onCopy={() => {
             navigator.clipboard.writeText(s.success!.number);
             setCopiedOrder(true);

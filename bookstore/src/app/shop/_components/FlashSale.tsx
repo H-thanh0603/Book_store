@@ -13,12 +13,14 @@ export default function FlashSale({
   activeStoreName,
   money,
   onAddToCart,
+  voucherCode,
 }: {
   products: Product[];
   countdown: { hours: number; minutes: number; seconds: number };
   activeStoreName: string;
   money: (v: number) => string;
   onAddToCart: (p: Product) => void;
+  voucherCode?: string | null;
 }) {
   return (
     <section id="flash-sale" className="rounded-3xl bg-[#2b2118] p-6 sm:p-10 text-white shadow-xl space-y-6 border border-[#e8dac5] relative overflow-hidden">
@@ -34,15 +36,20 @@ export default function FlashSale({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-serif font-black text-2xl sm:text-3xl text-white tracking-tight">
-                Giờ Vàng Săn Sách &amp; Quà Tặng
+                Gợi Ý Giờ Vàng
               </h2>
               <span className="bg-[#ffd56a] text-[#6b2113] text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
                 Đến Nửa Đêm
               </span>
             </div>
             <p className="text-xs text-[#f3e5d0] mt-0.5 font-semibold">
-              Ưu đãi trình bày tại <b>{activeStoreName}</b> — cập nhật theo tồn kho thực tế
+              Gợi ý nổi bật tại <b>{activeStoreName}</b> — giá niêm yết thật, áp mã để được giảm thêm
             </p>
+            {voucherCode && (
+              <p className="text-xs mt-1.5 inline-flex items-center gap-1.5 bg-white/15 border border-white/25 rounded-xl px-3 py-1.5 font-bold text-[#ffd56a]">
+                Nhập mã <span className="font-mono">{voucherCode}</span> khi thanh toán để giảm thêm
+              </p>
+            )}
           </div>
         </div>
 

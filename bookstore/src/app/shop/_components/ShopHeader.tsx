@@ -66,13 +66,14 @@ export default function ShopHeader({
         {/* Mega Search Bar with Smart Autocomplete Dropdown */}
         <div ref={searchContainerRef} className="relative flex-1 max-w-xl">
           <div className="relative">
-            <Search className="w-4 h-4 text-rose-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-[#8c2d19] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               value={query}
+              aria-label="Tìm kiếm sách, văn phòng phẩm, đồ chơi"
               onFocus={() => setSearchFocused(true)}
               onChange={(e) => onQuery(e.target.value)}
               placeholder="Tìm kiếm tác phẩm, bút Thiên Long, đồ chơi LEGO, tác giả..."
-              className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-2xl pl-10 pr-9 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all shadow-2xs"
+              className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-2xl pl-10 pr-9 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20 focus:border-[#8c2d19] transition-all shadow-2xs"
             />
             {query && (
               <button
@@ -106,8 +107,8 @@ export default function ShopHeader({
                           className="flex items-center justify-between p-2 rounded-xl hover:bg-[#faf4ea] transition-colors cursor-pointer group"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="size-10 rounded-xl bg-gradient-to-tr from-[#8c2d19] to-[#d97706] text-white flex items-center justify-center text-[9px] font-bold p-1 text-center shadow-xs">
-                              {p.category.name.slice(0, 4)}
+                            <div className="size-10 rounded-xl bg-gradient-to-tr from-[#8c2d19] to-[#d97706] text-white flex items-center justify-center shadow-xs" aria-hidden="true">
+                              <BookOpen className="w-4 h-4" />
                             </div>
                             <div>
                               <h5 className="font-bold text-xs text-slate-900 group-hover:text-[#8c2d19] line-clamp-1">

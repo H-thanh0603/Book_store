@@ -1,5 +1,6 @@
 // Section 16: QUICK VIEW PRODUCT MODAL
-import { X, ShoppingBag } from "lucide-react";
+import { useState } from "react";
+import { X, ShoppingBag, Check } from "lucide-react";
 import ProductReviews from "./ProductReviews";
 import type { Product } from "./types";
 
@@ -11,6 +12,7 @@ export default function QuickViewModal({
   onShelfFinder,
   onFlipbook,
   onAddToCart,
+  onViewCart,
 }: {
   product: Product;
   storeName: string;
@@ -19,7 +21,9 @@ export default function QuickViewModal({
   onShelfFinder: (p: Product) => void;
   onFlipbook: (p: Product) => void;
   onAddToCart: (p: Product) => void;
+  onViewCart?: () => void;
 }) {
+  const [added, setAdded] = useState(false);
   const variant = product.variants[0];
   return (
     <div
@@ -36,7 +40,7 @@ export default function QuickViewModal({
         <button
           onClick={onClose}
           aria-label="Đóng xem nhanh tác phẩm"
-          className="absolute top-5 right-5 size-9 rounded-full bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center transition-colors shadow-xs"
+          className="absolute top-5 right-5 size-9 touch-44 rounded-full bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center transition-colors shadow-xs"
         >
           <X className="w-4 h-4" />
         </button>
@@ -110,17 +114,30 @@ export default function QuickViewModal({
             )}
 
             <div className="pt-2">
-              <button
-                onClick={() => {
-                  onAddToCart(product);
-                  onClose();
-                }}
-                disabled={!variant?.available}
-                className="w-full py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                {variant?.available ? "Thêm Vào Giỏ Hàng Ngay" : "Tạm Hết Hàng"}
-              </button>
+              {added ? (
+                <button
+                  onClick={() => {
+                    onViewCart?.();
+                    onClose();
+                  }}
+                  className="w-full py-3.5 rounded-2xl bg-[#14532d] hover:bg-[#166534] text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all"
+                >
+                  <Check className="w-4 h-4" />
+                  Đã thêm ✓ — Xem giỏ hàng
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    onAddToCart(product);
+                    setAdded(true);
+                  }}
+                  disabled={!variant?.available}
+                  className="w-full py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  {variant?.available ? "Thêm Vào Giỏ Hàng Ngay" : "Tạm Hết Hàng"}
+                </button>
+              )}
             </div>
           </div>
         </div>

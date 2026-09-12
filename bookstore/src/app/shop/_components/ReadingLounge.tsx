@@ -35,7 +35,9 @@ export default function ReadingLounge({
             <button
               key={m.id}
               onClick={() => onMood(m.id)}
-              className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+              aria-label={`Không gian đọc: ${m.title}`}
+              aria-pressed={activeMood === m.id}
+              className={`px-4 py-2 touch-44 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeMood === m.id
                   ? "bg-[#1c1917] text-[#ffd56a] shadow-md font-black scale-105"
                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
