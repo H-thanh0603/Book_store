@@ -25,6 +25,7 @@ async function main() {
   console.log(`scraped: ${books.length}, already imported: ${doneSet.size}`);
 
   const bookCat = await prisma.category.findFirstOrThrow({ where: { name: "Sách", parentId: null } });
+  const org = await prisma.organization.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
   const retail = await prisma.priceList.findUniqueOrThrow({ where: { name: "RETAIL" } });
   const whLoc = await prisma.stockLocation.findFirstOrThrow({ where: { type: "WAREHOUSE" } });
   const stockrooms = await prisma.stockLocation.findMany({ where: { type: "STORE_STOCKROOM" } });
@@ -51,7 +52,7 @@ async function main() {
   for (const b of books) {
     if (doneSet.has(b.id)) { skipped++; continue; }
     const sku = `TKI-${b.id}`;
-    if (await prisma.productVariant.findUnique({ where: { sku } })) { skipped++; continue; }
+    if (await prisma.productVariant.findFirst({ where: { sku, orgId: org.id } })) { skipped++; continue; }
     // strip Tiki suffixes like " - NXB Trẻ" from display name
     const name = b.name.replace(/\s+-\s+NXB\s+\S+.*$/, "").trim() || b.name;
 
@@ -59,13 +60,13 @@ async function main() {
     const publisherId = b.publisher ? await findOrCreatePublisher(b.publisher) : null;
     const product = await prisma.product.create({
       data: {
-        name, status: "active", categoryId: bookCat.id,
+        name, status: "active", orgId: org.id, categoryId: bookCat.id,
         authorId, publisherId, taxRate: 0.08,
         description: `Nguồn: ${b.url}`,
         imageUrl: b.image || null,
         variants: {
           create: {
-            sku, name: "Default",
+            sku, orgId: org.id, name: "Default",
             barcodes: { create: { barcode: b.isbn, type: "ISBN" } },
           },
         },

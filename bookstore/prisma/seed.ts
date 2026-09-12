@@ -113,9 +113,9 @@ async function main() {
   ];
   const stores = [];
   for (const [code, name] of storeNames) {
-    let store = await prisma.store.findUnique({ where: { code } });
+    let store = await prisma.store.findFirst({ where: { code, orgId: org.id } });
     if (!store) {
-      store = await prisma.store.create({ data: { code, name, regionId: region.id } });
+      store = await prisma.store.create({ data: { code, name, regionId: region.id, orgId: org.id } });
       const stockroom = await prisma.stockLocation.create({ data: { name: `${name} — Kho sau`, type: "STORE_STOCKROOM", storeId: store.id } });
       await prisma.stockLocation.create({ data: { name: `${name} — Kệ A`, type: "STORE_SHELF", storeId: store.id, parentId: stockroom.id } });
       await prisma.posTerminal.create({ data: { storeId: store.id, name: `POS-${code}-01` } });
@@ -334,8 +334,8 @@ async function main() {
 
   const variantIds: Record<string, string> = {};
   for (const p of products) {
-    // idempotent: skip if SKU already exists
-    let variant = await prisma.productVariant.findUnique({ where: { sku: p.sku } });
+    // idempotent: skip if SKU already exists in this org
+    let variant = await prisma.productVariant.findFirst({ where: { sku: p.sku, orgId: org.id } });
     if (!variant) {
       // also skip if barcode already exists (from previous seed runs)
       const existingBarcode = await prisma.productBarcode.findUnique({ where: { barcode: p.barcode } });
@@ -350,13 +350,14 @@ async function main() {
         data: {
           name: p.name,
           status: "active",
+          orgId: org.id,
           categoryId: cats[p.cat],
           brandId: p.brand ? brands[p.brand] : null,
           authorId: p.author ? authors[p.author] : null,
           publisherId: p.pub ? pubs[p.pub] : null,
           taxRate: 0.08,
           variants: {
-            create: { sku: p.sku, name: "Default", barcodes: { create: { barcode: p.barcode, type: p.cat === "Sách" ? "ISBN" : "EAN13" } } },
+            create: { sku: p.sku, orgId: org.id, name: "Default", barcodes: { create: { barcode: p.barcode, type: p.cat === "Sách" ? "ISBN" : "EAN13" } } },
           },
         },
         include: { variants: true },
@@ -490,13 +491,13 @@ async function main() {
     }
   }
   async function seedGeneratedVariant(sku: string, name: string, barcode: string, categoryId: string, price: number, priceListId: string): Promise<string> {
-    const existing = await prisma.productVariant.findUnique({ where: { sku } });
+    const existing = await prisma.productVariant.findFirst({ where: { sku, orgId: org.id } });
     if (existing) return existing.id;
     if (await prisma.productBarcode.findUnique({ where: { barcode } })) return "";
     const product = await prisma.product.create({
       data: {
-        name, status: "active", categoryId, taxRate: 0.08,
-        variants: { create: { sku, name: "Default", barcodes: { create: { barcode, type: "EAN13" } } } },
+        name, status: "active", orgId: org.id, categoryId, taxRate: 0.08,
+        variants: { create: { sku, orgId: org.id, name: "Default", barcodes: { create: { barcode, type: "EAN13" } } } },
       },
       include: { variants: true },
     });

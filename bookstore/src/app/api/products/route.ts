@@ -4,6 +4,7 @@
 import { NextRequest } from "next/server";
 import { prisma, prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
+import { withOrg } from "@/lib/org-scope";
 import { apiError, ok, fail, toMoney, reqStr, optStr } from "@/lib/api";
 import { embedProduct } from "@/lib/embeddings";
 import { Prisma } from "../../../generated/prisma/client";
@@ -37,7 +38,7 @@ function parseTaxRate(v: unknown): number {
 // Admin browse is read-only and seconds-stale-tolerant → replica when configured.
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission("product.view");
+    const auth = await requirePermission("product.view");
     const sp = req.nextUrl.searchParams;
     const q = sp.get("q");
     const barcode = sp.get("barcode");
@@ -48,6 +49,7 @@ export async function GET(req: NextRequest) {
     const take = Math.min(200, Math.max(1, Number(sp.get("take") ?? 25)));
 
     const where = {
+      ...withOrg(auth),
       AND: [
         barcode ? { variants: { some: { barcodes: { some: { barcode } } } } } : {},
         sku ? { variants: { some: { sku } } } : {},
@@ -95,6 +97,9 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requirePermission("product.update");
     const b = await req.json();
+    // SEC-004: catalog is org-scoped — a legacy superuser (orgId null) has no
+    // org to attach, deny rather than create an orphan (same rule as customers).
+    if (!auth.orgId) fail(403, "FORBIDDEN", "Product creation requires an org-scoped account");
     const name = reqStr(b.name, "name", 255);
     const categoryId = await requireOptionalRef("category", b.categoryId, "Category").then((id) => {
       if (!id) fail(400, "VALIDATION", "categoryId required");
@@ -120,6 +125,7 @@ export async function POST(req: NextRequest) {
           data: {
             name,
             status,
+            orgId: auth.orgId as string,
             categoryId,
             brandId,
             authorId,
@@ -129,6 +135,7 @@ export async function POST(req: NextRequest) {
             variants: {
               create: b.variants.map((v: { sku: string; name?: string; barcode?: string; barcodeType?: string }) => ({
                 sku: v.sku,
+                orgId: auth.orgId as string,
                 name: v.name ?? "Default",
                 barcodes: v.barcode ? { create: { barcode: v.barcode, type: v.barcodeType ?? "INTERNAL" } } : undefined,
               })),
@@ -171,7 +178,9 @@ export async function PATCH(req: NextRequest) {
     const auth = await requirePermission("product.update");
     const b = await req.json();
     if (!b.id) fail(400, "VALIDATION", "id required");
-    const before = await prisma.product.findUnique({ where: { id: b.id }, include: { variants: true } });
+    // SEC-004: resolve the product inside the caller's org — a bare id lookup
+    // would let one tenant edit another tenant's catalog.
+    const before = await prisma.product.findFirst({ where: withOrg(auth, { id: b.id }), include: { variants: true } });
     if (!before) fail(404, "NOT_FOUND", "Product not found");
 
     // Whitelist + validate every field — raw client values must never reach
@@ -202,7 +211,7 @@ export async function PATCH(req: NextRequest) {
     if (b.newBarcode?.barcode && b.newBarcode?.variantId) {
       const bcBarcode = reqStr(b.newBarcode.barcode, "newBarcode.barcode", 128);
       const bcType = ["EAN13", "ISBN", "INTERNAL", "SUPPLIER"].includes(b.newBarcode.type) ? b.newBarcode.type : "INTERNAL";
-      const variant = await prisma.productVariant.findUnique({ where: { id: b.newBarcode.variantId } });
+      const variant = await prisma.productVariant.findFirst({ where: { id: b.newBarcode.variantId, ...withOrg(auth) } });
       if (!variant) fail(404, "NOT_FOUND", "Variant for newBarcode not found");
       try {
         await prisma.productBarcode.create({

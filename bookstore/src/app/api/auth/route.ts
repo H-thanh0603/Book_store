@@ -182,6 +182,7 @@ export async function POST(req: NextRequest) {
             code: `${slug.slice(0, 8).toUpperCase()}-HQ`,
             name: "Cửa hàng chính",
             regionId: region.id,
+            orgId: org.id,
           },
         });
 

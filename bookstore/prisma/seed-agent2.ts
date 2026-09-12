@@ -97,13 +97,14 @@ async function main() {
         if (existingCount >= TARGET_TOTAL) break outer;
         const title = `${g.names[n]}${vol > 1 ? ` — Tập ${vol}` : ""}`;
         const sku = `${g.skuPrefix}-${String(n + 1).padStart(2, "0")}-${vol}`;
-        if (await prisma.productVariant.findUnique({ where: { sku } })) { existingCount++; continue; }
+        if (await prisma.productVariant.findFirst({ where: { sku, orgId: org.id } })) { existingCount++; continue; }
         const cat = cats.find((c) => c.name === g.catName) ?? cats[0];
         const price = Math.round((g.basePrice + Math.floor(rand() * g.basePrice)) / 1000) * 1000;
         const product = await prisma.product.create({
           data: {
             name: title,
             status: "active",
+            orgId: org.id,
             categoryId: cat.id,
             brandId: g.catName !== "Sách" && brands.length ? pick(brands).id : null,
             authorId: g.catName === "Sách" && authors.length ? pick(authors).id : null,
@@ -111,7 +112,7 @@ async function main() {
             taxRate: 0.08,
             variants: {
               create: {
-                sku, name: "Default",
+                sku, orgId: org.id, name: "Default",
                 barcodes: { create: { barcode: `89${String(Math.floor(rand() * 1e10)).padStart(10, "0")}`, type: "EAN13" } },
               },
             },

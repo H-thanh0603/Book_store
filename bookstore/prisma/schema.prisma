@@ -26,6 +26,8 @@ model Organization {
   suppliers Supplier[]
   promotions Promotion[]
   giftCards GiftCard[]
+  stores    Store[]
+  products  Product[]
   subscription Subscription?
   billingInvoices BillingInvoice[]
   supportConversations SupportConversation[]
@@ -49,7 +51,12 @@ model Region {
 
 model Store {
   id       String  @id @default(uuid())
-  code     String  @unique
+  code     String
+  // SEC-004: store codes are unique PER org, not globally — two tenants may
+  // both run a "NH" branch. Denormalized from Region so the unique index and
+  // every code lookup stay single-table.
+  orgId    String
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Restrict)
   name     String
   regionId String
   region   Region  @relation(fields: [regionId], references: [id])
@@ -60,6 +67,8 @@ model Store {
   promotions     PromotionStore[]
   orders         Order[]
   eInvoices      EInvoice[] // back-relation for EInvoice.store (schema had drifted while the generated client stayed stale)
+  @@unique([orgId, code])
+  @@index([orgId])
 }
 
 model Warehouse {
@@ -337,6 +346,10 @@ enum ProductStatus {
 model Product {
   id          String @id @default(uuid())
   name        String
+  // SEC-004: catalog is per-tenant — cross-org product/SKU visibility was a
+  // tenant leak. Variants denormalize this into orgId for the composite unique.
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Restrict)
   status      ProductStatus @default(draft)
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
@@ -355,15 +368,20 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   @@index([name])
+  @@index([orgId])
   @@index([categoryId])
 }
 
 model ProductVariant {
   id        String @id @default(uuid())
-  sku       String @unique
+  sku       String
+  // Denormalized from Product so the per-org SKU unique stays single-table
+  // (Prisma cannot composite-unique across a relation).
+  orgId     String
   productId String
   product   Product @relation(fields: [productId], references: [id])
   @@index([productId]) // SCALE-004: Product→variants lookups
+  @@unique([orgId, sku])
   name      String // e.g. "Black 20L"
   attributes AttributeValue[]
   barcodes  ProductBarcode[]

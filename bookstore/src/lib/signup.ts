@@ -88,7 +88,7 @@ export async function signup(input: SignupInput): Promise<{ orgId: string; userI
   const region = await prisma.region.create({ data: { name: "Miền Nam", orgId: org.id } });
   const storeCode = `STORE-${createHash("sha256").update(org.id).digest("hex").slice(0, 6).toUpperCase()}`;
   const store = await prisma.store.create({
-    data: { name: input.storeName ?? `${input.orgName} - Trụ sở`, code: storeCode, regionId: region.id },
+    data: { name: input.storeName ?? `${input.orgName} - Trụ sở`, code: storeCode, regionId: region.id, orgId: org.id },
   });
   await ensureRolesAndPerms();
   const ownerRole = await prisma.role.findUniqueOrThrow({ where: { name: "owner" } });

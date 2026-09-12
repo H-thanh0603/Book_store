@@ -29,14 +29,23 @@ export async function POST(req: NextRequest) {
     const b = await req.json();
     const code = reqStr(b.code, "code", 16);
     const name = reqStr(b.name, "name");
-    if (await prisma.store.findUnique({ where: { code } })) fail(409, "DUPLICATE", `Store code ${code} exists`);
     let regionId = b.regionId ?? null;
-    if (regionId) requireRef(await prisma.region.findUnique({ where: { id: String(regionId) }, select: { id: true } }), "Region");
+    if (regionId) requireRef(await prisma.region.findUnique({ where: { id: String(regionId) }, select: { id: true, orgId: true } }), "Region");
     regionId ??= (await prisma.region.findFirst())?.id;
+    const region = requireRef(
+      await prisma.region.findUnique({ where: { id: String(regionId) }, select: { id: true, orgId: true } }),
+      "Region",
+    );
+    // SEC-004/005: the store inherits its org from the region, and the region
+    // must belong to the caller's org (legacy superuser without org bypasses).
+    if (auth.orgId && region.orgId !== auth.orgId)
+      fail(403, "FORBIDDEN", "Region belongs to another organization");
+    if (await prisma.store.findFirst({ where: { code, orgId: region.orgId } }))
+      fail(409, "DUPLICATE", `Store code ${code} exists`);
     try {
       const store = await prisma.store.create({
         data: {
-          code, name, regionId,
+          code, name, regionId, orgId: region.orgId,
           stockLocations: { create: { name: `${name} — Kho sau`, type: "STORE_STOCKROOM" } },
         },
         include: { stockLocations: true },
