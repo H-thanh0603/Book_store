@@ -7,7 +7,7 @@ import { Prisma } from "@/generated/prisma/client";
 // GET /api/transfers — List transfers
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission("inventory:read");
+    await requirePermission("inventory.view");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 // POST /api/transfers — Create transfer
 export async function POST(req: NextRequest) {
   try {
-    await requirePermission("inventory:manage");
+    await requirePermission("inventory.manage");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });

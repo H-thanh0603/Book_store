@@ -27,6 +27,8 @@ export async function GET(req: NextRequest) {
     return ok({
       page, pageSize, total,
       balances: rows.map((b) => ({
+        variantId: b.variantId,
+        locationId: b.locationId,
         sku: b.variant.sku, product: b.variant.product.name,
         location: b.location.name, onHand: b.onHand, reserved: b.reserved,
         available: b.onHand - b.reserved, inTransit: b.inTransit, damaged: b.damaged,

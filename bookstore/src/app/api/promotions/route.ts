@@ -9,7 +9,7 @@ import { Prisma } from "@/generated/prisma/client";
 export async function GET(req: NextRequest) {
   let auth;
   try {
-    auth = await requirePermission("promotions:read");
+    auth = await requirePermission("promotion.view");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   let auth;
   try {
-    auth = await requirePermission("promotions:manage");
+    auth = await requirePermission("promotion.manage");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });

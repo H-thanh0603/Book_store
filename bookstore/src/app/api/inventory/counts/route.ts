@@ -8,7 +8,7 @@ import { Prisma } from "@/generated/prisma/client";
 export async function GET(req: NextRequest) {
   let auth;
   try {
-    auth = await requirePermission("inventory:read");
+    auth = await requirePermission("inventory.view");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   let auth;
   try {
-    auth = await requirePermission("inventory:manage");
+    auth = await requirePermission("inventory.manage");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });

@@ -34,7 +34,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requirePermission("inventory:manage");
+    const auth = await requirePermission("inventory.manage");
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
     const { action, items: receiveItems } = body;
@@ -210,7 +210,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requirePermission("inventory:read");
+    const auth = await requirePermission("inventory.view");
     const { id } = await params;
     const transfer = await prismaRead.stockTransfer.findUnique({
       where: { id },

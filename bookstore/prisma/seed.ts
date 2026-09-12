@@ -23,9 +23,10 @@ const seedUserPassword = (() => {
 
 const PERMS = [
   "product.view", "product.update", "inventory.view", "inventory.adjust",
+  "inventory.manage",
   "inventory.transfer", "pos.sell", "pos.refund", "pos.override_price",
-  "purchase.create", "purchase.approve", "purchase.receive",
-  "customer.view", "customer.update", "promotion.manage",
+  "purchase.view", "purchase.create", "purchase.approve", "purchase.receive",
+  "customer.view", "customer.update", "promotion.view", "promotion.manage",
   "reports.financial.view", "reports.store.view", "admin.users", "admin.config",
   // Referenced by /api/billing + /api/webhooks + /api/payments/refunds but
   // never seeded before — every settings route 403'd for owner/admin too.
@@ -35,9 +36,9 @@ const PERMS = [
 const ROLE_PERMS: Record<string, string[]> = {
   cashier: ["product.view", "inventory.view", "pos.sell", "pos.refund", "customer.view", "customer.update"],
   sales: ["product.view", "inventory.view", "inventory.transfer", "customer.view"],
-  warehouse: ["product.view", "inventory.view", "inventory.adjust", "inventory.transfer", "purchase.receive"],
-  store_manager: ["product.view", "product.update", "inventory.view", "inventory.adjust", "inventory.transfer", "pos.sell", "pos.refund", "purchase.create", "customer.view", "promotion.manage", "reports.store.view"],
-  purchasing: ["product.view", "inventory.view", "purchase.create", "purchase.approve", "purchase.receive", "reports.store.view"],
+  warehouse: ["product.view", "inventory.view", "inventory.adjust", "inventory.manage", "inventory.transfer", "purchase.view", "purchase.receive"],
+  store_manager: ["product.view", "product.update", "inventory.view", "inventory.adjust", "inventory.manage", "inventory.transfer", "pos.sell", "pos.refund", "purchase.view", "purchase.create", "customer.view", "promotion.view", "promotion.manage", "reports.store.view"],
+  purchasing: ["product.view", "inventory.view", "purchase.view", "purchase.create", "purchase.approve", "purchase.receive", "reports.store.view"],
   admin: PERMS,
   owner: PERMS,
 };

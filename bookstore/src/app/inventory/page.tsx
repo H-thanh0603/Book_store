@@ -10,9 +10,13 @@ import {
   Sparkles,
   Zap,
   CheckCircle2,
+  Trash2,
+  X,
 } from "lucide-react";
 
 type Balance = {
+  variantId: string;
+  locationId: string;
   sku: string;
   product: string;
   location: string;
@@ -32,6 +36,39 @@ export default function InventoryPage() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [autoPOModalOpen, setAutoPOModalOpen] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  // N2c: damage slip form state
+  const [dmgOpen, setDmgOpen] = useState(false);
+  const [dmgSku, setDmgSku] = useState("");
+  const [dmgLoc, setDmgLoc] = useState("");
+  const [dmgQty, setDmgQty] = useState(1);
+  const [dmgReason, setDmgReason] = useState("");
+
+  async function submitDamage() {
+    if (!dmgSku.trim() || !dmgLoc || dmgQty < 1 || !dmgReason.trim()) {
+      setErr("Nhập đủ SKU, vị trí, số lượng và lý do hủy");
+      return;
+    }
+    // Ids come from the balances rows (server revalidates everything anyway).
+    const bal = balances.find((b) => b.sku === dmgSku.trim() && b.location === dmgLoc);
+    if (!bal) {
+      setErr("Không tìm thấy SKU tại vị trí này trong trang hiện tại");
+      return;
+    }
+    const r = await fetch("/api/inventory/damage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variantId: bal.variantId, locationId: bal.locationId, qty: dmgQty, reason: dmgReason.trim() }),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      setMsg({ text: `Đã ghi hủy ${d.qty} × ${d.sku}`, type: "success" });
+      setDmgOpen(false); setDmgSku(""); setDmgLoc(""); setDmgQty(1); setDmgReason("");
+      loadData(page);
+    } else {
+      setErr(d.message);
+    }
+  }
   const [poCreated, setPoCreated] = useState(false);
   const [poCode, setPoCode] = useState("");
 
@@ -101,6 +138,13 @@ export default function InventoryPage() {
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => { setDmgOpen(true); setMsg(null); }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Phiếu hủy hàng
+            </button>
+            <button
               onClick={() => setAutoPOModalOpen(true)}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-[#1c1917] font-bold text-xs rounded-xl shadow-xs transition-colors"
             >
@@ -122,6 +166,11 @@ export default function InventoryPage() {
         {err && (
           <div className="p-3.5 text-xs text-red-700 bg-red-50 rounded-xl border border-red-200">
             {err}
+          </div>
+        )}
+        {msg && (
+          <div className="p-3.5 text-xs text-emerald-700 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" /> {msg.text}
           </div>
         )}
 
@@ -222,6 +271,57 @@ export default function InventoryPage() {
           </div>
         </div>
       </div>
+
+      {/* DAMAGE SLIP MODAL (N2c) */}
+      {dmgOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-lg text-slate-900">Phiếu hủy hàng hỏng</h3>
+              <button onClick={() => setDmgOpen(false)} className="p-2 rounded-full hover:bg-slate-100" aria-label="Đóng">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-500">Ghi giảm tồn qua phiếu DAMAGED — bắt buộc lý do, lưu audit. Không thể hoàn tác.</p>
+            <input
+              value={dmgSku}
+              onChange={(e) => setDmgSku(e.target.value)}
+              placeholder="SKU (VD: BK-DEmen-01)"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono"
+            />
+            <select
+              value={dmgLoc}
+              onChange={(e) => setDmgLoc(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+            >
+              <option value="">— Chọn vị trí —</option>
+              {[...new Set(balances.filter((b) => !dmgSku.trim() || b.sku === dmgSku.trim()).map((b) => b.location))].map((loc) => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
+            </select>
+            <input
+              type="number" min={1} max={10000}
+              value={dmgQty}
+              onChange={(e) => setDmgQty(Number(e.target.value))}
+              placeholder="Số lượng"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+            />
+            <textarea
+              value={dmgReason}
+              onChange={(e) => setDmgReason(e.target.value)}
+              placeholder="Lý do hủy (VD: ướt mưa, rách bìa, hết hạn...)"
+              rows={2}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+            />
+            <button
+              onClick={submitDamage}
+              className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold"
+            >
+              Ghi hủy hàng
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* AUTO REPLENISHMENT PO MODAL */}
       {autoPOModalOpen && (
