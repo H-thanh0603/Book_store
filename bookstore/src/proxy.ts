@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   "/api/health",
   "/api/payments/vnpay",
   "/api/integrations/webhook",
+  "/api/mcp", // A3: agent discovery + tools are public (keyed quota inside)
 ];
 
 const PUBLIC_PAGE_PREFIXES = [
