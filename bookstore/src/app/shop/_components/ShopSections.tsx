@@ -37,9 +37,8 @@ export function BlogSection({ articles }: { articles: BlogArticle[] }) {
             </div>
             <div className="pt-3 border-t border-[#f3ece1] flex items-center justify-between text-xs text-slate-400">
               <span>{art.date}</span>
-              {/* Real navigation: the catalog search pre-fills the article topic. */}
               <Link
-                href={`/shop?q=${encodeURIComponent(art.category === "VĂN HÓA ĐỌC" ? "văn học" : art.category === "BÍ QUYẾT ĐỌC" ? "sách" : "đồ chơi")}`}
+                href={`/blog/${art.id}`}
                 className="text-[#8c2d19] font-bold flex items-center gap-1 hover:underline"
               >
                 Đọc tiếp <ArrowRight className="w-3.5 h-3.5" />
