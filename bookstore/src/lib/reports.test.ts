@@ -16,9 +16,12 @@ const hoisted = vi.hoisted(() => {
   const queryRaw = vi.fn(async (_tag: TemplateStringsArray, ..._rest: any[]) => {
     // Distinguish the three reports by the table they mention first.
     const sql = String(_tag);
+    if (sql.includes("latest_cost")) return sqlResults.storePnl ?? [];
     if (sql.includes('FROM "Store" s')) return sqlResults.revenueByStore ?? [];
-    if (sql.includes('AS category')) return sqlResults.revenueByCategory ?? [];
-    if (sql.includes('LIMIT 50')) return sqlResults.topSku ?? [];
+    if (sql.includes('FROM "PosTransaction"')) return sqlResults.topStaff ?? [];
+    if (sql.includes('FROM "InventoryBalance" b')) return sqlResults.slowStock ?? [];
+    if (sql.includes("AS category")) return sqlResults.revenueByCategory ?? [];
+    if (sql.includes("LIMIT 50")) return sqlResults.topSku ?? [];
     return [];
   });
   return { store, findMany, sqlResults, queryRaw };
@@ -40,7 +43,7 @@ vi.mock("./redis", () => ({
   cacheFlush: vi.fn(async (p: string) => { for (const k of memCache.keys()) if (k.startsWith(p.replace(/\*$/, ""))) memCache.delete(k); }),
 }));
 
-import { revenueByStore, revenueByCategory, topSku, stockOnHand, toCsv } from "./reports";
+import { revenueByStore, revenueByCategory, topSku, stockOnHand, storePnl, topStaff, slowStock, toCsv } from "./reports";
 
 const P = { from: new Date("2026-08-01"), to: new Date("2026-08-31T23:59:59"), orgId: "org-A" };
 
@@ -110,6 +113,45 @@ describe("stockOnHand", () => {
     expect(r.rows[0]).toEqual(["S1", "A", "Q1", "Shelf", 10, 10000]);
     expect(r.rows[1]).toEqual(["S1", "A", "Q1", "Stock", 5, 5000]);
     expect(r.summary?.totalValue).toBe(15000);
+  });
+});
+
+describe("storePnl (N5a)", () => {
+  it("computes gross profit and flags unpriced quantities", async () => {
+    sqlResults.storePnl = [
+      { name: "Q1", code: "Q1", revenue: 1_000_000n, discount: 50_000n, shipping: 30_000n, orders: 10n, cogs: 600_000n, unpricedQty: 2n },
+    ];
+    const r = await storePnl(P);
+    expect(r.columns).toContain("Lợi nhuận gộp (đ)");
+    expect(r.rows[0]).toEqual(["Q1", "Q1", 1000000, 50000, 30000, 600000, 400000, 10]);
+    expect(r.summary).toMatchObject({ totalRevenue: 1000000, totalCogs: 600000, grossProfit: 400000, unpricedQty: 2 });
+  });
+});
+
+describe("topStaff (N5b)", () => {
+  it("ranks cashiers by POS revenue", async () => {
+    sqlResults.topStaff = [
+      { name: "a@x.vn", email: "a@x.vn", revenue: 500_000n, txns: 5n },
+      { name: "b@x.vn", email: "b@x.vn", revenue: 100_000n, txns: 2n },
+    ];
+    const r = await topStaff(P);
+    expect(r.columns).toEqual(["Nhân viên", "Doanh thu (đ)", "Số giao dịch"]);
+    expect(r.rows[0]).toEqual(["a@x.vn", 500000, 5]);
+  });
+});
+
+describe("slowStock (N5c)", () => {
+  it("keeps only rows with no recent sale and values them", async () => {
+    const old = new Date("2026-01-01");
+    const recent = new Date("2026-08-20");
+    sqlResults.slowStock = [
+      { sku: "S1", name: "A", store: "Q1", qty: 10, price: 20000n, lastSale: old },
+      { sku: "S2", name: "B", store: "Q1", qty: 3, price: 5000n, lastSale: recent },
+      { sku: "S3", name: "C", store: "Q1", qty: 2, price: 10000n, lastSale: null },
+    ];
+    const r = await slowStock(P);
+    expect(r.rows.map((x) => x[0])).toEqual(["S1", "S3"]);
+    expect(r.summary).toMatchObject({ slowSkus: 2, slowValue: 10 * 20000 + 2 * 10000 });
   });
 });
 
