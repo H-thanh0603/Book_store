@@ -45,7 +45,7 @@ export default function AnnouncementBar({
   const current = announcements[index];
 
   return (
-    <div className="bg-gradient-to-r from-[#8c2d19] via-[#a63a1f] to-[#8c2d19] text-white px-4 py-2 text-xs font-semibold shadow-sm">
+    <div className="bg-[#1c1917] text-white px-4 py-2 text-xs font-semibold shadow-sm">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
         {/* Rotating Ticker */}
         <div className="flex items-center gap-2 text-center sm:text-left transition-all duration-300">

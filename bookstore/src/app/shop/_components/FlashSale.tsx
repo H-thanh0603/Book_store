@@ -21,7 +21,7 @@ export default function FlashSale({
   onAddToCart: (p: Product) => void;
 }) {
   return (
-    <section id="flash-sale" className="rounded-3xl bg-gradient-to-br from-[#8c2d19] via-[#a63a1f] to-[#6b2113] p-6 sm:p-10 text-white shadow-xl space-y-6 border border-[#e8dac5] relative overflow-hidden">
+    <section id="flash-sale" className="rounded-3xl bg-[#2b2118] p-6 sm:p-10 text-white shadow-xl space-y-6 border border-[#e8dac5] relative overflow-hidden">
       {/* Ambient paper glow */}
       <div className="absolute top-0 right-0 -mt-16 -mr-16 size-96 bg-[#d97706]/20 rounded-full blur-3xl pointer-events-none" />
 

@@ -149,8 +149,8 @@ export default async function Home() {
 
       {/* Hero Welcome Banner */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-rose-600 via-orange-500 to-amber-500 p-8 sm:p-10 text-white shadow-xl">
-          <div className="absolute right-0 top-0 -mt-8 -mr-8 size-96 bg-white/20 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
+        <div className="relative overflow-hidden rounded-3xl bg-[#2b2118] p-8 sm:p-10 text-white shadow-xl">
+          <div className="absolute right-0 top-0 -mt-8 -mr-8 size-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-xs text-white border border-white/30">

@@ -50,9 +50,9 @@ export default function HeroCarousel({
         <div
           className={`relative bg-gradient-to-r ${activeHero.bg} p-6 sm:p-12 lg:p-14 text-white min-h-[460px] flex flex-col justify-between overflow-hidden transition-all duration-700`}
         >
-          {/* Ambient Glows */}
-          <div className="absolute top-0 right-1/4 -mt-20 w-96 h-96 bg-white/15 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
-          <div className="absolute bottom-0 right-0 -mb-20 -mr-20 w-80 h-80 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
+          {/* Ambient Glows — static, muted */}
+          <div className="absolute top-0 right-1/4 -mt-20 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 right-0 -mb-20 -mr-20 w-80 h-80 bg-[#d97706]/10 rounded-full blur-3xl pointer-events-none" />
 
           {/* Top Banner Row */}
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
@@ -193,7 +193,7 @@ export default function HeroCarousel({
         {/* Banner 1: Deals */}
         <Link
           href="/deals"
-          className="group relative overflow-hidden rounded-3xl p-5 bg-gradient-to-br from-[#8c2d19] via-[#a63a1f] to-[#d97706] text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+          className="group relative overflow-hidden rounded-3xl p-5 bg-[#2e2620] text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">
@@ -218,7 +218,7 @@ export default function HeroCarousel({
         {/* Banner 2: Bestsellers */}
         <Link
           href="/bestsellers"
-          className="group relative overflow-hidden rounded-3xl p-5 bg-gradient-to-br from-[#d97706] via-[#b45309] to-[#8c2d19] text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+          className="group relative overflow-hidden rounded-3xl p-5 bg-[#33302c] text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-black/20 backdrop-blur-xs">
@@ -243,7 +243,7 @@ export default function HeroCarousel({
         {/* Banner 3: LEGO & Toys */}
         <Link
           href="/toys"
-          className="group relative overflow-hidden rounded-3xl p-5 bg-gradient-to-br from-[#574431] via-[#6b2113] to-[#8c2d19] text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+          className="group relative overflow-hidden rounded-3xl p-5 bg-[#3a2f26] text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">
@@ -268,7 +268,7 @@ export default function HeroCarousel({
         {/* Banner 4: Back To School */}
         <Link
           href="/back-to-school"
-          className="group relative overflow-hidden rounded-3xl p-5 bg-gradient-to-br from-[#14532d] via-[#166534] to-[#3f6212] text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+          className="group relative overflow-hidden rounded-3xl p-5 bg-[#243028] text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">

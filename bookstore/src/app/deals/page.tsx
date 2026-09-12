@@ -124,7 +124,7 @@ export default function DealsPage() {
   return (
     <main className="min-h-screen bg-[#faf7f2] text-slate-900 pb-24 font-sans selection:bg-[#8c2d19] selection:text-white">
       {/* 1. TOP TICKER */}
-      <div className="bg-gradient-to-r from-[#8c2d19] via-[#a63a1f] to-[#8c2d19] text-white px-4 py-2 text-xs font-bold shadow-sm">
+      <div className="bg-[#1c1917] text-white px-4 py-2 text-xs font-bold shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="bg-white text-[#8c2d19] px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black tracking-wider">
@@ -178,7 +178,7 @@ export default function DealsPage() {
 
       {/* 3. HERO BANNER */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#8c2d19] via-[#a63a1f] to-[#d97706] border border-[#e8dac5] p-8 sm:p-14 shadow-xl text-white">
+        <section className="relative overflow-hidden rounded-3xl bg-[#2b2118] border border-[#e8dac5] p-8 sm:p-14 shadow-xl text-white">
           <div className="relative z-10 max-w-2xl space-y-4">
             <div className="inline-flex items-center gap-2 bg-white text-[#8c2d19] px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-md">
               <Clock3 className="w-4 h-4" /> ƯU ĐÃI TRONG HÔM NAY
@@ -234,7 +234,7 @@ export default function DealsPage() {
                 <div className="flex items-center justify-between">
                   <TicketPercent className="w-4 h-4 text-[#d97706]" />
                   {v.flash && (
-                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-red-600 text-white animate-pulse">
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#8c2d19] text-white">
                       ⚡ Giờ vàng
                     </span>
                   )}
