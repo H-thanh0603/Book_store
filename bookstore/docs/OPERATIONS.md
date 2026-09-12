@@ -301,6 +301,20 @@ Token policy: 256-bit random, stored SHA-256-hashed, 30-minute expiry, single
 use (atomic claim), all sessions revoked on successful reset, rate-limited per
 IP and per account. Verify with `npm run test:reset`.
 
+## Housekeeping — demo dataset policy (R5)
+
+Canonical demo data = `prisma/seed.ts` (+ `seed-agent2.ts`) only. Research
+imports (`scripts/scrape_tiki.py` → `var/tiki_books.json` →
+`scripts/import-tiki.ts`) must NEVER run against the demo/staging database
+they pollute the catalog with scraped rows (240 TKI-* variants once lived
+next to the 278 curated ones).
+
+If it happens anyway: `./scripts/ops/purge-tiki.sh` (dry-run by default,
+`CONFIRM=YES` to delete, refuses production). It deletes every TKI-*
+variant and its dependent rows across all ledger tables, but KEEPS variants
+referenced by OrderItem/PosTransactionItem (history is never deleted) and
+reports them.
+
 ## Housekeeping — duplicate orgs (seed history)
 
 Phase-1 seed tạo org MỖI LẦN CHẠY (không dedupe), nên DB dev cũ có thể
