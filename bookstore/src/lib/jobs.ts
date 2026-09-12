@@ -12,6 +12,7 @@ import { scanRefundRequired } from "./payment-refunds";
 import { pruneAuditLogs, pruneWebhookDeliveries } from "./prune";
 import { runExportBuilds, pruneExportJobs } from "./exports/async-job";
 import { runCycleCounts, scanLowStockMail } from "./inventory-jobs";
+import { issueBirthdayVouchers } from "./loyalty-birthday";
 import { randomUUID } from "crypto";
 
 export const JOB_KINDS = {
@@ -29,6 +30,7 @@ export const JOB_KINDS = {
   "billing.suspend_overdue": suspendOverdueOrgs,
   "payments.refund_scan": scanRefundRequired,
   "export.build": runExportBuilds,
+  "loyalty.birthday_rewards": issueBirthdayVouchers,
   "inventory.cycle_count": runCycleCounts,
   "inventory.low_stock_scan": scanLowStockMail,
   // ponytail: integration dispatch is inline today (integrations route runs jobs on
@@ -143,7 +145,7 @@ export async function tickScheduler() {
  * expiry) get one slot per scheduler tick (5 min). Slot ids make both idempotent.
  * Called by the instrumentation interval; safe to call repeatedly.
  */
-const NIGHTLY: JobKind[] = ["replenishment.generate", "loss.scan", "partitions.rotate", "partitions.detach_old", "prune.audit_logs", "prune.webhook_deliveries", "misa.export", "billing.suspend_overdue", "inventory.cycle_count", "inventory.low_stock_scan"];
+const NIGHTLY: JobKind[] = ["replenishment.generate", "loss.scan", "partitions.rotate", "partitions.detach_old", "prune.audit_logs", "prune.webhook_deliveries", "misa.export", "billing.suspend_overdue", "inventory.cycle_count", "inventory.low_stock_scan", "loyalty.birthday_rewards"];
 const FREQUENT: JobKind[] = ["order.expire_reservations", "einvoice.issue", "einvoice.poll", "webhook.deliver", "payments.refund_scan", "export.build"];
 const TICK_MS = 5 * 60_000;
 

@@ -41,6 +41,28 @@ export default function CustomersPage() {
   const [phone, setPhone] = useState("");
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [selected, setSelected] = useState<Customer | null>(null);
+  // N4a/c: redeem state + tier benefits (single source lives in the API route)
+  const [redeemPts, setRedeemPts] = useState(100);
+  const [voucherCode, setVoucherCode] = useState<string | null>(null);
+  const [benefits, setBenefits] = useState<Record<string, string[]>>({});
+  const TIER_BENEFITS: Record<string, string[]> = benefits;
+
+  async function redeemVoucher() {
+    if (!selected) return;
+    const r = await fetch("/api/loyalty/redeem-voucher", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ customerId: selected.id, points: redeemPts }),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      setVoucherCode(d.code);
+      setMsg({ text: `Đã đổi ${redeemPts} điểm lấy voucher ${d.code} (${d.value.toLocaleString("vi-VN")} ₫). Số dư: ${d.balanceAfter} điểm`, type: "success" });
+      showHistory(selected);
+    } else {
+      setMsg({ text: d.message, type: "error" });
+    }
+  }
   const [history, setHistory] = useState<{
     points: number;
     tier: string | null;
@@ -58,7 +80,10 @@ export default function CustomersPage() {
   }
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void load(""), 0);
+    const timer = window.setTimeout(() => void load("", 1), 0);
+    fetch("/api/loyalty/redeem-voucher").then(async (r) => {
+      if (r.ok) setBenefits((await r.json()).benefits);
+    }).catch(() => {});
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -331,6 +356,39 @@ export default function CustomersPage() {
                       <Gift className="w-3.5 h-3.5" />
                       🎁 Quà sinh nhật (+100đ)
                     </button>
+                  </div>
+
+                  {/* N4a: redeem points → voucher */}
+                  <div className="flex gap-2">
+                    <input
+                      type="number" min={100}
+                      value={redeemPts}
+                      onChange={(e) => setRedeemPts(Number(e.target.value))}
+                      placeholder="Số điểm đổi (tối thiểu 100)"
+                      className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+                    />
+                    <button
+                      onClick={redeemVoucher}
+                      className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shrink-0"
+                    >
+                      Đổi voucher
+                    </button>
+                  </div>
+                  {voucherCode && (
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 flex items-center justify-between">
+                      <span>Mã voucher: <span className="font-mono">{voucherCode}</span> — đưa khách dùng online hoặc tại quầy</span>
+                      <button onClick={() => { navigator.clipboard.writeText(voucherCode); }} className="underline shrink-0 ml-2">Chép</button>
+                    </div>
+                  )}
+
+                  {/* N4c: tier benefits */}
+                  <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-100 text-xs space-y-1">
+                    <b className="text-amber-900">Quyền lợi hạng {history.tier ?? "Member"}:</b>
+                    <ul className="text-slate-600 space-y-0.5">
+                      {(TIER_BENEFITS[history.tier ?? "Member"] ?? TIER_BENEFITS.Member).map((b) => (
+                        <li key={b}>• {b}</li>
+                      ))}
+                    </ul>
                   </div>
 
                   {/* Transaction Ledger Table */}

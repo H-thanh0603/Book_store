@@ -18,6 +18,32 @@ type AuthState =
   | { anonymous: true }
   | { customerId: string; email: string | null; phone: string; name: string };
 
+// N4c: tier benefits table (single source: /api/loyalty/redeem-voucher).
+function TierBenefits() {
+  const [benefits, setBenefits] = useState<Record<string, string[]> | null>(null);
+  useEffect(() => {
+    fetch("/api/loyalty/redeem-voucher").then(async (r) => {
+      if (r.ok) setBenefits((await r.json()).benefits);
+    }).catch(() => {});
+  }, []);
+  if (!benefits) return null;
+  return (
+    <div className="rounded-2xl border border-[#ede5d8] bg-white p-4 space-y-3">
+      <h2 className="font-serif font-bold text-base text-slate-900">Hạng thành viên &amp; quyền lợi</h2>
+      {Object.entries(benefits).map(([tier, items]) => (
+        <div key={tier} className="text-xs">
+          <b className="text-[#8c2d19]">{tier}</b>
+          <ul className="text-slate-600 mt-0.5 space-y-0.5">
+            {items.map((b) => (
+              <li key={b}>• {b}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AccountInner() {
   const router = useRouter();
   const params = useSearchParams();
@@ -120,6 +146,7 @@ function AccountInner() {
           <Link href="/shop/wishlist" className="px-4 py-2 rounded-2xl border border-slate-200 bg-white text-slate-700 text-xs font-bold">Sách yêu thích</Link>
           <button onClick={logout} className="px-4 py-2 rounded-2xl border border-rose-200 text-rose-700 text-xs font-bold hover:bg-rose-50 cursor-pointer">Đăng xuất</button>
         </div>
+        <TierBenefits />
       </div>
     );
   }
