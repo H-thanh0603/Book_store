@@ -9,6 +9,19 @@ import { sendMail } from "./mail";
 import { orderConfirmationEmail, type OrderEmailData } from "./email-templates";
 import { cacheGet, cacheSet } from "./redis";
 
+// In-process fuzzy gate cache (SCALE-003): { count, at }. Redis is optional
+// here — a per-process 5-min TTL is fine because the gate is approximate.
+let fuzzyCountCache: { count: number; at: number } | null = null;
+async function fuzzyAllowed(): Promise<boolean> {
+  const FUZZY_MAX_ROWS = Math.max(1000, Number(process.env.FUZZY_MAX_ROWS ?? 50_000) || 50_000);
+  const now = Date.now();
+  if (!fuzzyCountCache || now - fuzzyCountCache.at > 5 * 60_000) {
+    const count = await prismaRead.product.count({ where: { status: "active" } });
+    fuzzyCountCache = { count, at: now };
+  }
+  return fuzzyCountCache.count <= FUZZY_MAX_ROWS;
+}
+
 // Cache layer: Redis (shared across instances) with in-process fallback.
 const CATALOG_TTL_SEC = 30;
 type CatalogResult = {
@@ -138,7 +151,11 @@ async function listStorefrontProductsUncached(input: {
   // 0.3 against some word of the name — that almost never matches on real
   // catalogs and multiplies the SIMILARITY calls per row.
   const FUZZY_STATEMENT_TIMEOUT_MS = Math.max(50, Number(process.env.FUZZY_SEARCH_TIMEOUT_MS ?? 300) || 300);
-  if (words.length === 1 && words[0].length >= 3 && rows.length === 0) {
+  // SCALE-003: above this many active products the trigram scan stops being
+  // a 300ms gamble and becomes a guaranteed pool pin — skip the fuzzy tier
+  // entirely and return the exact result. Count is cached 5 min in-process
+  // (a count(*) per search would itself scan on huge catalogs).
+  if (words.length === 1 && words[0].length >= 3 && rows.length === 0 && (await fuzzyAllowed())) {
     try {
       const hits = await prismaRead.$transaction(async (tx) => {
         // SET LOCAL cannot take a bind parameter (Prisma 42601) — inline a
