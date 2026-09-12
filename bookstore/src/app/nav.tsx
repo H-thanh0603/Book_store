@@ -59,6 +59,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/products", label: "Danh mục", icon: BookOpen },
       { href: "/products/barcodes", label: "In tem", icon: Barcode },
+      { href: "/products/health", label: "Sức khỏe listing", icon: ClipboardCheck },
     ],
   },
   {

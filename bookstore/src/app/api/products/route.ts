@@ -223,6 +223,20 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    // Optional: set the first retail price on a variant that has none
+    // (listing-health staged fix). Refuses when a live price already exists.
+    if (b.newPrice?.variantId && b.newPrice?.amountVnd !== undefined) {
+      const amount = Math.round(Number(b.newPrice.amountVnd));
+      if (!Number.isFinite(amount) || amount <= 0) fail(400, "VALIDATION", "newPrice.amountVnd must be a positive number");
+      const variant = await prisma.productVariant.findFirst({ where: { id: b.newPrice.variantId, ...withOrg(auth) } });
+      if (!variant) fail(404, "NOT_FOUND", "Variant for newPrice not found");
+      const existing = await prisma.price.findFirst({ where: { variantId: variant.id, validTo: null } });
+      if (existing) fail(409, "DUPLICATE", "Variant already has a live price");
+      const retail = await prisma.priceList.findFirst({ where: { kind: "retail" } });
+      if (!retail) fail(500, "CONFIG", "No retail price list");
+      await prisma.price.create({ data: { variantId: variant.id, priceListId: retail.id, amount: BigInt(amount) } });
+    }
+
     await prisma.auditLog.create({
       data: {
         actorId: auth.userId, action: "product.update", entity: "Product", entityId: product.id,
