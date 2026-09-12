@@ -13,6 +13,25 @@ Single-node is the default topology: the in-process scheduler (`src/instrumentat
 seeds nightly jobs and ticks every 5 min per server instance, so on one box nothing
 needs coordinating. For ~10x traffic scale out as described in "Multi-instance".
 
+### First boot on a production box (R4)
+
+```bash
+# 1. WAL archiving (postgresql.conf + reload) — see "Point-in-time recovery".
+# 2. PM2 apps + log rotation:
+pm2 start ecosystem.config.js --env production   # bookstore + bookstore-worker
+pm2 install pm2-logrotate
+pm2 save && pm2 startup
+# 3. Offsite backups + healthcheck (see "Backups"):
+#    15 3 * * *  cd /srv/bookstore && ./scripts/ops/backup-offsite.sh
+# 4. Weekly self-audit (pages when configuration drifts):
+#    0 6 * * 1  cd /srv/bookstore && ./scripts/ops/prod-checklist.sh
+# 5. Fill the production .env: DATABASE_URL, INTEGRATION_ENCRYPTION_KEY,
+#    SMTP_HOST/USER/PASS, SENTRY_DSN or ERROR_WEBHOOK_URL,
+#    GHTK_TOKEN/GHTK_SHOP_ID or VTP_USERNAME/VTP_PASSWORD,
+#    CARRIER_WEBHOOK_SECRET, RCLONE_REMOTE.
+# 6. Run ./scripts/ops/prod-checklist.sh — 0 failures before go-live.
+```
+
 ## Multi-instance (~10x traffic)
 
 Reference configs live in the repo root and `deploy/`:
