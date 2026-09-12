@@ -107,6 +107,26 @@ export default function ShopPage() {
 
   return (
     <main className="min-h-screen paper-mesh text-slate-900 pb-24 font-sans selection:bg-[#8c2d19] selection:text-white">
+      {/* Structured data: Human SEO + Agent parsing (Bookstore entity). */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BookStore",
+            name: "Melio Bookstore",
+            description:
+              "Nhà sách omnichannel Việt Nam — sách, văn phòng phẩm, đồ chơi, quà tặng. Đặt online, nhận tại chi nhánh hoặc giao tận nơi.",
+            url: "/shop",
+            inLanguage: "vi",
+            potentialAction: {
+              "@type": "SearchAction",
+              target: "/shop?q={query}",
+              "query-input": "required name=query",
+            },
+          }),
+        }}
+      />
       {/* 1. TOP ANNOUNCEMENT BAR */}
       <AnnouncementBar
         wishlistCount={s.wishlist.length}
