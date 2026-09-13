@@ -55,6 +55,17 @@ export async function destroyCustomerSession() {
   jar.delete(CUSTOMER_COOKIE);
 }
 
+/** Kill every OTHER session of a customer (password change); the caller's
+ *  own session stays valid — mirrors revokeOtherSessions for staff. */
+export async function revokeOtherCustomerSessions(customerId: string) {
+  const jar = await cookies();
+  const token = jar.get(CUSTOMER_COOKIE)?.value;
+  const currentHash = token ? hashSessionToken(token) : null;
+  await prisma.customerSession.deleteMany({
+    where: { customerId, ...(currentHash ? { token: { not: currentHash } } : {}) },
+  });
+}
+
 export async function getCustomerAuth(): Promise<CustomerAuth | null> {
   const jar = await cookies();
   const token = jar.get(CUSTOMER_COOKIE)?.value;

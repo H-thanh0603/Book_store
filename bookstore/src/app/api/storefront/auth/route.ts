@@ -19,10 +19,12 @@ import {
   destroyCustomerSession,
   getCustomerAuth,
   issueEmailVerifyToken,
+  revokeOtherCustomerSessions,
   setCustomerPassword,
 } from "@/lib/customer-auth";
-import { apiError, fail, ok } from "@/lib/api";
+import { apiError, fail, nextBusinessNumber, ok } from "@/lib/api";
 import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
+import { Prisma } from "../../../../generated/prisma/client";
 
 // SEC-004: customer phone/email are unique per ORG, so every lookup needs one.
 // The public storefront is single-tenant per deployment: resolve the org from
@@ -66,32 +68,45 @@ export async function POST(req: NextRequest) {
       if (existingEmail) fail(409, "CONFLICT", "Email already registered");
       if (existingPhone) fail(409, "CONFLICT", "Phone already registered");
 
-      // Auto-increment the CUS-XXXXXX code so the unique index is
-      // satisfied without coordinating with the staff-side code
-      // generator (which the storefront may not be able to call).
-      const last = await prisma.customer.findFirst({
-        orderBy: { code: "desc" },
-        select: { code: true },
-        where: { code: { startsWith: "CUS-" } },
-      });
-      const nextNum = last ? Number(last.code.slice(4)) + 1 : 1;
-      const code = "CUS-" + String(nextNum).padStart(6, "0");
-
+      // Atomic code allocation via nextBusinessNumber("CUS") — the old
+      // max(code)+1 raced under concurrent signups and collapsed into a
+      // 500/P2002. Retry on code collision; phone/email conflicts stay 409.
       const token = issueEmailVerifyToken();
-      const customer = await prisma.customer.create({
-        data: {
-          code,
-          name,
-          phone,
-          email,
-          orgId,
-          passwordHash: null,
-          emailVerifyTokenHash: token.hash,
-          emailVerifyExpiresAt: token.expiresAt,
-        },
-        select: { id: true, email: true },
-      });
-      await setCustomerPassword(customer.id, password);
+      let customer: { id: string; email: string | null } | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          customer = await prisma.customer.create({
+            data: {
+              code: await nextBusinessNumber("CUS"),
+              name,
+              phone,
+              email,
+              orgId,
+              passwordHash: null,
+              emailVerifyTokenHash: token.hash,
+              emailVerifyExpiresAt: token.expiresAt,
+            },
+            select: { id: true, email: true },
+          });
+          break;
+        } catch (err) {
+          if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+            const target = String((err.meta as { target?: unknown } | undefined)?.target ?? "");
+            if (!target.includes("code")) fail(409, "CONFLICT", "Phone or email already registered");
+            if (attempt === 2) throw err;
+            continue; // code collision → fresh number, retry
+          }
+          throw err;
+        }
+      }
+      if (!customer) fail(500, "INTERNAL", "Signup failed, please retry");
+      try {
+        await setCustomerPassword(customer.id, password);
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")
+          fail(409, "CONFLICT", "Phone or email already registered");
+        throw err;
+      }
       await createCustomerSession(customer.id);
 
       // Fire-and-forget verify email. Failure to send is logged but
@@ -157,10 +172,8 @@ export async function POST(req: NextRequest) {
       const ok3 = await checkCustomerPassword(auth.customerId, currentPassword);
       if (!ok3) fail(401, "BAD_REQUEST", "Current password is incorrect");
       await setCustomerPassword(auth.customerId, newPassword);
-      // Kill every other device session for this customer.
-      await prisma.customerSession.deleteMany({
-        where: { customerId: auth.customerId, NOT: { expiresAt: { lt: new Date() } } },
-      });
+      // Kill other device sessions; keep the caller's own session valid.
+      await revokeOtherCustomerSessions(auth.customerId);
       return ok({ ok: true });
     }
 

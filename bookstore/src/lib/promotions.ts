@@ -32,8 +32,8 @@ export async function claimRedemption(
 ): Promise<void> {
   await client.promotionRedemption.upsert({
     where: { promotionId_customerId: { promotionId: promoId, customerId } },
-    create: { promotionId: promoId, customerId, count: 1 },
-    update: {}, // ensure the row exists; the guarded increment is below
+    create: { promotionId: promoId, customerId, count: 0 },
+    update: {}, // ensure the row exists; the guarded increment below counts this redemption exactly once
   });
   const claimed = await client.promotionRedemption.updateMany({
     where: {

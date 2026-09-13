@@ -278,7 +278,13 @@ export async function quoteSale(input: Pick<CompleteSaleInput, "items" | "storeI
     include: {
       product: { include: { category: true } },
       prices: {
-        where: { priceList: { kind: "retail" }, OR: [{ validTo: null }, { validTo: { gt: new Date() } }] },
+        // Same validity window as completeSale (PRICE-001): future-dated rows
+        // must not leak into the preview total.
+        where: {
+          priceList: { kind: "retail" },
+          validFrom: { lte: new Date() },
+          OR: [{ validTo: null }, { validTo: { gt: new Date() } }],
+        },
         orderBy: { validFrom: "desc" },
         take: 1,
       },
