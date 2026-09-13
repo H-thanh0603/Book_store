@@ -156,6 +156,32 @@ the script refuses to lie: it warns that the dump is LOCAL ONLY.
 A same-box pg_dump is not a backup — one disk failure takes the database
 and its backup together.
 
+### Verifying the backup cron (weekly, 2 minutes)
+
+```bash
+rclone lsl "$RCLONE_REMOTE" --max-depth 1 | tail -3   # newest dump < 30h old?
+./scripts/ops/prod-checklist.sh                        # §2 checks this + WAL freshness
+```
+
+If the healthcheck pings stopped, check cron mail / `journalctl -u cron` on
+the box before assuming the database is the problem. A red weekly
+`backup-drill` workflow pages on-call (see "Automatic restore drill").
+
+## Release pipeline: dev → staging → production
+
+Staging is mandatory (see `docs/STAGING.md`): every release is tagged,
+smoke-tested on staging (`lint`, `tsc`, `test:storefront`, `smoke-agent`,
+one POS + one online + one refund click-through), then deployed here.
+
+### Rollback (app-level, no DB touch)
+
+```bash
+./scripts/ops/rollback.sh <last-healthy-sha>   # checkout + build + pm2 reload
+```
+
+Migrations are forward-only — rollback never reverses them. Data repair
+means restore-to-new-DB + reconcile (RUNBOOK.md "Rollback").
+
 ### Point-in-time recovery (WAL archiving)
 
 The nightly dump caps recovery at RPO ~24h. To close the gap to minutes,
