@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma, prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
+import { withOrg } from "@/lib/org-scope";
 import { apiError, ok, fail, getSystemConfig, nextBusinessNumber, optPage } from "@/lib/api";
 import { Prisma } from "../../../generated/prisma/client";
 
@@ -25,11 +26,14 @@ async function syncTier(customerId: string, tx: Tx | typeof prisma = prisma) {
 // GET /api/customers?q=  — list + loyalty balance (display-only → replica OK)
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission("customer.view");
+    const auth = await requirePermission("customer.view");
+    // P0 tenant isolation: deny legacy org-less callers instead of listing
+    // every tenant's customers; org-scoped callers only see their own org.
+    if (!auth.orgId) fail(403, "FORBIDDEN", "Customer listing requires an org-scoped account");
     const q = req.nextUrl.searchParams.get("q");
-    const where = q
+    const where = withOrg(auth, q
       ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { phone: { contains: q } }, { code: { contains: q, mode: "insensitive" as const } }] }
-      : {};
+      : {});
     const { page, pageSize, skip } = optPage(req.nextUrl.searchParams);
     const [customers, total] = await Promise.all([
       prismaRead.customer.findMany({
@@ -81,12 +85,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (body.action === "history") {
-      await requirePermission("customer.view");
+      const auth = await requirePermission("customer.view");
       const acct = await prisma.loyaltyAccount.findUnique({
         where: { customerId: body.customerId },
-        include: { transactions: { orderBy: { createdAt: "desc" }, take: 50 } },
+        include: { customer: { select: { orgId: true } }, transactions: { orderBy: { createdAt: "desc" }, take: 50 } },
       });
       if (!acct) return ok({ points: 0, tier: null, transactions: [] });
+      if (auth.orgId && acct.customer.orgId !== auth.orgId) fail(403, "FORBIDDEN", "Customer belongs to another organization");
       return ok({ points: acct.points, tier: acct.tier, transactions: acct.transactions });
     }
 
@@ -95,6 +100,9 @@ export async function POST(req: NextRequest) {
       const auth = await requirePermission("promotion.manage");
       if (!body.customerId || !Number.isInteger(body.points) || body.points === 0)
         fail(400, "VALIDATION", "customerId and non-zero integer points required");
+      const target = await prisma.customer.findUnique({ where: { id: body.customerId }, select: { orgId: true } });
+      if (!target) fail(404, "NOT_FOUND", "Customer not found");
+      if (auth.orgId && target.orgId !== auth.orgId) fail(403, "FORBIDDEN", "Customer belongs to another organization");
       const updated = await prisma.$transaction(async (tx) => {
         const acct = await tx.loyaltyAccount.upsert({
           where: { customerId: body.customerId }, create: { customerId: body.customerId }, update: {},
@@ -126,6 +134,8 @@ export async function POST(req: NextRequest) {
       const auth = await requirePermission("promotion.manage");
       if (!body.customerId) fail(400, "VALIDATION", "customerId required");
       const customer = await prisma.customer.findUnique({ where: { id: body.customerId } });
+      if (!customer) fail(404, "NOT_FOUND", "Customer not found");
+      if (auth.orgId && customer.orgId !== auth.orgId) fail(403, "FORBIDDEN", "Customer belongs to another organization");
       if (!customer?.birthday) fail(400, "VALIDATION", "Customer has no birthday on file");
       const bonus = await getSystemConfig<number>("loyalty.birthdayBonusPoints", 100);
       const yearStart = new Date(new Date().getFullYear(), 0, 1);

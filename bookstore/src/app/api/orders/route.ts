@@ -51,14 +51,14 @@ export async function GET(req: NextRequest) {
     // Tenant isolation (#7): storeId scoping alone is not enough — an
     // org-wide role (scope null) must still never see other orgs' orders.
     // Store is nullable (warehouse orders), so OR both paths under org.
-    const orgFilter = auth.orgId
-      ? {
-          OR: [
-            { store: { region: { orgId: auth.orgId } } },
-            { storeId: null, customer: { orgId: auth.orgId } },
-          ],
-        }
-      : {};
+    // Legacy org-less callers are denied: an empty filter would list every tenant.
+    if (!auth.orgId) fail(403, "FORBIDDEN", "Order listing requires an org-scoped account");
+    const orgFilter = {
+      OR: [
+        { store: { region: { orgId: auth.orgId } } },
+        { storeId: null, customer: { orgId: auth.orgId } },
+      ],
+    };
     const where = {
       ...orgFilter,
       ...(scope ? { storeId: { in: scope } } : {}),
