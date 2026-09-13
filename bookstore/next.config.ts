@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // HSTS only in production: browsers honor it on localhost too,
+          // which would brick local http dev after one https visit.
+          ...(process.env.NODE_ENV === "production"
+            ? [{ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" }]
+            : []),
           // camera=(self): POS barcode scanner needs getUserMedia on same origin (audit FE).
           { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
           { key: "X-Frame-Options", value: "DENY" },
