@@ -371,7 +371,7 @@ export function OrderSuccessModal({  success,
   onClose: () => void;
   paymentMethod?: string;
 }) {
-  const paidOnline = paymentMethod === "VNPAY";
+  const paidOnline = paymentMethod !== undefined && paymentMethod !== "COD";
   return (
     <div className="fixed inset-0 z-50 bg-[#1c1917]/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div role="dialog" aria-modal="true" aria-label="Đặt hàng thành công" className="w-full max-w-md bg-[#fbf9f5] rounded-3xl p-8 text-center shadow-2xl border border-[#ede5d8] space-y-4 animate-in zoom-in-95 duration-200 font-serif">

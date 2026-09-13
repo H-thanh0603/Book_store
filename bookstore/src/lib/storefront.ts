@@ -5,6 +5,8 @@ import { createReservedOrder } from "./orders";
 import { evaluatePromotions, mergeLineDiscounts, type CartLine } from "./promotions";
 import { embedText } from "./embeddings";
 import { buildVnpayUrl, vnpayConfigured } from "./vnpay";
+import { buildMomoUrl, momoConfigured } from "./momo";
+import { buildZaloPayUrl, zaloPayConfigured } from "./zalopay";
 import { sendMail } from "./mail";
 import { orderConfirmationEmail, type OrderEmailData } from "./email-templates";
 import { cacheGet, cacheSet } from "./redis";
@@ -316,7 +318,7 @@ export type StorefrontCheckoutInput = {
   idempotencyKey: string;
   storeId: string;
   fulfillment: "delivery" | "pickup";
-  paymentMethod?: "COD" | "VNPAY";
+  paymentMethod?: "COD" | "VNPAY" | "MOMO" | "ZALOPAY";
   customer: { name: string; phone: string; email?: string; address?: string };
   couponCode?: string;
   items: { variantId: string; quantity: number }[];
@@ -543,11 +545,11 @@ export async function checkoutStorefrontOrder(
   opts: { ip?: string; baseUrl?: string } = {},
 ) {
   const method = input.paymentMethod ?? "COD";
-  if (!["COD", "VNPAY"].includes(method)) fail(400, "VALIDATION", "Invalid payment method");
-  if (method === "VNPAY") {
-    // Fail before reserving stock rather than after.
-    if (!vnpayConfigured()) fail(400, "VALIDATION", "VNPay is not configured");
-  }
+  if (!["COD", "VNPAY", "MOMO", "ZALOPAY"].includes(method)) fail(400, "VALIDATION", "Invalid payment method");
+  // Fail before reserving stock rather than after.
+  if (method === "VNPAY" && !vnpayConfigured()) fail(400, "VALIDATION", "VNPay is not configured");
+  if (method === "MOMO" && !momoConfigured()) fail(400, "VALIDATION", "MoMo is not configured");
+  if (method === "ZALOPAY" && !zaloPayConfigured()) fail(400, "VALIDATION", "ZaloPay is not configured");
   if (!/^[a-zA-Z0-9_-]{16,128}$/.test(input.idempotencyKey ?? ""))
     fail(400, "VALIDATION", "Invalid idempotency key");
   if (!input.storeId || !["delivery", "pickup"].includes(input.fulfillment))
@@ -668,23 +670,24 @@ export async function checkoutStorefrontOrder(
 }
 
 /**
- * Attach the VNPay redirect URL when paying online. COD returns the bare
+ * Attach the gateway redirect URL when paying online. COD returns the bare
  * order. The payment intent row is created here so the callback has an
- * amount/ref to verify against even before VNPay redirects.
+ * amount/ref to verify against even before the gateway redirects.
  */
 async function withPayment(
   order: { id: string; number: string; total: bigint; status?: unknown },
-  method: "COD" | "VNPAY",
+  method: "COD" | "VNPAY" | "MOMO" | "ZALOPAY",
   opts: { ip?: string; baseUrl?: string },
 ): Promise<{ id: string; number: string; total: bigint; status?: unknown; paymentUrl?: string }> {
-  if (method !== "VNPAY") return order;
+  if (method === "COD") return order;
   // A retry on an already-settled or expired/cancelled order must not mint a
   // fresh payment URL — that is the paid-after-cancel path (audit MONEY-001).
   if (order.status && order.status !== "CONFIRMED")
     fail(409, "INVALID_STATUS_TRANSITION", `Order is ${order.status} and can no longer be paid online`);
-  const paymentUrl = await buildVnpayUrl(
-    { id: order.id, number: order.number, total: order.total },
-    opts.ip ?? "", opts.baseUrl ?? "",
-  );
+  const target = { id: order.id, number: order.number, total: order.total };
+  const paymentUrl =
+    method === "VNPAY" ? await buildVnpayUrl(target, opts.ip ?? "", opts.baseUrl ?? "")
+    : method === "MOMO" ? await buildMomoUrl(target, opts.baseUrl ?? "")
+    : await buildZaloPayUrl(target, opts.baseUrl ?? "");
   return { ...order, paymentUrl };
 }

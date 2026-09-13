@@ -1,9 +1,15 @@
 // Section 19: CHECKOUT MODAL
 // Loaded via next/dynamic from page.tsx so its JS ships in a separate chunk
 // and is only fetched when the customer actually opens checkout.
-import { useEffect, useRef } from "react";
-import { Banknote, Check, CreditCard, Gift, Store, Truck, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Banknote, Check, CreditCard, Gift, Store, Truck, Wallet, X } from "lucide-react";
 import type { CartLine, Fulfillment, GiftWrapping, PaymentMethodChoice, QuotePreview } from "./types";
+
+const GATEWAY_META: Record<string, { label: string; hint: string }> = {
+  VNPAY: { label: "VNPay", hint: "QR / Ngân hàng / Ví điện tử" },
+  MOMO: { label: "MoMo", hint: "Ví MoMo" },
+  ZALOPAY: { label: "ZaloPay", hint: "Ví ZaloPay" },
+};
 
 export default function CheckoutModal({
   cart,
@@ -57,6 +63,18 @@ export default function CheckoutModal({
   onSubmit: () => void;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  // Gateways the backend can actually settle (GET /api/payments/methods).
+  // COD always shows; a gateway shows only when its credentials are set.
+  const [gateways, setGateways] = useState<string[]>(["VNPAY"]);
+  useEffect(() => {
+    fetch("/api/payments/methods")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const list = (d?.methods ?? []).filter((m: { configured?: boolean }) => m.configured);
+        setGateways(list.map((m: { code: string }) => m.code).filter((c: string) => c !== "COD"));
+      })
+      .catch(() => {});
+  }, []);
 
   // Focus trap + Escape close + return focus on unmount (a11y).
   useEffect(() => {
@@ -117,8 +135,8 @@ export default function CheckoutModal({
         <div className="flex items-start justify-between">
           <div>
             <span className="text-[10px] uppercase tracking-widest text-[#8c2d19] bg-[#faf4ea] px-2.5 py-0.5 rounded font-bold border border-[#e8dac5]">
-              {paymentMethod === "VNPAY" ? "Thanh Toán Qua VNPay"
-                : "Thanh Toán Khi Nhận Hàng (COD)"}
+              {paymentMethod === "COD" ? "Thanh Toán Khi Nhận Hàng (COD)"
+                : `Thanh Toán Qua ${GATEWAY_META[paymentMethod]?.label ?? paymentMethod}`}
             </span>
             <h3 id="checkout-modal-title" className="font-black text-2xl sm:text-3xl text-slate-900 mt-1">
               Thông Tin Giao Nhận
@@ -176,7 +194,6 @@ export default function CheckoutModal({
 
         {/* Payment method */}
         <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label="Phương thức thanh toán">
-          {/* 2 payment options: COD / VNPay (MoMo/ZaloPay hidden until backend wires them) */}
           <button
             type="button"
             role="radio"
@@ -185,7 +202,7 @@ export default function CheckoutModal({
             className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all ${
               paymentMethod === "COD"
                 ? "bg-white border-[#8c2d19] ring-2 ring-[#8c2d19]/20 shadow-xs"
-                : "bg-[#faf7f2] border-[#ede5d8] hover:bg-white"
+                : "bg-[#faf4ea] border-[#ede5d8] hover:bg-white"
             }`}
           >
             <div className="flex items-center justify-between">
@@ -198,26 +215,34 @@ export default function CheckoutModal({
             </div>
           </button>
 
-          <button
-            type="button"
-            role="radio"
-            aria-checked={paymentMethod === "VNPAY"}
-            onClick={() => onPaymentMethod("VNPAY")}
-            className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all ${
-              paymentMethod === "VNPAY"
-                ? "bg-white border-[#8c2d19] ring-2 ring-[#8c2d19]/20 shadow-xs"
-                : "bg-[#faf7f2] border-[#ede5d8] hover:bg-white"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <CreditCard className={`w-5 h-5 ${paymentMethod === "VNPAY" ? "text-[#8c2d19]" : "text-slate-500"}`} />
-              {paymentMethod === "VNPAY" && <Check className="w-4 h-4 text-[#8c2d19]" />}
-            </div>
-            <div className="mt-2">
-              <b className="block text-xs sm:text-sm text-slate-900 font-bold">VNPay</b>
-              <span className="text-[11px] text-slate-500">QR / Ngân hàng / Ví điện tử</span>
-            </div>
-          </button>
+          {gateways.map((code) => {
+            const meta = GATEWAY_META[code] ?? { label: code, hint: "Thanh toán online" };
+            const active = paymentMethod === code;
+            const Icon = code === "COD" ? Banknote : code === "MOMO" || code === "ZALOPAY" ? Wallet : CreditCard;
+            return (
+              <button
+                key={code}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => onPaymentMethod(code as PaymentMethodChoice)}
+                className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all ${
+                  active
+                    ? "bg-white border-[#8c2d19] ring-2 ring-[#8c2d19]/20 shadow-xs"
+                    : "bg-[#faf4ea] border-[#ede5d8] hover:bg-white"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <Icon className={`w-5 h-5 ${active ? "text-[#8c2d19]" : "text-slate-500"}`} />
+                  {active && <Check className="w-4 h-4 text-[#8c2d19]" />}
+                </div>
+                <div className="mt-2">
+                  <b className="block text-xs sm:text-sm text-slate-900 font-bold">{meta.label}</b>
+                  <span className="text-[11px] text-slate-500">{meta.hint}</span>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         {/* Customer Inputs */}
