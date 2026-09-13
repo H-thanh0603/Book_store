@@ -495,7 +495,14 @@ export async function POST(req: NextRequest) {
             });
             if (!isUnavailable(result)) {
               checkoutCard = result;
-              card = { ok: true, checkoutUrl: result.checkoutUrl, total: result.quote.total, items: result.items };
+              card = {
+                ok: true,
+                // checkoutUrl absent when AGENT_CART_SECRET unset — the
+                // shopper still gets items + total in the card.
+                ...(result.checkoutUrl ? { checkoutUrl: result.checkoutUrl } : { note: "link thanh toán tạm thiếu cấu hình" }),
+                total: result.quote.total,
+                items: result.items,
+              };
             } else {
               card = { ok: false, reason: result.reason };
             }
