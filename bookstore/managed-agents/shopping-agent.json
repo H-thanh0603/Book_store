@@ -1,0 +1,21 @@
+{
+  "$comment": "Managed-agent manifest: shopping role over Melio's MCP server. Mount beside the role server; provenance gates stay in front of every write (MCP is read-only + checkout-card-only).",
+  "role": "shopping",
+  "mcpServer": "/api/mcp",
+  "discovery": "/.well-known/mcp-server",
+  "manifestVersion": "1.2.0",
+  "tools": ["search_products", "quote_order", "track_order", "prepare_checkout_card"],
+  "httpOnlyTools": ["ask_concierge"],
+  "switches": [
+    "COMMERCE_ENABLE_SEARCH",
+    "COMMERCE_ENABLE_QUOTE",
+    "COMMERCE_ENABLE_CHECKOUT",
+    "COMMERCE_ENABLE_TRACKING",
+    "COMMERCE_ENABLE_MEMORY"
+  ],
+  "policies": {
+    "checkout": "hands-off: prepare_checkout_card renders the cart, the host completes it at checkoutUrl",
+    "grounding": "names/prices/authors only from tool results",
+    "memory": "allowlisted keys, host-provided identity only"
+  }
+}

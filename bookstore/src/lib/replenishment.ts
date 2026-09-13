@@ -1,6 +1,8 @@
 import { prisma } from "./db";
-import { Prisma } from "../generated/prisma/client";
-import { getSystemConfig } from "./api";
+import { Prisma, SuggestionStatus } from "../generated/prisma/client";
+import { getSystemConfig, fail } from "./api";
+import { assertStoreAccess } from "./auth";
+import { createPurchaseOrder, createTransfer } from "./purchasing";
 import { calculateReplenishment } from "./replenishment-formula";
 
 const REPLENISHMENT_BATCH = 20;
@@ -138,4 +140,76 @@ export async function generateReplenishmentSuggestions() {
     include: { variant: { include: { product: true } }, location: true },
     orderBy: { recommendedQty: "desc" },
   });
+}
+
+type StoreAuth = Parameters<typeof assertStoreAccess>[0] & { userId: string };
+
+/**
+ * Accepting a suggestion is approval-backed: it materializes the
+ * recommendation as a draft transfer (store balancing) or pending_approval PO
+ * (purchase). Shared by POST /api/replenishment and the staged-change
+ * approval surface so both apply the exact same atomic flow.
+ *
+ * The status claim is atomic: only ONE accept/dismiss ever creates work for a
+ * suggestion — double submits get a 409 instead of duplicate POs/transfers.
+ */
+export async function applySuggestionDecision(
+  suggestionId: string,
+  status: "ACCEPTED" | "DISMISSED",
+  auth: StoreAuth,
+): Promise<{ suggestionId: string; status: string; created: { kind: string; number?: string; id: string } | null }> {
+  const suggestion = await prisma.replenishmentSuggestion.findUnique({
+    where: { id: suggestionId },
+    include: { variant: true, location: true },
+  });
+  if (!suggestion) fail(404, "NOT_FOUND", "Suggestion not found");
+  // Store scope: the caller must cover the suggestion's own location.
+  assertStoreAccess(auth, suggestion.location.storeId, "purchase.create");
+
+  const created = await prisma.$transaction(async (tx) => {
+    const claimed = await tx.replenishmentSuggestion.updateMany({
+      where: { id: suggestion.id, status: SuggestionStatus.OPEN },
+      data: { status },
+    });
+    if (claimed.count !== 1)
+      fail(409, "INVALID_STATUS_TRANSITION", `Suggestion is ${suggestion.status}, not OPEN`);
+
+    let result: { kind: string; number?: string; id: string } | null = null;
+    if (status === "ACCEPTED" && suggestion.recommendedQty > 0) {
+      const balancedFrom = (suggestion.rationale as { balancedFrom?: { locationId: string; qty: number } }).balancedFrom;
+      if (balancedFrom) {
+        const sourceLoc = await tx.stockLocation.findUnique({ where: { id: balancedFrom.locationId } });
+        if (!sourceLoc) fail(400, "VALIDATION", "Balancing source location no longer exists");
+        assertStoreAccess(auth, sourceLoc.storeId, "purchase.create");
+        const transfer = await createTransfer({
+          fromLocationId: balancedFrom.locationId,
+          toLocationId: suggestion.locationId,
+          requestedBy: auth.userId,
+          items: [{ variantId: suggestion.variantId, quantity: Math.min(balancedFrom.qty, suggestion.recommendedQty) }],
+          client: tx,
+        });
+        result = { kind: "transfer", number: transfer.number, id: transfer.id };
+      } else {
+        // ponytail: central warehouse + latest supplier price cost. Route by store or
+        // cheapest supplier once multi-warehouse purchasing lands.
+        const warehouse = await tx.warehouse.findFirst({ where: { isCentral: true } })
+          ?? await tx.warehouse.findFirst();
+        const price = await tx.supplierProductPrice.findFirst({
+          where: { variantId: suggestion.variantId }, orderBy: { recordedAt: "desc" },
+        });
+        if (!warehouse || !price) fail(400, "VALIDATION", "No warehouse or supplier price to source this PO");
+        const po = await createPurchaseOrder({
+          supplierId: price.supplierId,
+          warehouseId: warehouse.id,
+          userId: auth.userId,
+          items: [{ variantId: suggestion.variantId, quantity: suggestion.recommendedQty, unitCost: price.unitCost }],
+          client: tx,
+        });
+        result = { kind: "po", number: po.number, id: po.id };
+      }
+    }
+    return result;
+  });
+
+  return { suggestionId: suggestion.id, status, created };
 }

@@ -6,6 +6,7 @@ import { BookOpen, BookMarked, Gift, Menu, Search, Store, ShoppingBag, Trophy, U
 import type { ComponentType } from "react";
 import type { Product } from "./types";
 import { departments, hotSearchKeywords } from "./data";
+import ShopperBell from "./ShopperBell";
 
 export default function ShopHeader({
   query,
@@ -193,6 +194,11 @@ export default function ShopHeader({
               </option>
             ))}
           </select>
+        </div>
+
+        {/* P3 onsite notifications — bell with unread badge, hidden for anonymous */}
+        <div className="hidden sm:block">
+          <ShopperBell />
         </div>
 
         {/* Cart Button */}

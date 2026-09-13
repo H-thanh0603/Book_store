@@ -28,7 +28,8 @@
     "security:rotate-integration-key": "tsx scripts/ops/rotate-integration-key.ts",
     "ops:check-alerts": "tsx scripts/ops/check-alerts.ts",
     "test:restore-drill": "./scripts/ops/restore-drill.sh",
-    "verify:indexes": "tsx scripts/verify-scale-indexes.ts"
+    "verify:indexes": "tsx scripts/verify-scale-indexes.ts",
+    "smoke:agent": "tsx scripts/smoke-agent.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

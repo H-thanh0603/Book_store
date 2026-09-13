@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   SKILL_PERMISSION,
   SKILL_PROMPTS,
+  SKILL_TOOLS,
   detectListingIssues,
   filterSlowMovers,
 } from "./merchant-agent";
@@ -21,6 +22,14 @@ describe("merchant skill permissions", () => {
       expect(p).toMatch(/không.*(sửa|gọi mutation)|staged|người.*duyệt/i);
     }
   });
+
+  it("propose_change stages writes on four skills, never on explain", () => {
+    const names = (s: keyof typeof SKILL_TOOLS) => SKILL_TOOLS[s].map((t) => t.function.name);
+    for (const s of ["digest", "inventory", "promo", "catalog"] as const) {
+      expect(names(s)).toContain("propose_change");
+    }
+    expect(names("explain")).not.toContain("propose_change");
+  });
 });
 
 describe("filterSlowMovers", () => {
@@ -37,19 +46,19 @@ describe("filterSlowMovers", () => {
 });
 
 describe("detectListingIssues", () => {
-  it("flags missing category/author/barcode/price", () => {
+  it("flags missing description/author/barcode/price", () => {
     const out = detectListingIssues([
       {
-        productId: "p1", name: "Sách X", category: null, author: null, isBook: true,
+        productId: "p1", name: "Sách X", description: null, author: null, isBook: true,
         variants: [{ id: "v1", sku: "S1", barcodes: 0, hasPrice: false }],
       },
       {
-        productId: "p2", name: "Bút", category: "VPP", author: null, isBook: false,
+        productId: "p2", name: "Bút", description: "Bút bi", author: null, isBook: false,
         variants: [{ id: "v2", sku: "S2", barcodes: 2, hasPrice: true }],
       },
     ]);
     expect(out.map((i) => i.kind).sort()).toEqual(
-      ["missing_author", "missing_barcodes", "missing_category", "missing_price"].sort(),
+      ["missing_author", "missing_barcodes", "missing_description", "missing_price"].sort(),
     );
     expect(out).toHaveLength(4);
   });

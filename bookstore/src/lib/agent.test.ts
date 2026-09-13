@@ -20,11 +20,20 @@ describe("agent manifest", () => {
     expect(manifest.docs).toBe("https://example.com/llms.txt");
   });
 
-  it("v1.1 advertises MCP + ARD discovery and key auth", () => {
+  it("v1.2 advertises MCP + ARD discovery and key auth", () => {
     const manifest = buildAgentManifest("https://example.com");
-    expect(manifest.version).toBe("1.1.0");
+    expect(manifest.version).toBe("1.2.0");
     expect(manifest.discovery.mcpEndpoint).toBe("/api/mcp");
     expect(manifest.discovery.aiCatalog).toBe("/.well-known/ai-catalog.json");
     expect(manifest.auth.header).toBe("x-agent-key");
+  });
+
+  it("v1.2 adds read-only prepare_checkout handoff and memory policy", () => {
+    const manifest = buildAgentManifest("https://example.com");
+    const prepare = manifest.tools.find((t) => t.name === "prepare_checkout");
+    expect(prepare).toMatchObject({ readOnly: true, requiresHumanApproval: false });
+    // Still no direct checkout mutation anywhere in the manifest.
+    expect(JSON.stringify(manifest)).not.toContain("POST /api/storefront\"");
+    expect(manifest.policies.memory).toMatch(/allowlist/);
   });
 });

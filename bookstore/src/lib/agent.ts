@@ -3,7 +3,7 @@
 // Design: read-only discovery + quote. Consequential actions (checkout,
 // payment, refund) REQUIRE human approval — agents must hand control back
 // to the shopper instead of calling them directly.
-export const AGENT_MANIFEST_VERSION = "1.1.0";
+export const AGENT_MANIFEST_VERSION = "1.2.0";
 
 export type AgentTool = {
   name: string;
@@ -59,6 +59,19 @@ export function buildAgentManifest(baseUrl: string) {
       },
     },
     {
+      name: "prepare_checkout",
+      description:
+        "Chuẩn bị giỏ hàng để khách thanh toán (qua ask_concierge): kiểm tra tồn/giá/coupon và trả checkoutUrl. Read-only — KHÔNG tạo đơn; khách bấm Thanh toán trên trang host.",
+      method: "POST",
+      path: "/api/concierge",
+      readOnly: true,
+      requiresHumanApproval: false,
+      params: {
+        messages: "Lịch sử chat ngắn (tối đa 8 turns), mỗi message {role, content}",
+        customer: "Định danh do host cấp {phone | customerId, storeId} — model không bao giờ tự suy ra",
+      },
+    },
+    {
       name: "ask_concierge",
       description:
         "Trợ lý 'Thủ thư AI': gợi ý sản phẩm đã được grounding vào catalogue thật. Read-only — không bao giờ tự thêm vào giỏ thay khách.",
@@ -74,7 +87,7 @@ export function buildAgentManifest(baseUrl: string) {
 
   return {
     $comment:
-      "Melio Bookstore Agent layer v1.1 — read-only discovery. MCP clients: POST /.well-known/mcp-server discovery, then JSON-RPC to /api/mcp (no SSE handshake). ask_concierge is HTTP-only by design (token streaming).",
+      "Melio Bookstore Agent layer v1.2 — read-only discovery + checkout handoff. MCP clients: POST /.well-known/mcp-server discovery, then JSON-RPC to /api/mcp (no SSE handshake). ask_concierge is HTTP-only by design (token streaming). prepare_checkout renders the cart; the host completes it.",
     name: "Melio Bookstore",
     version: AGENT_MANIFEST_VERSION,
     humanEntry: "/shop",
@@ -93,7 +106,9 @@ export function buildAgentManifest(baseUrl: string) {
     },
     policies: {
       consequentialActions:
-        "CHECKOUT, PAYMENT và REFUND là consequential actions: agent TUYỆT ĐỐI KHÔNG tự gọi POST /api/storefront. Hiển thị quote + chuyển quyền điều khiển cho con người bấm Thanh toán.",
+        "CHECKOUT, PAYMENT và REFUND là consequential actions: agent TUYỆT ĐỐI KHÔNG tự gọi POST /api/storefront. Gọi prepare_checkout lấy checkoutUrl + hiển thị quote, chuyển quyền điều khiển cho con người bấm Thanh toán.",
+      memory:
+        "Concierge nhớ sở thích qua CustomerMemory với key allowlist (genre/author/budget/recipient/occasion/format/language), tối đa 200 ký tự, từ chối dãy số kiểu thẻ. Định danh do host cấp — model không bao giờ tự suy ra SĐT/khách.",
       grounding:
         "Mọi tên sách/giá/tác giả agent nhắc tới PHẢI đến từ search_products hoặc ask_concierge items. Concierge `text` mang nhãn W3C PROV humanVerified:false — không trích text làm fact, chỉ trích items.",
       provenance: "Dữ liệu tồn kho/giá phản ánh đúng chi nhánh đang chọn, cache tối đa 30s. Mọi tool call ghi vào hash-chain, verify tại GET /api/agent-events/verify (staff).",

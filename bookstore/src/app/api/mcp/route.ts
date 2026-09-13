@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api";
-import { listStorefrontProducts, quoteStorefrontOrder } from "@/lib/storefront";
+import { AGENT_MANIFEST_VERSION } from "@/lib/agent";
+import { getStorefrontBackend, isUnavailable, storefrontSwitches } from "@/lib/commerce";
 import { agentRateLimit, finishAgentCall, type ResolvedAgentKey } from "@/lib/agent-auth";
 
 // Minimal MCP server over Streamable-HTTP-compatible JSON-RPC (stateless).
@@ -57,6 +57,19 @@ const TOOLS = [
       required: ["number", "phone"],
     },
   },
+  {
+    name: "prepare_checkout_card",
+    description: "Read-only checkout card: validates items through the quote engine and returns a checkoutUrl for the HOST to complete. Never creates an order.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        storeId: { type: "string" },
+        items: { type: "object", description: "{variantId: quantity}", additionalProperties: { type: "number" } },
+        couponCode: { type: "string" },
+      },
+      required: ["storeId", "items"],
+    },
+  },
 ];
 
 function rpcError(id: unknown, code: number, message: string, data?: unknown) {
@@ -67,8 +80,10 @@ function rpcOk(id: unknown, result: unknown) {
   return NextResponse.json({ jsonrpc: "2.0", id, result });
 }
 
-function normPhone(v: string) {
-  return v.replace(/\D/g, "").replace(/^84/, "").replace(/^0/, "");
+/** Stub/pilot backends surface as a 400-class MCP error, never a silent lie. */
+function backendOrThrow<T>(result: T | { unavailable: true; reason: string }): T {
+  if (isUnavailable(result)) throw Object.assign(new Error(result.reason), { status: 400 });
+  return result;
 }
 
 export async function POST(req: NextRequest) {
@@ -100,7 +115,7 @@ export async function POST(req: NextRequest) {
       return rpcOk(id, {
         protocolVersion: PROTOCOL_VERSION,
         capabilities: { tools: {} },
-        serverInfo: { name: "melio-bookstore", version: "1.1.0" },
+        serverInfo: { name: "melio-bookstore", version: AGENT_MANIFEST_VERSION },
       });
     }
     if (method === "notifications/initialized") {
@@ -137,17 +152,20 @@ export async function POST(req: NextRequest) {
 }
 
 async function callTool(name: string, args: Record<string, unknown>): Promise<unknown> {
+  // One ordered flow per tool: the MCP server reads the same backend the REST
+  // routes and the agents use — no parallel reimplementations.
+  const backend = getStorefrontBackend();
   if (name === "search_products") {
-    const catalog = await listStorefrontProducts({
+    const catalog = backendOrThrow(await backend.searchProducts({
       q: typeof args.q === "string" ? args.q.slice(0, 80) : null,
       categoryId: typeof args.categoryId === "string" ? args.categoryId : null,
       storeId: typeof args.storeId === "string" ? args.storeId : null,
-    });
+    }));
     return {
       storeId: catalog.storeId,
-      products: (catalog.products as { name: string }[]).slice(0, 20).map((p) => ({
+      products: catalog.products.slice(0, 20).map((p) => ({
         ...p,
-        variants: (p as unknown as { variants: unknown[] }).variants.slice(0, 5),
+        variants: p.variants.slice(0, 5),
       })),
     };
   }
@@ -157,30 +175,29 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
         const [variantId, quantity] = chunk.split(":");
         return { variantId, quantity: Number(quantity) || 0 };
       }).filter((i) => i.variantId && i.quantity > 0);
-    return quoteStorefrontOrder({
+    return backendOrThrow(await backend.quoteOrder({
       storeId: typeof args.storeId === "string" ? args.storeId : null,
       couponCode: typeof args.couponCode === "string" ? args.couponCode : null,
       items,
-    });
+    }));
+  }
+  if (name === "prepare_checkout_card") {
+    if (!storefrontSwitches().enableCheckout)
+      throw Object.assign(new Error("Checkout is disabled on this deployment"), { status: 400 });
+    const rawItems = (args.items ?? {}) as Record<string, unknown>;
+    const items = Object.entries(rawItems).map(([variantId, quantity]) => ({
+      variantId, quantity: Number(quantity) || 0,
+    }));
+    return backendOrThrow(await backend.prepareCheckout({
+      storeId: String(args.storeId ?? ""),
+      items,
+      couponCode: typeof args.couponCode === "string" ? args.couponCode : null,
+    }));
   }
   // track_order: same two-factor lookup as the REST route (number + phone),
   // shipping status only — no names, phones or addresses leave the system.
   const number = String(args.number ?? "").trim().toUpperCase();
   const phone = String(args.phone ?? "").trim();
   if (!number || !phone) throw Object.assign(new Error("number and phone are required"), { status: 400 });
-  const order = await prisma.order.findUnique({
-    where: { number },
-    select: {
-      number: true, status: true, createdAt: true,
-      store: { select: { name: true } },
-      customer: { select: { phone: true } },
-      shipment: { select: { carrier: true, trackingNumber: true, status: true } },
-    },
-  });
-  if (!order?.customer.phone || normPhone(order.customer.phone) !== normPhone(phone))
-    return { order: null };
-  // customer.phone was selected for verification only — strip it before return.
-  const { customer: _verified, ...safe } = order;
-  void _verified;
-  return { order: safe };
+  return backendOrThrow(await backend.trackOrder({ number, phone }));
 }

@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 type Issue = {
-  kind: "missing_category" | "missing_author" | "missing_barcodes" | "missing_price";
+  kind: "missing_description" | "missing_author" | "missing_barcodes" | "missing_price";
   productId: string;
   variantId: string | null;
   name: string;
@@ -21,7 +21,7 @@ type Issue = {
 type Ref = { id: string; name: string };
 
 const KIND_LABEL: Record<Issue["kind"], string> = {
-  missing_category: "Thiếu nhóm hàng",
+  missing_description: "Thiếu mô tả",
   missing_author: "Sách thiếu tác giả",
   missing_barcodes: "Thiếu mã vạch",
   missing_price: "Thiếu giá bán",
@@ -31,7 +31,6 @@ export default function ListingHealthPage() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
-  const [categories, setCategories] = useState<Ref[]>([]);
   const [authors, setAuthors] = useState<Ref[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -41,14 +40,12 @@ export default function ListingHealthPage() {
   async function load() {
     setLoading(true);
     try {
-      const [ir, cr, ar] = await Promise.all([
+      const [ir, ar] = await Promise.all([
         fetch("/api/merchant/listing-issues"),
-        fetch("/api/refs?kind=categories"),
         fetch("/api/refs?kind=authors"),
       ]);
       if (ir.ok) setIssues((await ir.json()).issues ?? []);
       else setMsg({ text: (await ir.json()).message ?? "Lỗi tải danh sách", type: "error" });
-      if (cr.ok) setCategories((await cr.json()).categories ?? []);
       if (ar.ok) setAuthors((await ar.json()).authors ?? []);
     } catch {
       setMsg({ text: "Không thể kết nối đến máy chủ.", type: "error" });
@@ -70,7 +67,7 @@ export default function ListingHealthPage() {
       return;
     }
     const body: Record<string, unknown> = { id: i.productId };
-    if (i.kind === "missing_category") body.categoryId = v;
+    if (i.kind === "missing_description") body.description = v;
     else if (i.kind === "missing_author") body.authorId = v;
     else if (i.kind === "missing_barcodes") body.newBarcode = { barcode: v, variantId: i.variantId, type: "INTERNAL" };
     else body.newPrice = { variantId: i.variantId, amountVnd: Number(v) };
@@ -116,23 +113,21 @@ export default function ListingHealthPage() {
     }
   }
 
-  const groups = (["missing_category", "missing_author", "missing_barcodes", "missing_price"] as const)
+  const groups = (["missing_description", "missing_author", "missing_barcodes", "missing_price"] as const)
     .map((kind) => ({ kind, rows: issues.filter((i) => i.kind === kind) }))
     .filter((g) => g.rows.length > 0);
 
   function fixControl(i: Issue) {
     const k = keyOf(i);
-    if (i.kind === "missing_category") {
+    if (i.kind === "missing_description") {
       return (
-        <select
-          aria-label={`Chọn nhóm hàng cho ${i.name}`}
+        <input
+          aria-label={`Nhập mô tả cho ${i.name}`}
           value={values[k] ?? ""}
           onChange={(e) => setValues((p) => ({ ...p, [k]: e.target.value }))}
-          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs max-w-[180px]"
-        >
-          <option value="">— Chọn nhóm —</option>
-          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+          placeholder="Mô tả ngắn"
+          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs w-56"
+        />
       );
     }
     if (i.kind === "missing_author") {

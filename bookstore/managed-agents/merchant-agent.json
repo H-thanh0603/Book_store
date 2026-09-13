@@ -1,0 +1,23 @@
+{
+  "$comment": "Managed-agent manifest: merchant role. Writes do NOT exist on MCP — they are StagedChanges behind staff auth on /approvals. Digest schedule: cron POST /api/merchant {skill:digest} with a service identity.",
+  "role": "merchant",
+  "mcpServer": "/api/mcp",
+  "discovery": "/.well-known/mcp-server",
+  "manifestVersion": "1.2.0",
+  "skills": ["digest", "explain", "inventory", "promo", "catalog"],
+  "writeTools": ["propose_change"],
+  "approvalSurface": "/approvals",
+  "stagedKinds": ["promotion.create", "product.patch", "suggestion.accept"],
+  "switches": [
+    "COMMERCE_ENABLE_DIGEST",
+    "COMMERCE_ENABLE_INVENTORY",
+    "COMMERCE_ENABLE_PRICING",
+    "COMMERCE_ENABLE_CAMPAIGNS",
+    "COMMERCE_ENABLE_LISTING_EDITS"
+  ],
+  "policies": {
+    "writes": "staged-only: model proposes PENDING, human approves, same code as manual flows applies",
+    "grounding": "numbers only from tool results or context JSON",
+    "schedule": "digest on-demand today; cron service identity recommended"
+  }
+}

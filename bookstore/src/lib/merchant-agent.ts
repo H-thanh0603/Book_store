@@ -1,5 +1,6 @@
 // Merchant Agent shared frame — staff-only AI adapted from
-// anthropics/commerce-agents merchant-agent (5 skills) onto DeepSeek.
+// anthropics/commerce-agents merchant-agent (5 skills) onto any
+// OpenAI-compatible gateway (see lib/llm.ts: LLM_* with DEEPSEEK_* fallback).
 // READ tools only: the model explains and proposes; every write is a staged
 // change the human applies through existing APIs (replenishment accept,
 // promotion create, product PATCH). The model never calls a mutation.
@@ -9,9 +10,7 @@
 // catalog (catalog-listings health).
 
 import { prisma } from "./db";
-
-const DEEPSEEK_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com") + "/chat/completions";
-const MERCHANT_MODEL = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
+import { callLlm, llmConfigured, type LlmMessage } from "./llm";
 
 export type MerchantSkill = "digest" | "explain" | "inventory" | "promo" | "catalog";
 
@@ -34,6 +33,7 @@ export type ChatMessage = {
 const BASE_RULES = `Quy tắc BẮT BUỘC:
 - Mọi con số, tên sản phẩm, mã, tồn kho bạn nêu PHẢI đến từ kết quả tool hoặc JSON ngữ cảnh được cấp. Không bịa số.
 - Bạn không thể sửa dữ liệu — chỉ đề xuất; người dùng bấm nút duyệt mới có hiệu lực. Nói rõ điều này khi đề xuất hành động.
+- Khi có tool propose_change: hành động cụ thể nào cũng stage qua nó (kind đúng, title rõ, payload đủ) thay vì chỉ nói suông.
 - Trả lời tiếng Việt, ngắn gọn, tối đa 5 gạch đầu dòng chính.`;
 
 export const SKILL_PROMPTS: Record<MerchantSkill, string> = {
@@ -54,6 +54,14 @@ ${BASE_RULES}
 };
 
 // ── Read tools (DB-backed) ─────────────────────────────────────────────
+// propose_change is the ONLY write-adjacent tool: it stages a PENDING change
+// a human approves on /approvals. The model never applies anything itself.
+
+export type ProposeChangeFn = (
+  kind: string,
+  title: string,
+  payload: Record<string, unknown>,
+) => Promise<unknown>;
 
 export type DigestStats = {
   openSuggestions: number;
@@ -166,7 +174,7 @@ export async function getSlowMovers(take = 10): Promise<SlowMover[]> {
 }
 
 export type ListingIssue = {
-  kind: "missing_category" | "missing_author" | "missing_barcodes" | "missing_price";
+  kind: "missing_description" | "missing_author" | "missing_barcodes" | "missing_price";
   productId: string;
   variantId: string | null;
   name: string;
@@ -176,13 +184,13 @@ export type ListingIssue = {
 /** Pure detector (unit-tested) over a compact product snapshot. */
 export function detectListingIssues(
   rows: {
-    productId: string; name: string; category: string | null; author: string | null;
+    productId: string; name: string; description: string | null; author: string | null;
     isBook: boolean; variants: { id: string; sku: string; barcodes: number; hasPrice: boolean }[];
   }[],
 ): ListingIssue[] {
   const out: ListingIssue[] = [];
   for (const p of rows) {
-    if (!p.category) out.push({ kind: "missing_category", productId: p.productId, variantId: null, name: p.name, detail: "Chưa gán nhóm hàng" });
+    if (!p.description?.trim()) out.push({ kind: "missing_description", productId: p.productId, variantId: null, name: p.name, detail: "Thiếu mô tả — trang chi tiết nghèo nội dung, SEO kém" });
     if (p.isBook && !p.author) out.push({ kind: "missing_author", productId: p.productId, variantId: null, name: p.name, detail: "Sách thiếu tác giả" });
     for (const v of p.variants) {
       if (v.barcodes === 0) out.push({ kind: "missing_barcodes", productId: p.productId, variantId: v.id, name: `${p.name} (${v.sku})`, detail: "Phiên bản chưa có mã vạch — POS không quét được" });
@@ -205,7 +213,7 @@ export async function getListingIssues(take = 50): Promise<ListingIssue[]> {
   const snapshot = products.map((p) => ({
     productId: p.id,
     name: p.name,
-    category: p.category?.name ?? null,
+    description: p.description,
     author: p.author?.name ?? null,
     isBook: (p.category?.name ?? "").toLowerCase().includes("sách") || p.author !== null,
     variants: p.variants.map((v) => ({ id: v.id, sku: v.sku, barcodes: v.barcodes.length, hasPrice: v.prices.length > 0 })),
@@ -215,26 +223,64 @@ export async function getListingIssues(take = 50): Promise<ListingIssue[]> {
 
 // ── LLM turn loop (2 rounds, mirrors concierge) ─────────────────────────
 
-const SKILL_TOOLS: Record<MerchantSkill, { type: "function"; function: { name: string; description: string; parameters: object } }[]> = {
+const PROPOSE_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "propose_change",
+    description:
+      "Stage một đề xuất chờ duyệt (không áp dụng ngay): promotion.create {name,type:percentage|fixed,value ≤30|≤100000}, product.patch {productId,description 10-2000 ký tự}, suggestion.accept {suggestionId}. Luôn stage thay vì chỉ nói suông.",
+    parameters: {
+      type: "object",
+      properties: {
+        kind: { type: "string", description: "promotion.create | product.patch | suggestion.accept" },
+        title: { type: "string", description: "Tiêu đề ngắn cho người duyệt" },
+        payload: { type: "object", description: "Payload theo kind" },
+      },
+      required: ["kind", "title", "payload"],
+    },
+  },
+};
+
+export const SKILL_TOOLS: Record<MerchantSkill, ({ type: "function"; function: { name: string; description: string; parameters: object } } | typeof PROPOSE_TOOL)[]> = {
   digest: [
     { type: "function", function: { name: "digest_stats", description: "Số liệu tổng quan ca/kho: gợi ý mở, dòng hết hàng, PO chờ duyệt, điều chuyển dở dang.", parameters: { type: "object", properties: { storeId: { type: "string" } } } } },
     { type: "function", function: { name: "top_suggestions", description: "Top gợi ý nhập hàng đang mở kèm tồn và ngày bao phủ.", parameters: { type: "object", properties: { storeId: { type: "string" }, take: { type: "number" } } } } },
+    PROPOSE_TOOL,
   ],
   explain: [],
   inventory: [
     { type: "function", function: { name: "top_suggestions", description: "Gợi ý nhập hàng đang mở.", parameters: { type: "object", properties: { storeId: { type: "string" }, take: { type: "number" } } } } },
     { type: "function", function: { name: "digest_stats", description: "Số liệu tổng quan kho.", parameters: { type: "object", properties: { storeId: { type: "string" } } } } },
+    PROPOSE_TOOL,
   ],
   promo: [
     { type: "function", function: { name: "slow_movers", description: "Hàng tồn cao nhưng 30 ngày không bán được — ứng viên giảm giá.", parameters: { type: "object", properties: { take: { type: "number" } } } } },
+    PROPOSE_TOOL,
   ],
   catalog: [
-    { type: "function", function: { name: "listing_issues", description: "Lỗi listing: thiếu nhóm hàng, tác giả, mã vạch, giá.", parameters: { type: "object", properties: { take: { type: "number" } } } } },
+    { type: "function", function: { name: "listing_issues", description: "Lỗi listing: thiếu mô tả, tác giả, mã vạch, giá.", parameters: { type: "object", properties: { take: { type: "number" } } } } },
+    PROPOSE_TOOL,
   ],
 };
 
-async function execMerchantTool(name: string, args: Record<string, unknown>): Promise<unknown> {
+async function execMerchantTool(
+  name: string,
+  args: Record<string, unknown>,
+  propose?: ProposeChangeFn,
+): Promise<unknown> {
   switch (name) {
+    case "propose_change": {
+      if (!propose) return { staged: false, reason: "propose chưa được host cấp (demo mode)" };
+      try {
+        return await propose(
+          String(args.kind ?? ""),
+          String(args.title ?? ""),
+          (args.payload ?? {}) as Record<string, unknown>,
+        );
+      } catch {
+        return { staged: false, reason: "tool failed" };
+      }
+    }
     case "digest_stats":
       return getDigestStats(typeof args.storeId === "string" ? args.storeId : undefined);
     case "top_suggestions":
@@ -252,52 +298,40 @@ async function execMerchantTool(name: string, args: Record<string, unknown>): Pr
 }
 
 export function merchantConfigured() {
-  return Boolean(process.env.DEEPSEEK_API_KEY);
-}
-
-// Optional provider headers (OpenRouter recommends HTTP-Referer + X-Title).
-function providerHeaders(): Record<string, string> {
-  const h: Record<string, string> = {};
-  if (process.env.OPENROUTER_HTTP_REFERER) h["HTTP-Referer"] = process.env.OPENROUTER_HTTP_REFERER;
-  if (process.env.OPENROUTER_X_TITLE) h["X-Title"] = process.env.OPENROUTER_X_TITLE;
-  return h;
+  return llmConfigured();
 }
 
 export async function runMerchantTurn(
   skill: MerchantSkill,
   history: { role: "user" | "assistant"; content: string }[],
   contextJson?: string,
+  opts?: {
+    propose?: ProposeChangeFn;
+    /** enable_* switches: a disabled system removes propose_change for its skills. */
+    allowPropose?: boolean;
+  },
 ): Promise<{ text: string; usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number } }> {
-  const tools = SKILL_TOOLS[skill];
+  const allTools = SKILL_TOOLS[skill];
+  const tools =
+    opts?.allowPropose === false ? allTools.filter((t) => t.function.name !== "propose_change") : allTools;
   const messages: ChatMessage[] = [
     { role: "system", content: SKILL_PROMPTS[skill] + (contextJson ? `\n\n## Số liệu ngữ cảnh (chỉ trích số trong này):\n${contextJson.slice(0, 6000)}` : "") },
     ...history.map((m) => ({ role: m.role, content: m.content.slice(0, 2000) })),
   ];
-  for (let round = 0; round < 2; round++) {
-    const res = await fetch(DEEPSEEK_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-        ...providerHeaders(),
-      },
-      body: JSON.stringify({
-        model: MERCHANT_MODEL, messages, tools: tools.length > 0 ? tools : undefined,
-        max_tokens: 1000, temperature: 0.2,
-      }),
-      signal: AbortSignal.timeout(30_000),
+  for (let round = 0; round < 3; round++) {
+    const { message: msg, usage } = await callLlm(messages as LlmMessage[], {
+      tools: tools.length > 0 ? tools : undefined,
+      maxTokens: 1000,
+      temperature: 0.2,
+      timeoutMs: 60_000,
     });
-    if (!res.ok) throw Object.assign(new Error(`merchant upstream ${res.status}`), { status: 502 });
-    const data = (await res.json()) as { choices: { message: ChatMessage }[]; usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number } };
-    const msg = data.choices[0]?.message;
-    if (!msg) throw new Error("empty response");
     const calls = msg.tool_calls ?? [];
-    if (calls.length === 0) return { text: (msg.content ?? "").slice(0, 3000), usage: data.usage };
+    if (calls.length === 0) return { text: (msg.content ?? "").slice(0, 3000), usage };
     messages.push({ role: "assistant", content: msg.content ?? "", tool_calls: calls });
     for (const call of calls) {
       let result: unknown;
       try {
-        result = await execMerchantTool(call.function.name, JSON.parse(call.function.arguments || "{}"));
+        result = await execMerchantTool(call.function.name, JSON.parse(call.function.arguments || "{}"), opts?.propose);
       } catch {
         result = { error: "tool failed" };
       }

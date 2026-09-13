@@ -8,6 +8,18 @@ vi.mock("@/lib/storefront", () => ({
     stores: [],
   })),
   quoteStorefrontOrder: vi.fn(async () => ({ subtotal: 100, discountTotal: 10, total: 90 })),
+  trackStorefrontOrder: vi.fn(async () => ({
+    order: {
+      number: "MB-1",
+      status: "SHIPPED",
+      createdAt: new Date("2026-01-01"),
+      total: 90,
+      storeName: "Q1",
+      shipment: null,
+      items: [],
+      stages: [],
+    },
+  })),
 }));
 
 vi.mock("@/lib/agent-auth", () => ({
@@ -15,20 +27,7 @@ vi.mock("@/lib/agent-auth", () => ({
   finishAgentCall: vi.fn(async () => {}),
 }));
 
-vi.mock("@/lib/db", () => ({
-  prisma: {
-    order: {
-      findUnique: vi.fn(async () => ({
-        number: "MB-1",
-        status: "SHIPPED",
-        createdAt: new Date("2026-01-01"),
-        store: { name: "Q1" },
-        customer: { phone: "0901234567" },
-        shipment: null,
-      })),
-    },
-  },
-}));
+vi.mock("@/lib/db", () => ({ prisma: {}, prismaRead: {} }));
 
 import { POST } from "./route";
 
@@ -50,11 +49,11 @@ describe("POST /api/mcp", () => {
     expect(data.result.capabilities.tools).toEqual({});
   });
 
-  it("lists the 3 MCP tools (concierge stays HTTP-only)", async () => {
+  it("lists the 4 MCP tools (concierge stays HTTP-only)", async () => {
     const res = await POST(rpc("tools/list") as never);
     const data = await res.json();
     const names = data.result.tools.map((t: { name: string }) => t.name);
-    expect(names).toEqual(["search_products", "quote_order", "track_order"]);
+    expect(names).toEqual(["search_products", "quote_order", "track_order", "prepare_checkout_card"]);
   });
 
   it("calls search_products and truncates payload", async () => {
