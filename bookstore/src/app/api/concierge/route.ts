@@ -677,8 +677,12 @@ export async function POST(req: NextRequest) {
         if (call.function.name === "sync_cart" && subject) {
           // Two-way cart: the agent writes the SAME server cart the shop
           // syncs with. Only real variants survive (validated in saveServerCart).
+          // SEC-009: agent writes are side effects behind a bearer cookie —
+          // per-customer rate limit + structured audit so a stolen session
+          // can't silently churn carts/alerts at machine speed.
           let synced: unknown;
           try {
+            await enforceRateLimit("concierge-write", `cust:${subject.customerId}`, 30, 60_000);
             const args = JSON.parse(call.function.arguments || "{}") as { items?: Record<string, number> };
             const lines = Object.entries(args.items ?? {}).map(([variantId, quantity]) => ({
               variantId, quantity: Number(quantity),
@@ -689,6 +693,7 @@ export async function POST(req: NextRequest) {
               lines,
               "agent",
             );
+            console.info(JSON.stringify({ level: "info", event: "agent_write", tool: "sync_cart", customerId: subject.customerId, lines: saved.items.length }));
             // Server cart now holds agent lines — the checkoutUrl card for a
             // LATER prepare_checkout in this same conversation already carries
             // items explicitly, so no extra plumbing is needed here.
@@ -702,6 +707,7 @@ export async function POST(req: NextRequest) {
         if (call.function.name === "watch_stock" && subject) {
           let watched: unknown;
           try {
+            await enforceRateLimit("concierge-write", `cust:${subject.customerId}`, 30, 60_000);
             const args = JSON.parse(call.function.arguments || "{}") as { variantId?: string };
             const variantId = String(args.variantId ?? "");
             const variant = await prismaRead.productVariant.findFirst({
@@ -725,6 +731,7 @@ export async function POST(req: NextRequest) {
                 update: { status: "PENDING", notifiedAt: null },
               });
               watched = { ok: true, name: fenceUntrusted(variant.product.name), note: "Có hàng sẽ nhắn qua thông báo + email nếu có" };
+              console.info(JSON.stringify({ level: "info", event: "agent_write", tool: "watch_stock", customerId: subject.customerId, variantId }));
             }
           } catch {
             watched = { ok: false, reason: "tool failed" };

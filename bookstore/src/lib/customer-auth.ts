@@ -17,7 +17,14 @@ import { prisma } from "./db";
 import { hashPassword, verifyPassword } from "./auth";
 
 const CUSTOMER_COOKIE = "bs_customer";
-const CUSTOMER_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+// Session lifetime (SEC-009): 7-day idle TTL with sliding refresh, capped at
+// 30 days absolute from creation. The old 30-day fixed TTL let a stolen
+// cookie drive agent write tools (sync_cart/watch_stock) for a month; now a
+// stolen cookie goes stale within a week of the victim going quiet, while
+// active shoppers stay signed in via touch-on-activity.
+const CUSTOMER_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days idle
+const CUSTOMER_ABSOLUTE_MAX_MS = 30 * 24 * 60 * 60 * 1000; // 30 days absolute
+const TOUCH_THRESHOLD_MS = 3 * 24 * 60 * 60 * 1000; // refresh when <3d remains
 
 export type CustomerAuth = {
   customerId: string;
@@ -75,6 +82,19 @@ export async function getCustomerAuth(): Promise<CustomerAuth | null> {
     include: { customer: true },
   });
   if (!session || session.expiresAt < new Date()) return null;
+  // Sliding refresh: active shoppers keep their session (up to the absolute
+  // cap); one cheap update per ~4 days per user, never on every request.
+  const remaining = session.expiresAt.getTime() - Date.now();
+  if (remaining < TOUCH_THRESHOLD_MS) {
+    const absoluteEnd = session.createdAt.getTime() + CUSTOMER_ABSOLUTE_MAX_MS;
+    const next = new Date(Math.min(Date.now() + CUSTOMER_TTL_MS, absoluteEnd));
+    if (next > session.expiresAt) {
+      await prisma.customerSession.update({
+        where: { id: session.id },
+        data: { expiresAt: next },
+      }).catch(() => {});
+    }
+  }
   return {
     customerId: session.customer.id,
     email: session.customer.email,
