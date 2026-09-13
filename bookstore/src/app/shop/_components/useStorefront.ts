@@ -17,6 +17,7 @@ import type {
   StockConflictDetail,
 } from "./types";
 import { useCart } from "@/contexts/CartContext";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 export type Toast = { id: string; message: string };
 
@@ -557,7 +558,7 @@ export function useStorefront() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-csrf-check": "1",
+          ...(await csrfHeaders()),
         },
         body: JSON.stringify({ ...request, idempotencyKey: checkoutAttempt.current.key }),
       });

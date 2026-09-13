@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Nav from "../nav";
+import { csrfHeaders } from "@/lib/csrf-client";
 import ConfirmDialog, { type ConfirmRequest } from "@/components/ConfirmDialog";
 import { Tags, Plus, Pencil, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
 
@@ -51,7 +52,7 @@ export default function CategoriesPage() {
     if (kind === "categories" && !editing && parentId) body.parentId = parentId;
     const r = await fetch("/api/catalog", {
       method: editing ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify(body),
     });
     const d = await r.json();
@@ -66,7 +67,7 @@ export default function CategoriesPage() {
     if (!pendingDelete) return;
     const r = await fetch(`/api/catalog?kind=${kind}&id=${pendingDelete.id}`, {
       method: "DELETE",
-      headers: { "x-csrf-check": "1" },
+      headers: { ...(await csrfHeaders()) },
     });
     const d = await r.json();
     if (r.ok) { setMsg({ text: "Đã xóa", type: "success" }); void load(); }

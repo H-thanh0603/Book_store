@@ -32,6 +32,7 @@ import {
   Star,
 } from "lucide-react";
 import SupportWidget from "./support-widget";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type AuthUser = {
   userId?: string;
@@ -129,7 +130,7 @@ export default function Nav() {
   async function handleLogout() {
     await fetch("/api/auth", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "logout" }),
     });
     router.push("/login");

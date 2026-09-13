@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Nav from "../nav";
+import { csrfHeaders } from "@/lib/csrf-client";
 import { Users, Plus, AlertCircle, CheckCircle2 } from "lucide-react";
 
 type Member = {
@@ -45,7 +46,7 @@ export default function TeamPage() {
     }
     const r = await fetch("/api/team/invite", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({
         email: form.email.trim(),
         password: form.password,

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../nav";
+import { csrfHeaders } from "@/lib/csrf-client";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   Truck,
@@ -82,7 +83,7 @@ export default function SuppliersPage() {
     const method = editSupplier ? "PUT" : "POST";
     const r = await fetch(url, {
       method,
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify(form),
     });
     const d = await r.json();
@@ -98,7 +99,7 @@ export default function SuppliersPage() {
   async function deactivateSupplier(id: string) {
     const r = await fetch(`/api/suppliers/${id}`, {
       method: "DELETE",
-      headers: { "x-csrf-check": "1" },
+      headers: { ...(await csrfHeaders()) },
     });
     if (r.ok) {
       setMsg({ text: "Đã vô hiệu hóa", type: "success" });

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../nav";
+import { csrfHeaders } from "@/lib/csrf-client";
 import {
   ArrowLeftRight,
   Plus,
@@ -91,7 +92,7 @@ export default function TransfersPage() {
     if (!fromLoc || !toLoc || trfItems.length === 0) return;
     const r = await fetch("/api/transfers", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ fromLocationId: fromLoc, toLocationId: toLoc, items: trfItems }),
     });
     const d = await r.json();
@@ -108,7 +109,7 @@ export default function TransfersPage() {
   async function updateTransfer(id: string, action: string, items?: { id: string; receivedQty: number }[]) {
     const r = await fetch(`/api/transfers/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action, items }),
     });
     const d = await r.json();

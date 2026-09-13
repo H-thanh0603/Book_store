@@ -2,6 +2,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Review = {
   id: string;
@@ -72,7 +73,7 @@ export default function ProductReviews({ productId }: { productId: string }) {
     }
     const r = await fetch("/api/storefront/reviews", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ productId, authorName: name.trim(), rating, body: body.trim() }),
     });
     if (r.ok) {

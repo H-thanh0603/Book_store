@@ -4,6 +4,7 @@ import Link from "next/link";
 import Nav from "../../nav";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Webhook, Plus, AlertCircle, Loader2, Trash2, ExternalLink } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Endpoint = {
   id: string;
@@ -36,7 +37,7 @@ export default function WebhooksPage() {
   async function toggle(id: string, active: boolean) {
     await fetch(`/api/webhooks/${id}`, {
       method: "PATCH",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ active: !active }),
     });
     load();
@@ -146,7 +147,7 @@ function NewEndpointForm({ onCreated, onCancel }: { onCreated: () => void; onCan
     try {
       const r = await fetch("/api/webhooks", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify({
           provider,
           url,

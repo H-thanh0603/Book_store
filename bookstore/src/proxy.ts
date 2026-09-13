@@ -37,29 +37,22 @@ function isPublicPath(pathname: string): boolean {
   return false;
 }
 
-function validateCsrf(req: NextRequest): boolean {
+async function validateCsrf(req: NextRequest): Promise<boolean> {
   const method = req.method.toUpperCase();
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") return true;
 
   const sessionCookie = req.cookies.get(SESSION_COOKIE)?.value;
   if (!sessionCookie) return true;
 
-  const csrfHeader = req.headers.get("x-csrf-check");
-  if (csrfHeader === "1") return true;
-
-  const pathname = req.nextUrl.pathname;
-  if (pathname.startsWith("/api/")) {
-    const origin = req.headers.get("origin");
-    const host = req.headers.get("host");
-    if (origin && host && new URL(origin).host !== host) {
-      return false;
-    }
-  }
-
-  return true;
+  // Per-session token bound to the session cookie (lib/csrf.ts). The legacy
+  // static "1" is rejected: every staff client sends the same value, so it
+  // proves nothing about the caller's session. Fail closed — a staff mutation
+  // without a valid token is rejected even with a matching origin.
+  const { verifyCsrfToken } = await import("./lib/csrf");
+  return verifyCsrfToken(sessionCookie, req.headers.get("x-csrf-check"));
 }
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Skip static assets, Next.js internals
@@ -72,9 +65,9 @@ export function proxy(req: NextRequest) {
   }
 
   // CSRF check for state-changing API requests
-  if (pathname.startsWith("/api/") && !validateCsrf(req)) {
+  if (pathname.startsWith("/api/") && !(await validateCsrf(req))) {
     return NextResponse.json(
-      { error: "CSRF validation failed. Include x-csrf-check: 1 header." },
+      { error: "CSRF validation failed. Refresh the page and retry." },
       { status: 403 }
     );
   }

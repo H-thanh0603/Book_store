@@ -15,6 +15,7 @@ import {
   X,
   BookOpen,
 } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Product = {
   id: string;
@@ -47,7 +48,7 @@ export default function ProductsPage() {
   async function moderate(id: string, action: "approve" | "reject") {
     const r = await fetch("/api/reviews", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ id, action }),
     });
     if (r.ok) setPending((ls) => ls.filter((x) => x.id !== id));

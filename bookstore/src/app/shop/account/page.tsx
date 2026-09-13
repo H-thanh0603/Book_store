@@ -13,6 +13,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type AuthState =
   | { anonymous: true }
@@ -61,7 +62,7 @@ function AccountInner() {
     void (async () => {
       const res = await fetch("/api/storefront/auth", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify({ action: "verify_email", token: verifyToken }),
       });
       const data = await res.json();
@@ -91,7 +92,7 @@ function AccountInner() {
     const password = String(fd.get("password") ?? "");
     const res = await fetch("/api/storefront/auth", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "login", identifier, password }),
     });
     const data = await res.json();
@@ -112,7 +113,7 @@ function AccountInner() {
     const password = String(fd.get("password") ?? "");
     const res = await fetch("/api/storefront/auth", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "signup", name, email, phone, password }),
     });
     const data = await res.json();
@@ -126,7 +127,7 @@ function AccountInner() {
   async function logout() {
     await fetch("/api/storefront/auth", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "logout" }),
     });
     setAuth({ anonymous: true });

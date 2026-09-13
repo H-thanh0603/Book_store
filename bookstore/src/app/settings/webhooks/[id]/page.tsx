@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Nav from "../../../nav";
 import { ArrowLeft, Webhook, AlertCircle, Loader2, RotateCw, Send, PlayCircle } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Delivery = {
   id: string;
@@ -48,7 +49,7 @@ export default function WebhookDetailPage({ params }: { params: Promise<{ id: st
       const id = data?.endpoint.id;
       const r = await fetch(`/api/webhooks/${id}`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify(body),
       });
       if (!r.ok) {

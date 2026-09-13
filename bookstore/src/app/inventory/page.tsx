@@ -13,6 +13,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Balance = {
   variantId: string;
@@ -57,7 +58,7 @@ export default function InventoryPage() {
     }
     const r = await fetch("/api/inventory/damage", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ variantId: bal.variantId, locationId: bal.locationId, qty: dmgQty, reason: dmgReason.trim() }),
     });
     const d = await r.json();

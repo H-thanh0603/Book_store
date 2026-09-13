@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../../nav";
+import { csrfHeaders } from "@/lib/csrf-client";
 import {
   Sparkles,
   RefreshCw,
@@ -75,7 +76,7 @@ export default function ListingHealthPage() {
     try {
       const r = await fetch("/api/products", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify(body),
       });
       const d = await r.json().catch(() => ({}));
@@ -97,7 +98,7 @@ export default function ListingHealthPage() {
     try {
       const r = await fetch("/api/merchant", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify({
           skill: "catalog",
           messages: [{ role: "user", content: "Tóm tắt tình hình sức khỏe listing hiện tại." }],

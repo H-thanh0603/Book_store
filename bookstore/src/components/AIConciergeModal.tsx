@@ -8,6 +8,7 @@ import {
   ShoppingBag,
   X,
 } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type ProductSuggestion = {
   id: string;
@@ -59,16 +60,16 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
   ]);
 
   // Answer feedback — fire-and-forget POST /api/agent-feedback.
-  function sendFeedback(rating: "up" | "down", turnText: string) {
+  async function sendFeedback(rating: "up" | "down", turnText: string) {
     setFeedbackSent(rating);
     fetch("/api/agent-feedback", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ rating, agent: "concierge", turnText: turnText.slice(0, 400) }),
     }).catch(() => {});
   }
 
-  function handleSend(textToSend?: string) {
+  async function handleSend(textToSend?: string) {
     const q = textToSend || input;
     if (!q.trim() || pending) return;
 
@@ -87,7 +88,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
 
     fetch("/api/concierge", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ messages: chatHistory, ...(chatId ? { chatId } : {}) }),
     })
       .then(async (res) => {

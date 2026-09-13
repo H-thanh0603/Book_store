@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../../nav";
+import { csrfHeaders } from "@/lib/csrf-client";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   Sparkles,
@@ -62,7 +63,7 @@ export default function SuggestionsPage() {
     try {
       const r = await fetch("/api/replenishment", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify({ action: "generate" }),
       });
       if (r.ok) {
@@ -83,7 +84,7 @@ export default function SuggestionsPage() {
     setPending(null);
     const r = await fetch("/api/replenishment", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ suggestionId: s.id, status: action }),
     });
     const d = await r.json().catch(() => ({}));
@@ -105,7 +106,7 @@ export default function SuggestionsPage() {
     try {
       const r = await fetch("/api/merchant", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify({ skill: "digest", messages: [{ role: "user", content: "Tóm tắt tình hình nhập hàng sáng nay." }] }),
       });
       const d = await r.json();
@@ -126,7 +127,7 @@ export default function SuggestionsPage() {
     try {
       const r = await fetch("/api/merchant", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify({ skill: "inventory", messages: next }),
       });
       const d = await r.json();

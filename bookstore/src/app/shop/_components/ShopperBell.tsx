@@ -5,6 +5,21 @@
 // Hidden entirely when no phone/customerId is known (anonymous visitor).
 import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
+
+function storedIdentity(): { phone?: string; customerId?: string } {
+  try {
+    const raw = localStorage.getItem("melio.storefront.sync");
+    if (!raw) return {};
+    const id = JSON.parse(raw) as { phone?: string; customerId?: string };
+    return {
+      ...(id.customerId ? { customerId: id.customerId } : {}),
+      ...(id.phone ? { phone: id.phone } : {}),
+    };
+  } catch {
+    return {};
+  }
+}
 
 type Notification = {
   id: string;
@@ -60,12 +75,17 @@ export default function ShopperBell() {
     setOpen((v) => !v);
     if (unread.length === 0) return;
     setItems((prev) => prev!.map((n) => ({ ...n, status: "SENT" })));
+    // Owner proof required by PUT /api/storefront/notifications (same
+    // identity used for the GET above).
+    const identity = storedIdentity();
+    if (!identity.phone && !identity.customerId) return;
+    const csrf = await csrfHeaders();
     await Promise.allSettled(
       unread.map((n) =>
         fetch("/api/storefront/notifications", {
           method: "PUT",
-          headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
-          body: JSON.stringify({ id: n.id }),
+          headers: { "Content-Type": "application/json", ...csrf },
+          body: JSON.stringify({ id: n.id, ...identity }),
         }).catch(() => {})
       )
     );

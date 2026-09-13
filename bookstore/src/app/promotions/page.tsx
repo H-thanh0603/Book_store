@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../nav";
+import { csrfHeaders } from "@/lib/csrf-client";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   Tag,
@@ -112,7 +113,7 @@ export default function PromotionsPage() {
     const body = { ...form, value: Number(form.value) };
     const r = await fetch(url, {
       method,
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify(body),
     });
     const d = await r.json();
@@ -128,7 +129,7 @@ export default function PromotionsPage() {
   async function deactivatePromo(id: string) {
     const r = await fetch(`/api/promotions/${id}`, {
       method: "DELETE",
-      headers: { "x-csrf-check": "1" },
+      headers: { ...(await csrfHeaders()) },
     });
     if (r.ok) {
       setMsg({ text: "Đã tắt", type: "success" });
@@ -166,7 +167,7 @@ export default function PromotionsPage() {
     const code = withCode ? `XA-${codeBytes[0].toString(36).toUpperCase().slice(-4).padStart(4, "0")}` : undefined;
     const r = await fetch("/api/promotions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({
         name: `[AI] Xả hàng: ${c.name} (-${value}%)`,
         type: "percentage",
@@ -189,7 +190,7 @@ export default function PromotionsPage() {
     try {
       const r = await fetch("/api/merchant", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify({ skill: "promo", messages: [{ role: "user", content: "Tư vấn đợt xả hàng chậm tháng này." }] }),
       });
       const d = await r.json();

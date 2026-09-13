@@ -14,6 +14,7 @@ import {
   CreditCard,
   Crown,
 } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Customer = {
   id: string;
@@ -51,7 +52,7 @@ export default function CustomersPage() {
     if (!selected) return;
     const r = await fetch("/api/loyalty/redeem-voucher", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ customerId: selected.id, points: redeemPts }),
     });
     const d = await r.json();
@@ -94,7 +95,7 @@ export default function CustomersPage() {
     }
     const r = await fetch("/api/customers", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "create", name, phone }),
     });
     const d = await r.json();
@@ -112,7 +113,7 @@ export default function CustomersPage() {
     setSelected(c);
     const r = await fetch("/api/customers", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "history", customerId: c.id }),
     });
     if (r.ok) setHistory(await r.json());
@@ -125,7 +126,7 @@ export default function CustomersPage() {
     if (!raw || !Number.isInteger(points) || points === 0) return;
     const r = await fetch("/api/customers", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "adjust", customerId: selected.id, points }),
     });
     const d = await r.json();
@@ -142,7 +143,7 @@ export default function CustomersPage() {
     if (!selected) return;
     const r = await fetch("/api/customers", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "birthday_reward", customerId: selected.id }),
     });
     const d = await r.json();

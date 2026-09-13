@@ -9,6 +9,7 @@
 import { useEffect, useState } from "react";
 import Nav from "../../nav";
 import { CreditCard, AlertCircle, Loader2, CheckCircle2, Undo2, RefreshCw } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Refund = {
   id: string;
@@ -70,7 +71,7 @@ export default function PaymentsRefundsPage() {
     try {
       const r = await fetch("/api/payments/refunds", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify({ id, note: noteText || undefined }),
       });
       if (!r.ok) {

@@ -14,6 +14,7 @@ import {
   EyeOff,
   AlertCircle,
 } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Run = {
   id: string;
@@ -59,7 +60,7 @@ export default function ReportsPage() {
   async function retry(runId: string) {
     await fetch("/api/jobs", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "retry", runId }),
     });
     void load();
@@ -68,7 +69,7 @@ export default function ReportsPage() {
   async function dismiss(alertId: string) {
     await fetch("/api/loss-prevention", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "review", alertId, status: "DISMISSED" }),
     });
     void load();

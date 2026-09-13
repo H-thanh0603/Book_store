@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../nav";
+import { csrfHeaders } from "@/lib/csrf-client";
 import {
   Gift,
   Plus,
@@ -51,7 +52,7 @@ export default function GiftCardsPage() {
   async function issueCard() {
     const r = await fetch("/api/gift-cards", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ initialValue: newAmount }),
     });
     const d = await r.json();
@@ -68,7 +69,7 @@ export default function GiftCardsPage() {
     if (!viewCard || !adjustReason.trim()) return;
     const r = await fetch(`/api/gift-cards/${viewCard.id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "adjust", amount: adjustAmount, reason: adjustReason }),
     });
     const d = await r.json();
@@ -86,7 +87,7 @@ export default function GiftCardsPage() {
     const action = card.active ? "deactivate" : "activate";
     const r = await fetch(`/api/gift-cards/${card.id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action }),
     });
     if (r.ok) {

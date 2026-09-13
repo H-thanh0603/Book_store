@@ -15,6 +15,7 @@ import {
   Search,
   AlertCircle,
 } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Product = {
   id: string;
@@ -117,7 +118,7 @@ export default function OrdersPage() {
     }
     const r = await fetch("/api/orders", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({
         channel: "WEB",
         type: orderType,
@@ -150,7 +151,7 @@ export default function OrdersPage() {
     }
     const r = await fetch("/api/fulfillment", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify(body),
     });
     const d = await r.json();
@@ -181,7 +182,7 @@ export default function OrdersPage() {
   async function deliver(order: Order) {
     const r = await fetch("/api/fulfillment", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ orderId: order.id, action: "deliver" }),
     });
     const d = await r.json();
@@ -202,7 +203,7 @@ export default function OrdersPage() {
     }
     const r = await fetch("/api/returns", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({
         action: "create",
         orderId: order.id,
@@ -218,7 +219,7 @@ export default function OrdersPage() {
     }
     const rr = await fetch("/api/returns", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ returnId: d.id, action: "receive" }),
     });
     if (rr.ok) {

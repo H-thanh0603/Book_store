@@ -233,7 +233,12 @@ export async function GET() {
   try {
     const { getAuth } = await import("@/lib/auth");
     const auth = await getAuth();
-    return ok(auth ?? { anonymous: true });
+    if (!auth) return ok({ anonymous: true });
+    // Per-session CSRF token for staff mutations (see lib/csrf.ts).
+    const { cookies } = await import("next/headers");
+    const { issueCsrfToken } = await import("@/lib/csrf");
+    const sessionCookie = (await cookies()).get("bs_session")?.value ?? "";
+    return ok({ ...auth, csrfToken: await issueCsrfToken(sessionCookie) });
   } catch (err) {
     return apiError(err);
   }

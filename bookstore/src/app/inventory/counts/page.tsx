@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Nav from "../../nav";
+import { csrfHeaders } from "@/lib/csrf-client";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   ClipboardCheck,
@@ -69,7 +70,7 @@ export default function InventoryCountPage() {
     if (!selectedLocation) return;
     const r = await fetch("/api/inventory/counts", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ locationId: selectedLocation }),
     });
     const d = await r.json();
@@ -105,7 +106,7 @@ export default function InventoryCountPage() {
 
     const r = await fetch(`/api/inventory/counts/${viewCount.id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "update_items", items }),
     });
     if (r.ok) {
@@ -120,7 +121,7 @@ export default function InventoryCountPage() {
     if (!viewCount) return;
     const r = await fetch(`/api/inventory/counts/${viewCount.id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "post" }),
     });
     const d = await r.json();
@@ -136,7 +137,7 @@ export default function InventoryCountPage() {
   async function cancelCount(id: string) {
     const r = await fetch(`/api/inventory/counts/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "cancel" }),
     });
     if (r.ok) {

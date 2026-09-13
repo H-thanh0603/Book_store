@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Sparkles,
 } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Variant = { id: string; sku: string; product: { name: string } };
 type PO = {
@@ -53,7 +54,7 @@ export default function PurchaseOrdersPage() {
   async function post(body: object) {
     const r = await fetch("/api/purchase-orders", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify(body),
     });
     const d = await r.json();

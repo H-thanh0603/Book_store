@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { parseAgentCartParam } from "@/lib/agent-cart";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 const CART_KEY = "melio.storefront.cart.v1";
 
@@ -137,10 +138,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (!syncId) return;
       const raw = JSON.parse(syncId) as { phone?: string; customerId?: string; storeId?: string };
       if (!raw.phone && !raw.customerId) return;
-      const t = setTimeout(() => {
+      const t = setTimeout(async () => {
         fetch("/api/storefront/cart", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
           body: JSON.stringify({
             ...raw,
             items: cart.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Nav from "../nav";
+import { csrfHeaders } from "@/lib/csrf-client";
 import {
   Store,
   Search,
@@ -225,7 +226,7 @@ export default function PosPage() {
     }
     const r = await fetch("/api/pos", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({
         action: "open_shift",
         terminalId: term.id,
@@ -244,7 +245,7 @@ export default function PosPage() {
   async function closeShift() {
     const r = await fetch("/api/pos", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ action: "close_shift", shiftId, closingCash: 0 }),
     });
     const d = await r.json();
@@ -294,7 +295,7 @@ export default function PosPage() {
     if (!coupon.trim() || !lines.length) return;
     const r = await fetch("/api/pos", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({
         action: "quote", storeId,
         customerId: customerId || undefined,
@@ -329,7 +330,7 @@ export default function PosPage() {
     try {
       r = await fetch("/api/pos", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify({
           ...requestBody,
           idempotencyKey: paymentAttemptRef.current.key,
@@ -390,7 +391,7 @@ export default function PosPage() {
     if (!refundNumber.trim()) return;
     const r = await fetch("/api/pos", {
       method: "PUT",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ txNumber: refundNumber.trim(), shiftId, storeId }),
     });
     const d = await r.json();

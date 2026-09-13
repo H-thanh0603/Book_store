@@ -6,6 +6,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { MessageCircle, X, Send, Loader2 } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Conversation = { id: string; subject: string | null; status: "OPEN" | "ESCALATED" | "CLOSED"; lastMessageAt: string; customerName: string; customerPhone: string };
 type Message = { id: string; kind: "USER" | "STAFF" | "BOT"; body: string; createdAt: string };
@@ -35,7 +36,7 @@ export default function SupportWidget() {
     setBusy(true);
     try {
       await fetch(`/api/support/conversations/${active.id}/messages`, {
-        method: "POST", headers: { "content-type": "application/json" },
+        method: "POST", headers: { "content-type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify({ body: draft.trim() }),
       });
       setDraft("");

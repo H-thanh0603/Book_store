@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import Nav from "../../nav";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { ShieldAlert, AlertCircle, Loader2, RotateCcw, Save } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Kind = "LARGE_REFUND" | "EXCESSIVE_DISCOUNT" | "CASH_VARIANCE" | "STOCK_SHRINKAGE";
 type Effective = { kind: Kind; threshold: number; isOverride: boolean };
@@ -60,8 +61,8 @@ export default function LossPreventionPage() {
     if (!Number.isFinite(num) || num < 0) { setErr(kind + ": ngưỡng phải là số không âm"); return; }
     setErr(null);
     const res = d.id
-      ? await fetch("/api/loss-prevention/rules/" + d.id, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ threshold: num, active: d.active }) })
-      : await fetch("/api/loss-prevention/rules", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind, threshold: num, active: d.active }) });
+      ? await fetch("/api/loss-prevention/rules/" + d.id, { method: "PATCH", headers: { "content-type": "application/json", ...(await csrfHeaders()) }, body: JSON.stringify({ threshold: num, active: d.active }) })
+      : await fetch("/api/loss-prevention/rules", { method: "POST", headers: { "content-type": "application/json", ...(await csrfHeaders()) }, body: JSON.stringify({ kind, threshold: num, active: d.active }) });
     if (!res.ok) { setErr("Lưu " + kind + " thất bại: HTTP " + res.status); return; }
     setSavedKind(kind); setTimeout(() => setSavedKind(null), 1500); load();
   }

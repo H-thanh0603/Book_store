@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Nav from "../nav";
+import { csrfHeaders } from "@/lib/csrf-client";
 import { Star, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 
 type Review = {
@@ -44,7 +45,7 @@ export default function ReviewsPage() {
   async function moderate(id: string, action: "approve" | "reject") {
     const r = await fetch("/api/reviews", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
+      headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
       body: JSON.stringify({ id, action }),
     });
     const d = await r.json();

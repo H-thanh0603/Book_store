@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Mode = "login" | "forgot" | "reset";
 
@@ -51,7 +52,7 @@ export default function LoginPage() {
     try {
       const res = await fetch("/api/auth", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify({ action: "login", email, password }),
       });
       if (res.ok) {
@@ -315,7 +316,7 @@ function ForgotResetForms({
         : { action: "reset_password", token, newPassword };
       const res = await fetch("/api/auth", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify(body),
       });
       if (!res.ok) {

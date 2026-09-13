@@ -5,6 +5,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 export default function SignupForm() {
   const r = useRouter();
@@ -22,7 +23,7 @@ export default function SignupForm() {
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify({ orgName, email, password, storeName: storeName || undefined }),
       });
       if (res.status === 201) {

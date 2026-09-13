@@ -15,6 +15,7 @@ import {
   Truck,
   Sparkles,
 } from "lucide-react";
+import { csrfHeaders } from "@/lib/csrf-client";
 
 type Dash = {
   today: { revenue: number; transactions: number };
@@ -60,7 +61,7 @@ export default function DashboardPage() {
     try {
       const r = await fetch("/api/merchant", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
         body: JSON.stringify({
           skill: "explain",
           messages: [{ role: "user", content: "Giải thích biến động kinh doanh trong số liệu này." }],
