@@ -26,6 +26,14 @@ function conciergeConfigured() {
   return Boolean(process.env.DEEPSEEK_API_KEY);
 }
 
+// Optional provider headers (OpenRouter recommends HTTP-Referer + X-Title;
+// harmless for DeepSeek and other OpenAI-compatible gateways).
+function providerHeaders(): Record<string, string> {
+  const h: Record<string, string> = {};
+  if (process.env.OPENROUTER_HTTP_REFERER) h["HTTP-Referer"] = process.env.OPENROUTER_HTTP_REFERER;
+  if (process.env.OPENROUTER_X_TITLE) h["X-Title"] = process.env.OPENROUTER_X_TITLE;
+  return h;
+}
 // Tool contract: search the real catalog only. The model must ground every
 // product it mentions in tool results — never from its own knowledge.
 const TOOLS = [
@@ -158,6 +166,7 @@ export async function POST(req: NextRequest) {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+          ...providerHeaders(),
         },
         body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, max_tokens: 800, temperature: 0.3 }),
         signal: AbortSignal.timeout(30_000),

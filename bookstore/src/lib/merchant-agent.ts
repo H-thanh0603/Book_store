@@ -255,6 +255,14 @@ export function merchantConfigured() {
   return Boolean(process.env.DEEPSEEK_API_KEY);
 }
 
+// Optional provider headers (OpenRouter recommends HTTP-Referer + X-Title).
+function providerHeaders(): Record<string, string> {
+  const h: Record<string, string> = {};
+  if (process.env.OPENROUTER_HTTP_REFERER) h["HTTP-Referer"] = process.env.OPENROUTER_HTTP_REFERER;
+  if (process.env.OPENROUTER_X_TITLE) h["X-Title"] = process.env.OPENROUTER_X_TITLE;
+  return h;
+}
+
 export async function runMerchantTurn(
   skill: MerchantSkill,
   history: { role: "user" | "assistant"; content: string }[],
@@ -268,7 +276,11 @@ export async function runMerchantTurn(
   for (let round = 0; round < 2; round++) {
     const res = await fetch(DEEPSEEK_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+        ...providerHeaders(),
+      },
       body: JSON.stringify({
         model: MERCHANT_MODEL, messages, tools: tools.length > 0 ? tools : undefined,
         max_tokens: 1000, temperature: 0.2,
