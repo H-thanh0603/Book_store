@@ -72,3 +72,15 @@ export async function pruneCustomerMemories(): Promise<{ deleted: number }> {
   });
   return { deleted: res.count };
 }
+
+/** AgentChatTurn: conversation transcripts are low-value chat logs — drop
+ *  rows older than the window (default 30d). Fresh threads stay resumable;
+ *  stale ones would only bloat grounding context. */
+export async function pruneAgentChatTurns(): Promise<{ deleted: number }> {
+  const days = retentionDays(process.env.AGENT_CHAT_RETENTION_DAYS, 30);
+  const cutoff = new Date(Date.now() - days * 86_400_000);
+  const res = await prisma.agentChatTurn.deleteMany({
+    where: { createdAt: { lt: cutoff } },
+  });
+  return { deleted: res.count };
+}

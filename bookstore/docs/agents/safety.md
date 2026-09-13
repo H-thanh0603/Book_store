@@ -20,6 +20,8 @@ staff session + agent-key quotas.
 | Agent-side discount caps (percentage ≤30, fixed ≤100k) | `validatePromotionCreate` | staged-changes |
 | Listing-patch bounds (description 10–2000, no dynamic markup) | `validateProductPatch` | staged-changes |
 | Deterministic totals (quote == checkout engine) | `quoteStorefrontOrder` shared by quote/card/checkout | storefront |
+| Server-side chat state (AgentChatTurn, org-scoped, unguessable chatId, 30d prune) — history not replayed from browser | concierge route, `prune.agent_chat_turns` | concierge |
+| Model-authored task plan (`update_plan`, max 5 steps, declaration only — no step grants capability) | `lib/agent-plan.ts`, concierge route | concierge |
 
 What is intentionally NOT here yet: web `checkout` still trusts the
 client-supplied cart shape (re-priced server-side, amounts never trusted),

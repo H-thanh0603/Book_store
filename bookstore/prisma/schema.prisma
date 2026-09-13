@@ -38,6 +38,7 @@ model Organization {
   stockAlerts StockAlert[]
   shopperNotifications ShopperNotification[]
   agentFeedback AgentFeedback[]
+  agentChatTurns AgentChatTurn[]
 }
 
 enum OrgStatus {
@@ -349,6 +350,23 @@ model AgentFeedback {
   ipHash      String?
   createdAt   DateTime @default(now())
   @@index([orgId, agent, rating, createdAt])
+}
+
+// Server-side concierge conversation: the client sends only chatId + the new
+// message — history lives here instead of being replayed from the browser
+// (task state survives reloads and long chats that outgrew the 8-turn window).
+// Sessions are anonymous-scoped: chatId is an unguessable id handed to the
+// client once; orgId scopes the tenant.
+model AgentChatTurn {
+  id          String   @id @default(uuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  chatId      String
+  role        String   // user | assistant
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
+  @@index([chatId, createdAt])
+  @@index([orgId, createdAt])
 }
 // Merchant-agent staged changes: every AI-proposed write waits here until a
 // human approves it on the approval surface. The model proposes (PENDING);

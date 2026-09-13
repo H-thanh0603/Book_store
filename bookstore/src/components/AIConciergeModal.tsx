@@ -46,8 +46,11 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState<string | null>(null);
+  // Server-side conversation id (#13): the client sends only fresh turns;
+  // history lives in AgentChatTurn rows. Kept in state (per page-load chat).
+  const [chatId, setChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<
-    { sender: "user" | "ai"; text: string; items?: ProductSuggestion[] }[]
+    { sender: "user" | "ai"; text: string; items?: ProductSuggestion[]; plan?: { title: string; status: string }[] }[]
   >([
     {
       sender: "ai",
@@ -85,12 +88,13 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
     fetch("/api/concierge", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: chatHistory }),
+      body: JSON.stringify({ messages: chatHistory, ...(chatId ? { chatId } : {}) }),
     })
       .then(async (res) => {
         if (!res.ok) throw Object.assign(new Error(String(res.status)), { status: res.status });
-        const data = (await res.json()) as { text: string; items: ProductSuggestion[] };
-        setMessages((prev) => [...prev, { sender: "ai", text: data.text, items: data.items }]);
+        const data = (await res.json()) as { text: string; items: ProductSuggestion[]; chatId?: string; plan?: { title: string; status: string }[] };
+        if (typeof data.chatId === "string" && data.chatId) setChatId(data.chatId);
+        setMessages((prev) => [...prev, { sender: "ai", text: data.text, items: data.items, plan: data.plan }]);
       })
       .catch((err: Error & { status?: number }) => {
         // 429 rate-limited / 5xx configured-but-broken: honest message, no
@@ -190,6 +194,23 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
                     }`}
                   >
                     <p>{m.text}</p>
+
+                    {/* Model-authored task plan (#2): progress the agent
+                        declared via update_plan. Read-only render. */}
+                    {m.plan && m.plan.length > 0 && (
+                      <div className="mt-2 rounded-xl bg-[#faf4ea] border border-[#ede5d8] px-2.5 py-2 space-y-1">
+                        {m.plan.map((step, i) => (
+                          <div key={i} className="flex items-start gap-1.5 text-[11px] text-slate-600">
+                            <span aria-hidden="true">
+                              {step.status === "done" ? "✅" : step.status === "doing" ? "⏳" : "▫️"}
+                            </span>
+                            <span className={step.status === "done" ? "line-through text-slate-400" : ""}>
+                              {step.title}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Answer feedback (thumbs): powers the weekly quality
                         review; best-effort identity, no PII stored. */}
