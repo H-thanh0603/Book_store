@@ -171,11 +171,29 @@ export default function Nav() {
               const isGroupOpen = openGroup === group.label;
               const GroupIcon = group.icon;
               return (
-                <div key={group.label} className="relative">
+                <div
+                  key={group.label}
+                  className="relative"
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setOpenGroup(null);
+                    // Disclosure + menu keyboard support: ↓ opens and moves
+                    // focus to the first item (hover alone isn't keyboard-able).
+                    if (e.key === "ArrowDown" && document.activeElement?.tagName === "BUTTON") {
+                      e.preventDefault();
+                      setOpenGroup(group.label);
+                      requestAnimationFrame(() => {
+                        document
+                          .querySelector<HTMLElement>(`#nav-group-${CSS.escape(group.label)} [role="menuitem"]`)
+                          ?.focus();
+                      });
+                    }
+                  }}
+                >
                   <button
                     onClick={() => setOpenGroup(isGroupOpen ? null : group.label)}
                     onMouseEnter={() => setOpenGroup(group.label)}
                     aria-expanded={isGroupOpen}
+                    aria-haspopup="menu"
                     aria-controls={`nav-group-${group.label}`}
                     aria-label={`Nhóm ${group.label}`}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8c2d19] ${

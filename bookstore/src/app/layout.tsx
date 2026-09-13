@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/contexts/CartContext";
 import { GlobalErrorHandler } from "@/components/GlobalErrorHandler";
+import SkipLink from "@/components/SkipLink";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} ${serifDisplay.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#faf7f2] text-[#1c1917]">
+        <SkipLink />
         <GlobalErrorHandler>
           <CartProvider>{children}</CartProvider>
         </GlobalErrorHandler>
