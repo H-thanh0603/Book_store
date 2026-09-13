@@ -39,6 +39,11 @@ export async function GET() {
       },
     });
     return ok({
+      // Online refunds are MANUAL in this release: no gateway refund API is
+      // called — the operator refunds via the VNPay portal / bank transfer,
+      // then PATCHes to record it. `manual: true` lets clients render that.
+      manual: true,
+      howTo: "Hoàn tiền qua portal VNPay (theo mã giao dịch) hoặc chuyển khoản, rồi đánh dấu đã hoàn (PATCH).",
       refunds: rows.map((r) => ({
         id: r.id,
         txnRef: r.txnRef,

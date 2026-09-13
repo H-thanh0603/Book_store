@@ -213,7 +213,7 @@ export function adapterFor(provider: "VNPT" | "VIETTEL" | "MISA" | "VN_EINVOICE"
 // webhook retry or duplicate POS event never issues twice. Cancel happens
 // via a separate transition that records its own attempt.
 
-const TAX = 0n; // Bán lẻ VAT 0% là mặc định cho SME bán sách; tax override sẽ đến từ SystemConfig sau.
+const TAX_FALLBACK_RATE = 0.08; // matches Product.taxRate default when a row predates the column
 
 export async function enqueueEinvoice(input: {
   orderId: string;
@@ -226,6 +226,7 @@ export async function enqueueEinvoice(input: {
   customerAddress?: string | null;
   subtotal: bigint;
   total: bigint;
+  tax?: bigint; // embedded VAT (VAT-inclusive policy, see lib/tax.ts); defaults to 0 for legacy callers
   lines: { name: string; quantity: number; unitPrice: bigint; total: bigint }[];
 }, client?: Prisma.TransactionClient) {
   const db = client ?? prisma;
@@ -258,7 +259,7 @@ export async function enqueueEinvoice(input: {
       customerEmail: input.customerEmail ?? null,
       customerAddress: input.customerAddress ?? null,
       subtotal: input.subtotal,
-      tax: TAX,
+      tax: input.tax ?? 0n,
       total: input.total,
     },
     });
@@ -317,7 +318,7 @@ export async function enqueueEinvoiceForPosTransaction(txnId: string) {
     where: { id: txnId },
     include: {
       customer: true,
-      items: { include: { variant: { include: { product: true } } } },
+      items: { include: { variant: { include: { product: { select: { name: true, taxRate: true } } } } } },
     },
   });
   if (!txn) return null;
@@ -326,6 +327,13 @@ export async function enqueueEinvoiceForPosTransaction(txnId: string) {
     include: { region: { include: { org: true } } },
   });
   const subtotal = txn.subtotal + txn.discountTotal; // gross before discount for tax line
+  const { sumIncludedTax } = await import("./tax");
+  const tax = sumIncludedTax(
+    txn.items.map((it) => ({
+      grossMinor: it.unitPrice * BigInt(it.quantity),
+      rate: Number(it.variant.product.taxRate ?? TAX_FALLBACK_RATE),
+    }))
+  );
   return enqueueEinvoice({
     orderId: `POS:${txnId}`,
     orderKind: "POS",
@@ -339,6 +347,7 @@ export async function enqueueEinvoiceForPosTransaction(txnId: string) {
     customerAddress: txn.customer?.address ?? null,
     subtotal,
     total: txn.total,
+    tax,
     lines: txn.items.map((it) => ({
       name: it.variant.product.name,
       quantity: it.quantity,
@@ -354,10 +363,17 @@ export async function enqueueEinvoiceForOrder(orderId: string) {
     include: {
       store: { include: { region: { include: { org: true } } } },
       customer: true,
-      items: { include: { variant: { include: { product: true } } } },
+      items: { include: { variant: { include: { product: { select: { name: true, taxRate: true } } } } } },
     },
   });
   if (!order) return null;
+  const { sumIncludedTax: sumTax } = await import("./tax");
+  const orderTax = sumTax(
+    order.items.map((it) => ({
+      grossMinor: it.unitPrice * BigInt(it.quantity),
+      rate: Number(it.variant.product.taxRate ?? TAX_FALLBACK_RATE),
+    }))
+  );
   return enqueueEinvoice({
     orderId: order.id,
     orderKind: "WEB",
@@ -369,6 +385,7 @@ export async function enqueueEinvoiceForOrder(orderId: string) {
     customerAddress: order.customer?.address ?? null,
     subtotal: order.subtotal,
     total: order.total,
+    tax: orderTax,
     lines: order.items.map((it) => ({
       name: it.variant.product.name,
       quantity: it.quantity,

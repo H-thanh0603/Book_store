@@ -271,6 +271,8 @@ export type StorefrontQuoteInput = {
 export type StorefrontQuote = {
   subtotal: number;
   discountTotal: number;
+  /** Embedded VAT in the listed (VAT-inclusive) prices — informational only. */
+  taxAmount: number;
   total: number;
   shipping: { zone: string; fee: number; freeShip: boolean };
   promotions: { name: string; discountTotal: number }[];
@@ -317,7 +319,7 @@ export async function quoteStorefrontOrder(input: StorefrontQuoteInput): Promise
       ...(quoteStore ? { orgId: quoteStore.orgId } : {}),
     },
     include: {
-      product: { select: { categoryId: true } },
+      product: { select: { categoryId: true, taxRate: true } },
       prices: {
         where: {
           priceList: { kind: { in: ["online", "retail"] } },
@@ -360,9 +362,16 @@ export async function quoteStorefrontOrder(input: StorefrontQuoteInput): Promise
     couponInvalidReason =
       "Mã hợp lệ nhưng chưa được áp dụng cho giỏ hàng này (ưu đãi tự động đang được tính)";
   }
+  // VAT-inclusive breakdown (informational — total unchanged, see lib/tax.ts).
+  const { sumIncludedTax } = await import("./tax");
+  const rateByVariant = new Map(variants.map((v) => [v.id, Number(v.product.taxRate ?? 0.08)]));
+  const taxAmount = sumIncludedTax(
+    lines.map((line) => ({ grossMinor: line.unitPrice * BigInt(line.quantity), rate: rateByVariant.get(line.variantId) ?? 0.08 }))
+  );
   return {
     subtotal: Number(subtotal),
     discountTotal: Number(discounts.total),
+    taxAmount: Number(taxAmount),
     total: Number(subtotal - discounts.total + shipping.fee),
     shipping: { zone: shipping.zone, fee: Number(shipping.fee), freeShip: shipping.freeShip },
     promotions: applied
@@ -372,6 +381,97 @@ export async function quoteStorefrontOrder(input: StorefrontQuoteInput): Promise
     couponInvalidReason: coupon && !couponApplied
       ? (couponInvalidReason ?? "Mã chưa đạt điều kiện áp dụng cho giỏ hàng này")
       : undefined,
+  };
+}
+
+export type TrackOrderInput = {
+  number: string;
+  phone: string;
+};
+
+export type TrackStage = {
+  label: string;
+  time: string;
+  done: boolean;
+  desc: string;
+};
+
+export type TrackedOrder = {
+  number: string;
+  status: string;
+  createdAt: Date;
+  total: number;
+  storeName: string;
+  shipment: { carrier: string | null; trackingNumber: string | null; status: string | null } | null;
+  items: { id: string; name: string; quantity: number; price: number }[];
+  stages: TrackStage[];
+};
+
+function normPhone(v: string) {
+  // 0901234567 / +84 90 123 4567 / 84 912345678 all normalize to the same core.
+  return v.replace(/\D/g, "").replace(/^84/, "").replace(/^0/, "");
+}
+
+/**
+ * Public delivery tracking. Two-factor lookup: the exact order number AND the
+ * phone recorded on the order must both match — knowing one alone reveals
+ * nothing. The response carries fulfillment status only: no customer name,
+ * phone or address ever leaves the system here. Extracted from the track
+ * route so the shopping agent backend reuses the same ordered flow.
+ */
+export async function trackStorefrontOrder(
+  input: TrackOrderInput,
+): Promise<{ order: TrackedOrder | null }> {
+  const number = input.number.trim().toUpperCase();
+  const phone = input.phone.trim();
+  if (!number || !phone) return { order: null };
+  const order = await prisma.order.findUnique({
+    where: { number },
+    select: {
+      number: true, status: true, createdAt: true, total: true,
+      store: { select: { name: true } },
+      customer: { select: { phone: true } }, // verification factor only — never returned
+      shipment: { select: { carrier: true, trackingNumber: true, status: true } },
+      items: {
+        select: {
+          id: true, quantity: true, unitPrice: true,
+          variant: { select: { product: { select: { name: true } } } },
+        },
+      },
+    },
+  });
+  if (!order || !order.customer.phone) return { order: null };
+  if (normPhone(order.customer.phone) !== normPhone(phone)) return { order: null };
+
+  const isDelivered = order.status === "DELIVERED";
+  const isShipped = order.status === "SHIPPED" || isDelivered;
+  const isPacked = ["PACKED", "READY"].includes(order.status) || isShipped;
+  const isConfirmed = order.status !== "NEW" && order.status !== "CANCELLED";
+
+  const stages: TrackStage[] = [
+    { label: "Đã tiếp nhận đơn", time: new Date(order.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }), done: true, desc: "Hệ thống đã xác nhận đơn hàng" },
+    { label: "Thủ thư đóng gói", time: "", done: isConfirmed, desc: "Đã kiểm tra chất lượng ấn bản & bọc chống sốc" },
+    { label: "Bàn giao vận chuyển", time: "", done: isPacked, desc: "Đơn vị vận chuyển đã nhận hàng" },
+    { label: "Đang giao hàng", time: "", done: isShipped, desc: "Shipper đang trên đường giao đến bạn" },
+    { label: "Giao thành công", time: "", done: isDelivered, desc: "Hoàn tất đơn hàng" },
+  ];
+
+  return {
+    order: {
+      number: order.number,
+      status: order.status,
+      createdAt: order.createdAt,
+      total: Number(order.total),
+      storeName: order.store?.name ?? "Kho Trung Tâm",
+      shipment: order.shipment,
+      items: order.items.map((it) => ({
+        id: it.id,
+        name: it.variant.product.name,
+        quantity: it.quantity,
+        price: Number(it.unitPrice),
+      })),
+      stages,
+    },
   };
 }
 

@@ -326,9 +326,17 @@ export async function quoteSale(input: Pick<CompleteSaleInput, "items" | "storeI
     total = 0n;
   }
 
+  // VAT-inclusive breakdown (informational — total unchanged, see lib/tax.ts).
+  const { sumIncludedTax } = await import("./tax");
+  const rateByVariant = new Map(variants.map((v) => [v.id, Number(v.product.taxRate ?? 0.08)]));
+  const taxAmount = sumIncludedTax(
+    lines.map((l) => ({ grossMinor: l.unitPriceResolved * BigInt(l.quantity), rate: rateByVariant.get(l.variantId) ?? 0.08 }))
+  );
+
   return {
     lines: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity, unitPrice: Number(l.unitPriceResolved) })),
     subtotal: Number(subtotal), discountTotal: Number(discountTotal),
+    taxAmount: Number(taxAmount),
     redeemDiscount: Number(redeemDiscount), redeemable, total: Number(total),
     promos: applied.map((ap) => ({ name: ap.name, discountTotal: Number(ap.discountTotal) })),
   };
