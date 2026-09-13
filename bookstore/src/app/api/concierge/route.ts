@@ -20,7 +20,7 @@ import { prismaRead, prisma as prismaWrite } from "@/lib/db";
 import { getCustomerAuth } from "@/lib/customer-auth";
 import { saveServerCart } from "@/lib/server-cart";
 import { callLlm, llmConfigured, type LlmMessage } from "@/lib/llm";
-import { enforceRateLimit } from "@/lib/rate-limit";
+import { enforceRateLimit, clientIp } from "@/lib/rate-limit";
 import { agentRateLimit, finishAgentCall, type ResolvedAgentKey } from "@/lib/agent-auth";
 import { apiError } from "@/lib/api";
 import { observeRequest } from "@/lib/metrics";
@@ -280,7 +280,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ code: "VALIDATION", message: "Thiếu nội dung tin nhắn" }, { status: 400 });
     }
 
-    // Shared daily bucket across ALL IPs: hard ceiling on credit burn.
+    // Per-IP daily bucket first, then the shared global daily ceiling. One
+    // hostile IP burns only its own quota; the global cap still bounds the
+    // distributed-botnet worst case for everyone else.
+    await enforceRateLimit("concierge-daily-ip", clientIp(req.headers), Math.floor(DAILY_LIMIT / 10), 24 * 60 * 60_000);
     await enforceRateLimit("concierge-daily", "global", DAILY_LIMIT, 24 * 60 * 60_000);
 
     // ── Memory: host-provided identity only (the model reads results) ──
