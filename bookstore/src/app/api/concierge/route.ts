@@ -20,7 +20,7 @@ import { prismaRead, prisma as prismaWrite } from "@/lib/db";
 import { getCustomerAuth } from "@/lib/customer-auth";
 import { fenceUntrusted, fenceToolResult } from "@/lib/fencing";
 import { saveServerCart } from "@/lib/server-cart";
-import { callLlm, llmConfigured, type LlmMessage } from "@/lib/llm";
+import { callLlm, llmConfigured, llmModelId, type LlmMessage } from "@/lib/llm";
 import { enforceRateLimit, clientIp } from "@/lib/rate-limit";
 import { agentRateLimit, finishAgentCall, type ResolvedAgentKey } from "@/lib/agent-auth";
 import { apiError } from "@/lib/api";
@@ -419,7 +419,7 @@ export async function POST(req: NextRequest) {
         // that carries no tool_calls) — this return sits inside that branch.
         if (data.usage) {
           console.info(JSON.stringify({
-            level: "info", event: "concierge_usage",
+            level: "info", event: "concierge_usage", model: llmModelId(),
             promptTokens: data.usage.prompt_tokens,
             completionTokens: data.usage.completion_tokens,
             totalTokens: data.usage.total_tokens,
@@ -582,13 +582,22 @@ export async function POST(req: NextRequest) {
               // group. Empty group → retry once with its FIRST word only
               // (multi-word AND search is strict: "sách thiếu nhi" matches
               // nothing when "thiếu" never appears together with both others).
+              // DB-search budget: 8 per plan_combo call (4 groups × up to 2
+              // attempts) — the turn rate limit counts turns, not searches,
+              // so a repeat-combo caller must not multiply into raw DB load.
               const picked: { variantId: string; name: string; price: number; group: string }[] = [];
               let remaining = budget;
+              let searchBudget = 8;
               for (const group of queries) {
+                if (searchBudget <= 0) break;
+                searchBudget--;
                 let found = await searchProducts(group);
-                if (found.length === 0) {
+                if (found.length === 0 && searchBudget > 0) {
                   const firstWord = group.split(/\s+/)[0] ?? group;
-                  if (firstWord && firstWord !== group) found = await searchProducts(firstWord);
+                  if (firstWord && firstWord !== group) {
+                    searchBudget--;
+                    found = await searchProducts(firstWord);
+                  }
                 }
                 const candidates = found.filter((c) => (c.price ?? 0) > 0 && (c.price ?? 0) <= remaining);
                 if (candidates.length === 0) continue;

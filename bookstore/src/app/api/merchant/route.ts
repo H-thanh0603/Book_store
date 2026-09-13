@@ -7,6 +7,10 @@ import { requireAuth } from "@/lib/auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { apiError } from "@/lib/api";
 import { observeRequest } from "@/lib/metrics";
+import { merchantSwitches } from "@/lib/commerce";
+import { prisma } from "@/lib/db";
+import { llmModelId } from "@/lib/llm";
+import { proposeStagedChange } from "@/lib/staged-changes";
 import {
   SKILL_PERMISSION,
   merchantConfigured,
@@ -44,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     if (!merchantConfigured()) {
       finish(503);
-      return NextResponse.json({ code: "NOT_CONFIGURED", message: "DEEPSEEK_API_KEY chưa cấu hình." }, { status: 503 });
+      return NextResponse.json({ code: "NOT_CONFIGURED", message: "LLM_API_KEY chưa cấu hình." }, { status: 503 });
     }
 
     const history = (body?.messages ?? [])
@@ -58,11 +62,31 @@ export async function POST(req: NextRequest) {
     await enforceRateLimit("merchant-daily", "global", MERCHANT_DAILY_LIMIT, 24 * 60 * 60_000);
     await enforceRateLimit("merchant-user", auth.userId, 60, 60 * 60_000);
 
-    const contextJson = body?.context !== undefined ? JSON.stringify(body.context) : undefined;
-    const { text, usage } = await runMerchantTurn(skill as MerchantSkill, history, contextJson);
+    // Context cap: staff-supplied context flows into the LLM prompt and the
+    // staged payload — an oversized blob burns tokens and bloats rows.
+    const rawContext = body?.context !== undefined ? JSON.stringify(body.context) : undefined;
+    if (rawContext !== undefined && rawContext.length > 60_000) {
+      finish(413);
+      return NextResponse.json({ code: "VALIDATION", message: "context quá lớn (tối đa ~60KB)" }, { status: 413 });
+    }
+    const contextJson = rawContext;
+    // Approval-surface wiring: propose_change stages PENDING rows attributed
+    // to this staff user; nothing the model says applies itself.
+    const orgId = auth.orgId ?? (await prisma.organization.findFirstOrThrow({ orderBy: { createdAt: "asc" } })).id;
+    const permissions = auth.roles.flatMap((r) => r.permissions);
+    const switches = merchantSwitches();
+    const allowPropose =
+      (skill === "promo" && (switches.enablePricing || switches.enableCampaigns)) ||
+      ((skill === "digest" || skill === "inventory") && switches.enableInventory) ||
+      (skill === "catalog" && switches.enableListingEdits);
+    const { text, usage } = await runMerchantTurn(skill as MerchantSkill, history, contextJson, {
+      allowPropose,
+      propose: async (kind, title, payload) =>
+        proposeStagedChange(kind, title, payload, { orgId, userId: auth.userId, permissions }),
+    });
     if (usage) {
       console.info(JSON.stringify({
-        level: "info", event: "merchant_usage", skill,
+        level: "info", event: "merchant_usage", skill, model: llmModelId(),
         promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens, totalTokens: usage.total_tokens,
       }));
     }
