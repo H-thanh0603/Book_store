@@ -11,7 +11,11 @@ export async function GET() {
     const auth = await requireAuth();
     const scope = resolveStoreScope(auth);
     const stores = await prisma.store.findMany({
-      where: scope ? { id: { in: scope } } : undefined,
+      // Tenant isolation (#7): org-wide role must not list other orgs' stores.
+      where: {
+        ...(auth.orgId ? { orgId: auth.orgId } : {}),
+        ...(scope ? { id: { in: scope } } : {}),
+      },
       select: { id: true, name: true, code: true },
     });
     return ok({ stores });

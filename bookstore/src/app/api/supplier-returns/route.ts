@@ -11,7 +11,12 @@ export async function GET() {
     const auth = await requirePermission("inventory.view");
     const scope = resolveStoreScope(auth, undefined, "inventory.view");
     const returns = await prisma.supplierReturn.findMany({
-      where: scope ? { location: { storeId: { in: scope } } } : undefined,
+      // Tenant isolation (#7): scope via the org-owned supplier (SEC-005) so
+      // warehouse-location returns stay org-scoped even with scope null.
+      where: {
+        ...(auth.orgId ? { supplier: { orgId: auth.orgId } } : {}),
+        ...(scope ? { location: { storeId: { in: scope } } } : {}),
+      },
       include: { supplier: true, items: { include: { variant: true } } },
       orderBy: { createdAt: "desc" },
       take: 50,

@@ -10,9 +10,17 @@ export async function GET(req: NextRequest) {
     const auth = await requirePermission("inventory.view");
     const scope = resolveStoreScope(auth, sp.get("storeId") ?? undefined, "inventory.view");
 
+    // Tenant isolation (#7): scoped callers only see their stores (already
+    // org-implied). Unscoped (org-wide) callers see own-org store locations
+    // + warehouse rows. Warehouse has no org owner (follow-up) — unchanged.
+    const locationFilter = scope
+      ? { storeId: { in: scope } }
+      : auth.orgId
+        ? { OR: [{ store: { orgId: auth.orgId } }, { storeId: null }] }
+        : {};
     const where = {
       variantId: sp.get("variantId") ?? undefined,
-      location: scope ? { storeId: { in: scope } } : undefined,
+      location: locationFilter,
     };
     const { page, pageSize, skip } = optPage(sp, 50);
     const [rows, total] = await Promise.all([

@@ -48,7 +48,21 @@ export async function GET(req: NextRequest) {
     const sp = req.nextUrl.searchParams;
     const auth = await requirePermission("reports.store.view");
     const scope = resolveStoreScope(auth, sp.get("storeId") ?? undefined, "reports.store.view");
-    const where = scope ? { storeId: { in: scope } } : undefined;
+    // Tenant isolation (#7): storeId scoping alone is not enough — an
+    // org-wide role (scope null) must still never see other orgs' orders.
+    // Store is nullable (warehouse orders), so OR both paths under org.
+    const orgFilter = auth.orgId
+      ? {
+          OR: [
+            { store: { region: { orgId: auth.orgId } } },
+            { storeId: null, customer: { orgId: auth.orgId } },
+          ],
+        }
+      : {};
+    const where = {
+      ...orgFilter,
+      ...(scope ? { storeId: { in: scope } } : {}),
+    };
     const { page, pageSize, skip } = optPage(sp);
     const [orders, total] = await Promise.all([
       prisma.order.findMany({

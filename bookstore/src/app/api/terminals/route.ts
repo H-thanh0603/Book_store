@@ -8,8 +8,12 @@ export async function GET(req: NextRequest) {
     const auth = await requireAuth();
     const storeId = req.nextUrl.searchParams.get("storeId") ?? undefined;
     const scope = resolveStoreScope(auth, storeId);
+    // Tenant isolation (#7): org-wide role must not see other orgs' terminals.
     const terminals = await prisma.posTerminal.findMany({
-      where: scope ? { storeId: { in: scope } } : storeId ? { storeId } : undefined,
+      where: {
+        ...(auth.orgId ? { store: { orgId: auth.orgId } } : {}),
+        ...(scope ? { storeId: { in: scope } } : storeId ? { storeId } : {}),
+      },
     });
     return ok({ terminals });
   } catch (err) {
