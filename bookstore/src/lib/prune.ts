@@ -43,3 +43,32 @@ export async function pruneWebhookDeliveries(): Promise<{ deleted: number }> {
   });
   return { deleted: res.count };
 }
+
+/** ShopperNotification: onsite inbox rows are read-once and never revisited.
+ *  SENT (seen) rows older than the window go; PENDING rows stay — a shopper
+ *  who hasn't opened the bell in months still finds their pings. */
+export async function pruneShopperNotifications(): Promise<{ deleted: number }> {
+  const days = retentionDays(process.env.SHOPPER_NOTIFICATION_RETENTION_DAYS, 30);
+  const cutoff = new Date(Date.now() - days * 86_400_000);
+  const res = await prisma.shopperNotification.deleteMany({
+    where: { status: "SENT", createdAt: { lt: cutoff } },
+  });
+  return { deleted: res.count };
+}
+
+/** CustomerMemory: rows keyed by phone whose Customer row is gone (deleted
+ *  or guest-typed without an account) are orphaned — cascade never reaches
+ *  them. Phone-keyed memories older than the window with no living customer
+ *  are removed. customerId-keyed rows are owned by the Customer cascade. */
+export async function pruneCustomerMemories(): Promise<{ deleted: number }> {
+  const days = retentionDays(process.env.CUSTOMER_MEMORY_RETENTION_DAYS, 180);
+  const cutoff = new Date(Date.now() - days * 86_400_000);
+  const res = await prisma.customerMemory.deleteMany({
+    where: {
+      customerId: null,
+      phone: { not: null },
+      createdAt: { lt: cutoff },
+    },
+  });
+  return { deleted: res.count };
+}

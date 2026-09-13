@@ -9,10 +9,11 @@ import { rotateInventoryPartitions, detachOldInventoryPartitions } from "./parti
 import { runDailyMisaExport } from "./exports/misa-job";
 import { suspendOverdueOrgs } from "./billing";
 import { scanRefundRequired } from "./payment-refunds";
-import { pruneAuditLogs, pruneWebhookDeliveries } from "./prune";
+import { pruneAuditLogs, pruneWebhookDeliveries, pruneShopperNotifications, pruneCustomerMemories } from "./prune";
 import { runExportBuilds, pruneExportJobs } from "./exports/async-job";
 import { runCycleCounts, scanLowStockMail } from "./inventory-jobs";
 import { issueBirthdayVouchers } from "./loyalty-birthday";
+import { runShopperNotify } from "./shopper-notify";
 import { randomUUID } from "crypto";
 
 export const JOB_KINDS = {
@@ -26,11 +27,14 @@ export const JOB_KINDS = {
   "partitions.detach_old": detachOldInventoryPartitions,
   "prune.audit_logs": pruneAuditLogs,
   "prune.webhook_deliveries": pruneWebhookDeliveries,
+  "prune.shopper_notifications": pruneShopperNotifications,
+  "prune.customer_memories": pruneCustomerMemories,
   "misa.export": runDailyMisaExport,
   "billing.suspend_overdue": suspendOverdueOrgs,
   "payments.refund_scan": scanRefundRequired,
   "export.build": runExportBuilds,
   "loyalty.birthday_rewards": issueBirthdayVouchers,
+  "shopper.notify": runShopperNotify,
   "inventory.cycle_count": runCycleCounts,
   "inventory.low_stock_scan": scanLowStockMail,
   // ponytail: integration dispatch is inline today (integrations route runs jobs on
@@ -145,7 +149,7 @@ export async function tickScheduler() {
  * expiry) get one slot per scheduler tick (5 min). Slot ids make both idempotent.
  * Called by the instrumentation interval; safe to call repeatedly.
  */
-const NIGHTLY: JobKind[] = ["replenishment.generate", "loss.scan", "partitions.rotate", "partitions.detach_old", "prune.audit_logs", "prune.webhook_deliveries", "misa.export", "billing.suspend_overdue", "inventory.cycle_count", "inventory.low_stock_scan", "loyalty.birthday_rewards"];
+const NIGHTLY: JobKind[] = ["replenishment.generate", "loss.scan", "partitions.rotate", "partitions.detach_old", "prune.audit_logs", "prune.webhook_deliveries", "prune.shopper_notifications", "prune.customer_memories", "misa.export", "billing.suspend_overdue", "inventory.cycle_count", "inventory.low_stock_scan", "loyalty.birthday_rewards", "shopper.notify"];
 const FREQUENT: JobKind[] = ["order.expire_reservations", "einvoice.issue", "einvoice.poll", "webhook.deliver", "payments.refund_scan", "export.build"];
 const TICK_MS = 5 * 60_000;
 
