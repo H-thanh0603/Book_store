@@ -27,6 +27,9 @@ import {
   Undo2,
   Receipt,
   MapPin,
+  Stamp,
+  Tags,
+  Star,
 } from "lucide-react";
 import SupportWidget from "./support-widget";
 
@@ -58,6 +61,8 @@ const NAV_GROUPS: NavGroup[] = [
     icon: BookOpen,
     items: [
       { href: "/products", label: "Danh mục", icon: BookOpen },
+      { href: "/categories", label: "Thể loại & NXB", icon: Tags },
+      { href: "/reviews", label: "Duyệt đánh giá", icon: Star },
       { href: "/products/barcodes", label: "In tem", icon: Barcode },
       { href: "/products/health", label: "Sức khỏe listing", icon: ClipboardCheck },
     ],
@@ -89,7 +94,9 @@ const NAV_GROUPS: NavGroup[] = [
     icon: ShieldCheck,
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/approvals", label: "Duyệt AI", icon: Stamp },
       { href: "/reports", label: "Báo cáo", icon: Activity },
+      { href: "/team", label: "Nhân sự", icon: Users },
       { href: "/audit-logs", label: "Audit log", icon: ShieldCheck },
       { href: "/settings/payments", label: "Hoàn tiền", icon: Undo2 },
     ],
