@@ -41,12 +41,50 @@ const inProcessCatalog = new Map<string, { value: CatalogResult; expiresAt: numb
 // 554 connect-timeouts in 3 minutes, all on this route).
 const catalogInflight = new Map<string, Promise<CatalogResult>>();
 
+export type CatalogSort = "name" | "price_asc" | "price_desc" | "newest";
+const CATALOG_SORTS: CatalogSort[] = ["name", "price_asc", "price_desc", "newest"];
+
+/** Validate + normalize catalog filter params. Fail closed (400) on junk. */
+export function normalizeCatalogInput(input: {
+  q?: string | null;
+  categoryId?: string | null;
+  brandId?: string | null;
+  storeId?: string | null;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  sort?: CatalogSort | string | null;
+}) {
+  const pick = (v: string | null | undefined) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 64) : undefined);
+  const num = (v: number | null | undefined, field: string): number | undefined => {
+    if (v === null || v === undefined || (typeof v === "number" && Number.isNaN(v))) return undefined;
+    if (typeof v !== "number" || !Number.isFinite(v) || v < 0 || v > 1_000_000_000)
+      fail(400, "VALIDATION", `${field} must be a number between 0 and 1000000000`);
+    return Math.floor(v);
+  };
+  const minPrice = num(input.minPrice, "minPrice");
+  const maxPrice = num(input.maxPrice, "maxPrice");
+  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice)
+    fail(400, "VALIDATION", "minPrice must not exceed maxPrice");
+  const sort = input.sort ?? "name";
+  if (!CATALOG_SORTS.includes(sort as CatalogSort))
+    fail(400, "VALIDATION", `sort must be one of ${CATALOG_SORTS.join(", ")}`);
+  return {
+    q: input.q, categoryId: pick(input.categoryId), brandId: pick(input.brandId),
+    storeId: pick(input.storeId), minPrice, maxPrice, sort: sort as CatalogSort,
+  };
+}
+
 export async function listStorefrontProducts(input: {
   q?: string | null;
   categoryId?: string | null;
+  brandId?: string | null;
   storeId?: string | null;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  sort?: CatalogSort | string | null;
 }) {
-  const cacheKey = JSON.stringify([input.q ?? "", input.categoryId ?? "", input.storeId ?? ""]);
+  const normalized = normalizeCatalogInput(input);
+  const cacheKey = JSON.stringify([normalized.q ?? "", normalized.categoryId ?? "", normalized.brandId ?? "", normalized.storeId ?? "", normalized.minPrice ?? "", normalized.maxPrice ?? "", normalized.sort]);
   const redisKey = `catalog:${cacheKey}`;
 
   // 1. Try Redis
@@ -58,7 +96,7 @@ export async function listStorefrontProducts(input: {
   if (cached && cached.expiresAt > Date.now()) return cached.value;
 
   // 3. Fetch from DB — single-flight: concurrent misses share one fetch
-  const flight = catalogInflight.get(cacheKey) ?? listStorefrontProductsUncached(input).finally(() => {
+  const flight = catalogInflight.get(cacheKey) ?? listStorefrontProductsUncached(normalized).finally(() => {
     catalogInflight.delete(cacheKey);
   });
   catalogInflight.set(cacheKey, flight);
@@ -75,7 +113,11 @@ export async function listStorefrontProducts(input: {
 async function listStorefrontProductsUncached(input: {
   q?: string | null;
   categoryId?: string | null;
+  brandId?: string | null;
   storeId?: string | null;
+  minPrice?: number | undefined;
+  maxPrice?: number | undefined;
+  sort: CatalogSort;
 }) {
   const q = input.q?.trim().slice(0, 80) || undefined;
   // Per-word AND search: every word must appear in one of the searched fields,
@@ -142,6 +184,7 @@ async function listStorefrontProductsUncached(input: {
         status: "active",
         orgId,
         categoryId: input.categoryId || undefined,
+        brandId: input.brandId || undefined,
         variants: { some: { id: { in: stockedIds }, active: true } },
         ...(words.length ? {
           AND: words.map((w) => ({
@@ -184,7 +227,7 @@ async function listStorefrontProductsUncached(input: {
         await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${FUZZY_STATEMENT_TIMEOUT_MS}`);
         return tx.$queryRaw<{ id: string }[]>`
           SELECT p.id FROM "Product" p
-          WHERE p.status = 'active' AND p."orgId" = ${orgId} ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
+          WHERE p.status = 'active' AND p."orgId" = ${orgId} ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty} ${input.brandId ? Prisma.sql`AND p."brandId" = ${input.brandId}` : Prisma.empty}
             AND NOT EXISTS (
               SELECT 1
               FROM unnest(${words}::text[]) q(w)
@@ -222,6 +265,7 @@ async function listStorefrontProductsUncached(input: {
           JOIN "Product" p ON p.id = e."productId"
           WHERE p.status = 'active' AND p."orgId" = ${orgId}
             ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
+            ${input.brandId ? Prisma.sql`AND p."brandId" = ${input.brandId}` : Prisma.empty}
           ORDER BY e.embedding <=> ${`[${vec.join(",")}]`}::vector
           LIMIT 100`;
         if (hits.length)
@@ -247,7 +291,25 @@ async function listStorefrontProductsUncached(input: {
     });
     return variants.length ? [{ ...product, image: product.imageUrl, variants }] : [];
   });
-  return { products, categories, stores, storeId: store.id };
+  // Price-range filter + sort run in memory over the in-stock set: variant
+  // prices live in the related Price table (no single sortable column), and
+  // the stocked-id gate already bounds the working set.
+  const minById = new Map(products.map((p) => [p.id, Math.min(...p.variants.map((v) => v.price))]));
+  const inRange = products.filter((p) => {
+    const floor = minById.get(p.id) ?? 0;
+    if (input.minPrice !== undefined && floor < input.minPrice) return false;
+    if (input.maxPrice !== undefined && floor > input.maxPrice) return false;
+    return true;
+  });
+  const sorted = [...inRange].sort((a, b) => {
+    switch (input.sort) {
+      case "price_asc": return (minById.get(a.id) ?? 0) - (minById.get(b.id) ?? 0);
+      case "price_desc": return (minById.get(b.id) ?? 0) - (minById.get(a.id) ?? 0);
+      case "newest": return b.createdAt.getTime() - a.createdAt.getTime();
+      default: return a.name.localeCompare(b.name, "vi");
+    }
+  });
+  return { products: sorted, categories, stores, storeId: store.id };
 }
 
 export type StorefrontCheckoutInput = {

@@ -22,10 +22,21 @@ export async function GET(req: NextRequest) {
     // Cache at the edge: browser 15s, CDN (Cloudflare) 30s, plus stale-while-revalidate
     // so a cold origin never stalls shoppers. Response varies ONLY on the query string
     // (no auth/cookies on this endpoint), so CDNs can key on the full URL safely.
+    const sp = req.nextUrl.searchParams;
+    const numOrNull = (key: string) => {
+      const raw = sp.get(key);
+      if (raw === null || raw === "") return null;
+      const n = Number(raw);
+      return n;
+    };
     const response = ok(await listStorefrontProducts({
-      q: req.nextUrl.searchParams.get("q"),
-      categoryId: req.nextUrl.searchParams.get("categoryId"),
-      storeId: req.nextUrl.searchParams.get("storeId"),
+      q: sp.get("q"),
+      categoryId: sp.get("categoryId"),
+      brandId: sp.get("brandId"),
+      storeId: sp.get("storeId"),
+      minPrice: numOrNull("minPrice"),
+      maxPrice: numOrNull("maxPrice"),
+      sort: sp.get("sort"),
     }), 200, {
       "Cache-Control": "public, max-age=15, s-maxage=30, stale-while-revalidate=60",
       Vary: "Accept-Encoding",

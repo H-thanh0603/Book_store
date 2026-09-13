@@ -34,7 +34,7 @@ function parseTaxRate(v: unknown): number {
   return v;
 }
 
-// GET /api/products?q=&barcode=&sku=&page=&search=
+// GET /api/products?q=&barcode=&sku=&page=&search=&brandId=&sort=name_asc|name_desc|newest
 // Admin browse is read-only and seconds-stale-tolerant → replica when configured.
 export async function GET(req: NextRequest) {
   try {
@@ -43,6 +43,16 @@ export async function GET(req: NextRequest) {
     const q = sp.get("q");
     const barcode = sp.get("barcode");
     const sku = sp.get("sku");
+    const brandId = sp.get("brandId")?.trim() || undefined;
+    const sort = sp.get("sort") ?? "name_asc";
+    const orderBy = sort === "newest"
+      ? { createdAt: "desc" as const }
+      : sort === "name_desc"
+        ? { name: "desc" as const }
+        : sort === "name_asc"
+          ? { name: "asc" as const }
+          : null;
+    if (!orderBy) fail(400, "VALIDATION", "sort must be one of name_asc, name_desc, newest");
     const page = Math.max(1, Number(sp.get("page") ?? 1));
     // take is client-tunable (POS/order pickers request a bigger page) but
     // hard-clamped so a hand-crafted ?take=100000 cannot dump the catalog.
@@ -50,6 +60,7 @@ export async function GET(req: NextRequest) {
 
     const where = {
       ...withOrg(auth),
+      ...(brandId ? { brandId } : {}),
       AND: [
         barcode ? { variants: { some: { barcodes: { some: { barcode } } } } } : {},
         sku ? { variants: { some: { sku } } } : {},
@@ -81,7 +92,7 @@ export async function GET(req: NextRequest) {
             },
           },
         },
-        orderBy: { name: "asc" },
+        orderBy,
         skip: (page - 1) * take,
         take,
       }),
