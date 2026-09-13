@@ -45,6 +45,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
   useEscapeClose(open, () => setOpen(false));
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
+  const [feedbackSent, setFeedbackSent] = useState<string | null>(null);
   const [messages, setMessages] = useState<
     { sender: "user" | "ai"; text: string; items?: ProductSuggestion[] }[]
   >([
@@ -53,6 +54,16 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
       text: "Xin chào bạn đọc! Mình là Thủ Thư AI của Melio Bookstore. Bạn đang tìm sách theo tâm trạng, tìm quà tặng hay cần chọn dụng cụ học tập gì hôm nay?",
     },
   ]);
+
+  // Answer feedback — fire-and-forget POST /api/agent-feedback.
+  function sendFeedback(rating: "up" | "down", turnText: string) {
+    setFeedbackSent(rating);
+    fetch("/api/agent-feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating, agent: "concierge", turnText: turnText.slice(0, 400) }),
+    }).catch(() => {});
+  }
 
   function handleSend(textToSend?: string) {
     const q = textToSend || input;
@@ -179,6 +190,27 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
                     }`}
                   >
                     <p>{m.text}</p>
+
+                    {/* Answer feedback (thumbs): powers the weekly quality
+                        review; best-effort identity, no PII stored. */}
+                    {m.sender === "ai" && idx > 0 && (
+                      <div className="mt-1.5 flex gap-1">
+                        {(["up", "down"] as const).map((r) => (
+                          <button
+                            key={r}
+                            onClick={() => sendFeedback(r, m.text)}
+                            aria-label={r === "up" ? "Câu trả lời hữu ích" : "Câu trả lời chưa tốt"}
+                            className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold transition-colors ${
+                              feedbackSent === r
+                                ? "bg-[#ede5d8] text-[#8c2d19]"
+                                : "text-slate-400 hover:text-[#8c2d19] hover:bg-[#faf4ea]"
+                            }`}
+                          >
+                            {r === "up" ? "👍 Hữu ích" : "👎 Chưa đúng"}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Product Suggestion Cards */}
                     {m.items && (

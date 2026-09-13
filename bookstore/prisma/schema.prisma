@@ -32,6 +32,12 @@ model Organization {
   billingInvoices BillingInvoice[]
   agentKeys AgentKey[]
   supportConversations SupportConversation[]
+  customerMemories CustomerMemory[]
+  stagedChanges StagedChange[]
+  serverCarts ServerCart[]
+  stockAlerts StockAlert[]
+  shopperNotifications ShopperNotification[]
+  agentFeedback AgentFeedback[]
 }
 
 enum OrgStatus {
@@ -264,6 +270,126 @@ model SupportMessage {
   body            String
   createdAt       DateTime @default(now())
   @@index([conversationId, createdAt])
+}
+
+// Two-way cart sync: the shopper's cart lives server-side per subject so the
+// storefront and the agent read/write the same lines (last-write-wins by
+// updatedAt). Guests are keyed by phone (host-provided, like memory);
+// members by customerId. Cart lines are variantIds only — never PII.
+model ServerCart {
+  id          String   @id @default(uuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  phone       String?
+  storeId     String?
+  items       Json
+  source      String   @default("shop") // shop | agent
+  remindedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([orgId, customerId, storeId])
+  @@unique([orgId, phone, storeId])
+  @@index([orgId, updatedAt])
+}
+
+// Back-in-stock subscriptions: shopper asks to be pinged when a variant is
+// available again. One PENDING row per subject+variant; worker flips NOTIFIED.
+model StockAlert {
+  id          String   @id @default(uuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  phone       String?
+  email       String?
+  variantId   String
+  status      String   @default("PENDING") // PENDING | NOTIFIED | CANCELLED
+  notifiedAt  DateTime?
+  createdAt   DateTime @default(now())
+  @@unique([orgId, customerId, variantId])
+  @@unique([orgId, phone, variantId])
+  @@index([orgId, status])
+}
+
+// Shopper outbox: proactive pings (back_in_stock, abandoned_cart). Email when
+// the address is known, otherwise PENDING onsite for /api/storefront/notifications.
+model ShopperNotification {
+  id          String   @id @default(uuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  phone       String?
+  email       String?
+  kind        String
+  title       String
+  body        String
+  status      String   @default("PENDING") // PENDING | SENT | FAILED
+  refId       String?
+  createdAt   DateTime @default(now())
+  @@index([orgId, status])
+}
+
+// Concierge answer feedback (thumbs up/down from the chat UI). One row per
+// click, best-effort identity (session or IP hash) — never raw PII. Powers
+// the weekly review: which kinds of answers go wrong, with the model id.
+model AgentFeedback {
+  id          String   @id @default(uuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  rating      String   // up | down
+  agent       String   // concierge | merchant
+  modelId     String?
+  turnText    String?  @db.Text
+  note        String?  @db.Text
+  ipHash      String?
+  createdAt   DateTime @default(now())
+  @@index([orgId, agent, rating, createdAt])
+}
+// Merchant-agent staged changes: every AI-proposed write waits here until a
+// human approves it on the approval surface. The model proposes (PENDING);
+// reviewers APPROVE (applies via the same code as the manual flow) or REJECT.
+// Terminal: APPROVED (no-op write), APPLIED, REJECTED, FAILED (see error).
+model StagedChange {
+  id          String   @id @default(uuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  kind        String
+  title       String
+  payload     Json
+  status      String   @default("PENDING") // PENDING | APPROVED | APPLIED | REJECTED | FAILED
+  requestedBy String?
+  reviewedBy  String?
+  reviewNote  String?
+  appliedRef  String?
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([orgId, status])
+}
+// gift recipients, budget hints). The host holds the credential; the model
+// reads only validated results. Memory validation runs on write: allowlisted
+// keys, length caps, no card-like digit runs. Guests are keyed by normalized
+// phone (matches the Guest Checkout identity); members by customerId.
+model CustomerMemory {
+  id          String   @id @default(uuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  phone       String?
+  key         String
+  value       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([orgId, customerId, key])
+  @@unique([orgId, phone, key])
+  @@index([orgId, customerId])
+  @@index([orgId, phone])
 }
 
 // Customer-facing session (storefront). Mirrors the staff Session model:
@@ -726,6 +852,11 @@ model Customer {
   supportConversations SupportConversation[]
   promoRedemptions PromotionRedemption[]
   reviews ProductReview[]
+  memories CustomerMemory[]
+  serverCarts ServerCart[]
+  stockAlerts StockAlert[]
+  shopperNotifications ShopperNotification[]
+  agentFeedback AgentFeedback[]
 
   @@unique([orgId, phone])
   @@unique([orgId, email])
