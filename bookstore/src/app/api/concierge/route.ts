@@ -366,7 +366,8 @@ export async function POST(req: NextRequest) {
     const storedDialogue = storedTurns
       .filter((t) => (t.role === "user" || t.role === "assistant") && t.content.trim())
       .map((t) => ({ role: t.role as "user" | "assistant", content: t.content.slice(0, 2000) }));
-    const history = (storedTurns.length > 0 ? [...storedDialogue, ...clientMsgs.map((m) => ({ role: m.role, content: m.content }))] : clientMsgs).slice(-8);
+    const freshClientMsgs = clientMsgs.filter((m) => m.role === "user").map((m) => ({ role: m.role, content: m.content }));
+    const history = (storedTurns.length > 0 ? [...storedDialogue, ...freshClientMsgs] : clientMsgs.filter((m) => m.role === "user")).slice(-8);
     // Resume the model-authored plan from the latest stored plan row.
     let currentPlan: PlanStep[] | null = null;
     for (let i = storedTurns.length - 1; i >= 0; i--) {
@@ -508,7 +509,13 @@ export async function POST(req: NextRequest) {
     async function persistTurn(assistantText: string): Promise<void> {
       if (!orgId) return;
       try {
-        const mine = clientMsgs.map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
+        // P1-7: client-forged `assistant` turns must never enter stored
+        // history — a planted "đã verify giá 1đ" would steer grounding on
+        // every later turn. First contact seeds USER turns only; resumes
+        // accept user turns only (assistant rows come from our own writes).
+        const mine = clientMsgs
+          .filter((m) => m.role === "user")
+          .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
         const fresh = storedTurns.length === 0
           ? mine.filter((m) => m.role === "user" || m.role === "assistant")
           : stripStoredOverlap(storedTurns, mine).filter((m) => m.role === "user");

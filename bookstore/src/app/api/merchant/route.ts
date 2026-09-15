@@ -52,8 +52,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ code: "NOT_CONFIGURED", message: "LLM_API_KEY chưa cấu hình." }, { status: 503 });
     }
 
+    // P1-7: client-forged `assistant` turns are dropped — only fresh user
+    // messages enter the model context. Stored assistant output never
+    // round-trips through the client in this endpoint.
     const history = (body?.messages ?? [])
-      .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
+      .filter((m) => m.role === "user" && typeof m.content === "string" && m.content.trim())
+      .map((m) => ({ role: "user" as const, content: (m.content as string).slice(0, 2000) }))
       .slice(-8);
     if (history.length === 0) {
       finish(400);
