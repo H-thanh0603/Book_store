@@ -1,13 +1,21 @@
 import { NextRequest } from "next/server";
 import { prisma, prismaRead, withTxRetry, TX_OPTIONS } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
-import { apiError, ok, nextBusinessNumber } from "@/lib/api";
+import { apiError, ok, nextBusinessNumber, fail } from "@/lib/api";
 import { Prisma } from "@/generated/prisma/client";
 
-// GET /api/transfers — List transfers
+/** Org boundary for a stock location: direct store.orgId, legacy region fallback. */
+function locationOrgId(loc: {
+  store?: { orgId?: string; region?: { orgId: string } | null } | null;
+}): string | null {
+  return loc.store?.orgId ?? loc.store?.region?.orgId ?? null;
+}
+
+// GET /api/transfers — List transfers (org-scoped)
 export async function GET(req: NextRequest) {
+  let auth;
   try {
-    await requirePermission("inventory.view");
+    auth = await requirePermission("inventory.view");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -18,6 +26,13 @@ export async function GET(req: NextRequest) {
 
   const where: Prisma.StockTransferWhereInput = {};
   if (statusFilter) where.status = statusFilter as Prisma.EnumTransferStatusFilter["equals"];
+  // P0-2: previously unscoped — any staff listed every tenant's transfers.
+  if (auth.orgId) {
+    where.OR = [
+      { fromLocation: { store: { orgId: auth.orgId } } },
+      { toLocation: { store: { orgId: auth.orgId } } },
+    ];
+  }
 
   const transfers = await prismaRead.stockTransfer.findMany({
     where,
@@ -37,10 +52,11 @@ export async function GET(req: NextRequest) {
   return ok({ transfers });
 }
 
-// POST /api/transfers — Create transfer
+// POST /api/transfers — Create transfer (REQUESTED; stock moves at ship time)
 export async function POST(req: NextRequest) {
+  let auth;
   try {
-    await requirePermission("inventory.manage");
+    auth = await requirePermission("inventory.manage");
   } catch (e: unknown) {
     const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
     return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
@@ -55,27 +71,54 @@ export async function POST(req: NextRequest) {
   if (fromLocationId === toLocationId) {
     return apiError({ status: 400, code: "VALIDATION", message: "Source and destination cannot be the same" });
   }
+  // P0-2: item shape was never validated — non-integer/negative/NaN
+  // quantities reached the DB layer.
+  for (const item of items) {
+    if (typeof item?.variantId !== "string" || !item.variantId) {
+      return apiError({ status: 400, code: "VALIDATION", message: "Each item needs a variantId" });
+    }
+    if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+      return apiError({ status: 400, code: "VALIDATION", message: `Quantity for variant ${item.variantId} must be a positive integer` });
+    }
+  }
 
-  // Verify locations
+  // P0-2: locations were loaded bare — a scoped caller could create a
+  // transfer between two foreign locations and reserve foreign stock.
   const [fromLoc, toLoc] = await Promise.all([
-    prismaRead.stockLocation.findUnique({ where: { id: fromLocationId } }),
-    prismaRead.stockLocation.findUnique({ where: { id: toLocationId } }),
+    prismaRead.stockLocation.findUnique({
+      where: { id: fromLocationId },
+      include: { store: { select: { orgId: true, regionId: true } } },
+    }),
+    prismaRead.stockLocation.findUnique({
+      where: { id: toLocationId },
+      include: { store: { select: { orgId: true, regionId: true } } },
+    }),
   ]);
   if (!fromLoc || !toLoc) return apiError({ status: 404, code: "NOT_FOUND", message: "Location not found" });
-
-  // Verify stock availability
-  for (const item of items) {
-    const balance = await prismaRead.inventoryBalance.findUnique({
-      where: { variantId_locationId: { variantId: item.variantId, locationId: fromLocationId } },
+  if (auth.orgId) {
+    const orgs = [locationOrgId(fromLoc), locationOrgId(toLoc)];
+    if (orgs.some((o) => o !== auth.orgId))
+      return apiError({ status: 404, code: "NOT_FOUND", message: "Location not found" });
+    // Variants are org-scoped — a transfer may only move the caller's SKUs.
+    const variantRows = await prismaRead.productVariant.findMany({
+      where: { id: { in: items.map((i: { variantId: string }) => i.variantId) } },
+      select: { id: true, orgId: true },
     });
-    const available = (balance?.onHand ?? 0) - (balance?.reserved ?? 0);
-    if (available < item.quantity) {
-      return apiError({ status: 400, code: "VALIDATION", message: `Insufficient stock for variant ${item.variantId}: available ${available}, requested ${item.quantity}` });
+    const byId = new Map(variantRows.map((v) => [v.id, v.orgId]));
+    for (const item of items) {
+      if (byId.get(item.variantId) !== auth.orgId)
+        return apiError({ status: 404, code: "NOT_FOUND", message: `Variant ${item.variantId} not found` });
     }
   }
 
   const trfNumber = await nextBusinessNumber("TRF");
 
+  // P0-2: the old code checked availability on a replica OUTSIDE the tx and
+  // then blindly incremented `reserved` INSIDE it — a TOCTOU over-reserve,
+  // and the increment was never released at ship time (ship moves
+  // onHand→inTransit via applyMovement), so `reserved` leaked upward
+  // forever. Creation now writes the REQUESTED transfer only; availability
+  // is enforced under a FOR UPDATE lock at ship time by applyMovement.
   const transfer = await withTxRetry(() =>
     prisma.$transaction(
       async (tx) => {
@@ -84,7 +127,7 @@ export async function POST(req: NextRequest) {
             number: trfNumber,
             fromLocationId,
             toLocationId,
-            requestedBy: "system",
+            requestedBy: auth.userId,
             items: {
               create: items.map((item: { variantId: string; quantity: number }) => ({
                 variantId: item.variantId,
@@ -98,14 +141,6 @@ export async function POST(req: NextRequest) {
             },
           },
         });
-
-        // Reserve stock at source location
-        for (const item of items) {
-          await tx.inventoryBalance.update({
-            where: { variantId_locationId: { variantId: item.variantId, locationId: fromLocationId } },
-            data: { reserved: { increment: item.quantity } },
-          });
-        }
 
         return transfer;
       },

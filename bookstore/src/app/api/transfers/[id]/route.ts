@@ -18,13 +18,15 @@ import { MovementType } from "@/generated/prisma/client";
 /** Org boundary: both endpoint locations must belong to the caller's org. */
 function assertOrgOnTransfer(
   transfer: {
-    fromLocation: { store: { region: { orgId: string } | null } | null };
-    toLocation: { store: { region: { orgId: string } | null } | null };
+    fromLocation: { store: { orgId?: string; region?: { orgId: string } | null } | null };
+    toLocation: { store: { orgId?: string; region?: { orgId: string } | null } | null };
   },
   auth: { orgId: string | null }
 ) {
   if (!auth.orgId) return; // legacy admin
-  const orgIds = [transfer.fromLocation.store?.region?.orgId, transfer.toLocation.store?.region?.orgId];
+  const orgOf = (loc: { store: { orgId?: string; region?: { orgId: string } | null } | null }) =>
+    loc.store?.orgId ?? loc.store?.region?.orgId ?? null;
+  const orgIds = [orgOf(transfer.fromLocation), orgOf(transfer.toLocation)];
   if (orgIds.some((orgId) => orgId !== auth.orgId))
     fail(404, "NOT_FOUND", "Transfer not found");
 }
