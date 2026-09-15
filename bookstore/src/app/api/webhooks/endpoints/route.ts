@@ -26,6 +26,9 @@ export async function GET() {
     const endpoints = await prisma.webhookEndpoint.findMany({
       where: withOrg(auth, {}),
       orderBy: { createdAt: "desc" },
+      // Audit: hard ceiling — endpoint count is operator-controlled and small;
+      // the cap only guards against pathological data, not real usage.
+      take: 200,
       select: { id: true, provider: true, url: true, eventTypes: true, active: true, description: true, createdAt: true, updatedAt: true },
     });
     return NextResponse.json({ endpoints });

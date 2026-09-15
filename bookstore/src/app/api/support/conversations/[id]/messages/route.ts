@@ -16,11 +16,16 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     const since = req.nextUrl.searchParams.get("since");
     const conversation = await prisma.supportConversation.findFirst({ where: withOrg(auth, { id }) });
     if (!conversation) return ok({ code: "NOT_FOUND", message: "conversation not found" }, 404);
+    // Audit: a long-lived conversation can accumulate thousands of messages;
+    // the poll contract is "?since=" incremental sync, so a hard ceiling with
+    // "older messages exist" flag keeps the payload bounded. Clients page
+    // backwards with since=<first message createdAt>.
     const messages = await prisma.supportMessage.findMany({
       where: { conversationId: id, ...(since ? { createdAt: { gt: new Date(since) } } : {}) },
       orderBy: { createdAt: "asc" },
+      take: 500,
     });
-    return NextResponse.json({ messages, lastMessageAt: conversation.lastMessageAt });
+    return NextResponse.json({ messages, lastMessageAt: conversation.lastMessageAt, truncated: messages.length === 500 });
   } catch (err) {
     return apiError(err);
   }
