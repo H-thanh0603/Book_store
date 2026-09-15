@@ -324,8 +324,12 @@ export async function enqueueEinvoiceForPosTransaction(txnId: string) {
   if (!txn) return null;
   const store = await prisma.store.findUnique({
     where: { id: txn.storeId },
-    include: { region: { include: { org: true } } },
+    select: { orgId: true, region: { select: { org: { select: { id: true } } } } },
   });
+  // P0-7: orgId snapshots the fiscal owner. The old `?? ""` fallback wrote
+  // ownerless invoice rows when the store was missing — fail loudly instead.
+  const txnOrgId = store?.orgId ?? store?.region?.org?.id ?? null;
+  if (!txnOrgId) fail(400, "VALIDATION", "Cannot issue invoice: store has no organization");
   const subtotal = txn.subtotal + txn.discountTotal; // gross before discount for tax line
   const { sumIncludedTax } = await import("./tax");
   const tax = sumIncludedTax(
@@ -337,7 +341,7 @@ export async function enqueueEinvoiceForPosTransaction(txnId: string) {
   return enqueueEinvoice({
     orderId: `POS:${txnId}`,
     orderKind: "POS",
-    orgId: store?.region?.org?.id ?? "",
+    orgId: txnOrgId,
     storeId: txn.storeId,
     customerName: txn.customer?.name || "Khách lẻ",
     // Customer has no taxCode column in this schema — the field is reserved
@@ -361,12 +365,17 @@ export async function enqueueEinvoiceForOrder(orderId: string) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
-      store: { include: { region: { include: { org: true } } } },
+      store: { select: { orgId: true, region: { select: { org: { select: { id: true } } } } } },
       customer: true,
       items: { include: { variant: { include: { product: { select: { name: true, taxRate: true } } } } } },
     },
   });
   if (!order) return null;
+  // P0-7: same ownerless-row guard as the POS path — prefer the direct
+  // store.orgId (SEC-004), fall back to the legacy region chain, then to the
+  // customer org for storeless orders.
+  const orderOrgId = order.store?.orgId ?? order.store?.region?.org?.id ?? order.customer?.orgId ?? null;
+  if (!orderOrgId) fail(400, "VALIDATION", "Cannot issue invoice: order has no organization");
   const { sumIncludedTax: sumTax } = await import("./tax");
   const orderTax = sumTax(
     order.items.map((it) => ({
@@ -377,7 +386,7 @@ export async function enqueueEinvoiceForOrder(orderId: string) {
   return enqueueEinvoice({
     orderId: order.id,
     orderKind: "WEB",
-    orgId: order.store?.region?.org?.id ?? "",
+    orgId: orderOrgId,
     storeId: order.storeId,
     customerName: order.customer?.name || order.customer?.phone || "Khách lẻ",
     customerTaxCode: (order.customer as { taxCode?: string | null } | null)?.taxCode ?? null,
