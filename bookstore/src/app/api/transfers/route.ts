@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma, prismaRead, withTxRetry, TX_OPTIONS } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
-import { apiError, ok, nextBusinessNumber, fail } from "@/lib/api";
+import { apiError, ok, nextBusinessNumber } from "@/lib/api";
 import { Prisma } from "@/generated/prisma/client";
 
 /** Org boundary for a stock location: direct store.orgId, legacy region fallback. */
