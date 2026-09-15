@@ -9,7 +9,6 @@ import { apiError } from "@/lib/api";
 import { redactPii } from "@/lib/fencing";
 import { observeRequest } from "@/lib/metrics";
 import { merchantSwitches } from "@/lib/commerce";
-import { prisma } from "@/lib/db";
 import { llmModelId } from "@/lib/llm";
 import { proposeStagedChange } from "@/lib/staged-changes";
 import {

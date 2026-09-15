@@ -238,7 +238,6 @@ export function detectListingIssues(
 }
 
 export async function getListingIssues(scope: ToolScope, take = 50): Promise<ListingIssue[]> {
-  const orgStores = orgWhere(scope);
   const products = await prisma.product.findMany({
     where: { status: "active", ...orgWhere(scope) },
     include: {
