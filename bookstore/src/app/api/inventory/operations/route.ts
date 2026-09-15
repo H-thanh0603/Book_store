@@ -1,7 +1,7 @@
 // Agent 2: Inventory operations — movement history, adjustment approval workflow,
 // low-stock report, aging report.
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { assertStoreAccess, requirePermission, resolveStoreScope } from "@/lib/auth";
 import { apiError, ok, fail, nextBusinessNumber } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
             });
           }
           return a;
-        });
+        }, TX_OPTIONS);
         await prisma.auditLog.create({ data: { actorId: auth.userId, action: "adjustment.direct", entity: "InventoryAdjustment", entityId: adj.id, after: { number } } });
         return ok({ number: adj.number, status: adj.status }, 201);
       }
@@ -205,7 +205,7 @@ export async function PATCH(req: NextRequest) {
         });
       }
       return tx.inventoryAdjustment.findUniqueOrThrow({ where: { id: adj.id } });
-    });
+    }, TX_OPTIONS);
     await prisma.auditLog.create({ data: { actorId: auth.userId, action: "adjustment.approve", entity: "InventoryAdjustment", entityId: adj.id, after: { number: adj.number } } });
     return ok({ number: updated.number, status: updated.status });
   } catch (err) {

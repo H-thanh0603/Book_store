@@ -4,7 +4,7 @@
 // invisible. Mirrors the manual cancel flow in fulfillment/route.ts:
 // claim the status first, then release every RESERVATION movement.
 import { MovementType } from "../generated/prisma/client";
-import { prisma } from "./db";
+import { prisma, TX_OPTIONS } from "./db";
 import { fail, getSystemConfig } from "./api";
 import { applyMovement } from "./inventory";
 import { audit } from "./auth";
@@ -82,7 +82,7 @@ export async function expireStaleReservations() {
         number: order.number, ttlMinutes,
       }, tx);
       expired += 1;
-    });
+    }, TX_OPTIONS);
   }
   return { scanned: candidates.length, expired };
 }

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { requirePermission, resolveStoreScope } from "@/lib/auth";
 import { apiError, fail, nextBusinessNumber, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         });
       }
       return tx.supplierReturn.findUniqueOrThrow({ where: { id: current.id } });
-    });
+    }, TX_OPTIONS);
     return ok({ number: supplierReturn.number, status: supplierReturn.status });
   } catch (err) {
     return apiError(err);

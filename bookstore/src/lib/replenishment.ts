@@ -1,4 +1,4 @@
-import { prisma } from "./db";
+import { prisma, TX_OPTIONS } from "./db";
 import { Prisma, SuggestionStatus } from "../generated/prisma/client";
 import { getSystemConfig, fail } from "./api";
 import { assertStoreAccess } from "./auth";
@@ -263,7 +263,7 @@ export async function applySuggestionDecision(
       }
     }
     return result;
-  });
+  }, TX_OPTIONS);
 
   return { suggestionId: suggestion.id, status, created };
 }

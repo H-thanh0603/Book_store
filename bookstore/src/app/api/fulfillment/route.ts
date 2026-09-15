@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { requirePermission, assertStoreAccess, audit } from "@/lib/auth";
 import { apiError, fail, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
         });
         await audit(auth.userId, "order.deliver", "Order", current.id, { number: current.number }, tx);
         return updated;
-      });
+      }, TX_OPTIONS);
       return ok({ number: order.number, status: order.status });
     }
 
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
       });
       await audit(auth.userId, isPickup ? "order.collect" : "order.ship", "Order", order.id, { number: order.number }, tx);
       return updated;
-    });
+    }, TX_OPTIONS);
     return ok({ number: result.number, status: result.status });
   } catch (err) {
     return apiError(err);

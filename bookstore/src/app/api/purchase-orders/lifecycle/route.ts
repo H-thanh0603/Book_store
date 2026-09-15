@@ -6,7 +6,7 @@
 // (`updateMany` guarded on the pre-state) inside a $transaction, so repeated or
 // concurrent submissions can never double-apply a state change (notably `pay`).
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { audit, requirePermission } from "@/lib/auth";
 import { apiError, ok, fail, toMoney } from "@/lib/api";
 import { assertPoTransition } from "@/lib/purchasing";
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         return tx.purchaseOrder.findUniqueOrThrow({
           where: { id: po.id }, select: { number: true, supplierConfirmedAt: true },
         });
-      });
+      }, TX_OPTIONS);
       await audit(auth.userId, "po.supplier_confirmed", "PurchaseOrder", po.id, { number: updated.number });
       return ok({ number: updated.number, supplierConfirmedAt: updated.supplierConfirmedAt });
     }
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         });
         if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "PO was already updated");
         return tx.purchaseOrder.findUniqueOrThrow({ where: { id: po.id }, select: { number: true } });
-      });
+      }, TX_OPTIONS);
       await audit(auth.userId, "po.send", "PurchaseOrder", po.id, { before: { status: po.status }, after: { status: "sent" } });
       return ok({ number: updated.number, status: "sent" });
     }
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
           where: { id: po.id },
           select: { number: true, invoiceNumber: true, payableStatus: true },
         });
-      });
+      }, TX_OPTIONS);
       await audit(auth.userId, "po.invoice_recorded", "PurchaseOrder", po.id, { invoiceNumber: b.invoiceNumber, invoiceAmount: amount.toString() });
       return ok({ number: updated.number, invoiceNumber: updated.invoiceNumber, payableStatus: updated.payableStatus });
     }
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
         if (claimed.count !== 1)
           fail(409, "INVALID_STATUS_TRANSITION", `Cannot pay PO with payableStatus ${current.payableStatus}`);
         return tx.purchaseOrder.findUniqueOrThrow({ where: { id: po.id }, select: { number: true, payableStatus: true } });
-      });
+      }, TX_OPTIONS);
       await audit(auth.userId, "po.paid", "PurchaseOrder", po.id, { after: { payableStatus: updated.payableStatus } });
       return ok({ number: updated.number, payableStatus: updated.payableStatus });
     }
@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
         });
         if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "PO was already updated");
         await audit(auth.userId, `po.${b.action}`, "PurchaseOrder", po.id, { before: { status: po.status }, after: { status: to } }, tx);
-      });
+      }, TX_OPTIONS);
       return ok({ number: po.number, status: to });
     }
 

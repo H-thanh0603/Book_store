@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { requirePermission, assertStoreAccess, audit } from "@/lib/auth";
 import { apiError, fail, nextBusinessNumber, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         });
         await audit(auth.userId, "return.create", "Return", ret.id, { number: ret.number }, tx);
         return ret;
-      });
+      }, TX_OPTIONS);
       return ok({ id: result.id, number: result.number, status: result.status }, 201);
     }
 
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
         });
         await audit(auth.userId, "return.refund", "Return", current.id, { amount: Number(current.refundTotal), method }, tx);
         return updated;
-      });
+      }, TX_OPTIONS);
       return ok({ number: ret.number, status: ret.status, refundTotal: Number(ret.refundTotal) });
     }
     if (body.action !== "receive") fail(400, "VALIDATION", "Unknown action");
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
       const updated = await tx.return.findUniqueOrThrow({ where: { id: current.id } });
       await audit(auth.userId, "return.receive", "Return", current.id, { number: current.number }, tx);
       return updated;
-    });
+    }, TX_OPTIONS);
     return ok({ number: ret.number, status: ret.status });
   } catch (err) {
     return apiError(err);
