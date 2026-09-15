@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { apiError } from "@/lib/api";
+import { redactPii } from "@/lib/fencing";
 import { observeRequest } from "@/lib/metrics";
 import { merchantSwitches } from "@/lib/commerce";
 import { prisma } from "@/lib/db";
@@ -69,7 +70,9 @@ export async function POST(req: NextRequest) {
       finish(413);
       return NextResponse.json({ code: "VALIDATION", message: "context quá lớn (tối đa ~60KB)" }, { status: 413 });
     }
-    const contextJson = rawContext;
+    // P1: staff paste revenue/customer JSON into context — mask phones and
+    // emails before the text leaves for the third-party LLM provider.
+    const contextJson = rawContext === undefined ? undefined : redactPii(rawContext);
     // Approval-surface wiring: propose_change stages PENDING rows attributed
     // to this staff user; nothing the model says applies itself.
     const orgId = auth.orgId ?? (await prisma.organization.findFirstOrThrow({ orderBy: { createdAt: "asc" } })).id;

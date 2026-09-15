@@ -4,7 +4,7 @@
 // allowlisted keys, length caps, no card-like digit runs, no PII hoarding.
 
 import { prisma } from "./db";
-import { sanitizeUntrusted } from "./fencing";
+import { containsPii, sanitizeUntrusted } from "./fencing";
 
 export const MEMORY_KEYS = [
   "genre",
@@ -50,6 +50,11 @@ export function validateMemoryInput(
   // secrets; refuse rather than store.
   if (/\d{12,}/.test(normalizedValue.replace(/[\s.-]/g, ""))) {
     return { ok: false, reason: "value chứa dãy số dài kiểu thẻ/mật khẩu — từ chối lưu" };
+  }
+  // P1: the old 12-digit check let 10-digit VN phones (0901234567) through
+  // into rows that render into every LLM turn. Reject phones/emails here.
+  if (containsPii(normalizedValue)) {
+    return { ok: false, reason: "value chứa SĐT/email — không lưu thông tin liên hệ vào memory" };
   }
   return { ok: true, key: normalizedKey as MemoryKey, value: normalizedValue };
 }

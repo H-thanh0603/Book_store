@@ -50,3 +50,33 @@ export function fenceToolResult<T extends Record<string, unknown>>(obj: T): T {
   }
   return out as T;
 }
+
+// ── PII scrubbing (P1) ──────────────────────────────────────────────
+// Free text staff or shoppers paste into AI context (merchant `context`,
+// concierge memories) must not carry phone numbers or emails to a
+// third-party LLM provider. Patterns cover VN mobiles (09/03/07/08/05 +
+// 8 digits, +84 variants, spaced/dotted), emails, and card-like runs.
+
+const PHONE_RE = /(?:\+?84|0)(?:[\s.-]?\d){9}\b/g;
+const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+
+/** True when the text carries a phone number, email, or card-like run. */
+export function containsPii(input: unknown): boolean {
+  if (typeof input !== "string" || !input) return false;
+  const compact = input.replace(/[\s.-]/g, "");
+  if (/\d{10,}/.test(compact)) return true;
+  PHONE_RE.lastIndex = 0;
+  if (PHONE_RE.test(input)) return true;
+  EMAIL_RE.lastIndex = 0;
+  return EMAIL_RE.test(input);
+}
+
+/** Mask phones/emails in place so the text stays usable without the PII. */
+export function redactPii(input: unknown): string {
+  if (typeof input !== "string") return "";
+  PHONE_RE.lastIndex = 0;
+  EMAIL_RE.lastIndex = 0;
+  return input
+    .replace(PHONE_RE, "[SĐT]")
+    .replace(EMAIL_RE, "[email]");
+}
