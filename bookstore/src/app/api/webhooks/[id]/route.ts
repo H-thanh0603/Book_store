@@ -78,9 +78,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const action = optStr(body.action, "action");
 
     if (action === "rotate-secret") {
-      await ownedEndpointId(auth, id);
+      const ownedId = await ownedEndpointId(auth, id);
       const secret = randomBytes(32).toString("hex");
-      await prisma.webhookEndpoint.update({ where: { id }, data: { secret } });
+      await prisma.webhookEndpoint.update({ where: { id: ownedId! }, data: { secret } });
       return ok({ secret, _note: "store the secret now; it will not be shown again" });
     }
     if (action === "test") {

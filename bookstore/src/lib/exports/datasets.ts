@@ -113,16 +113,26 @@ async function fetchProducts(storeScope: string[] | null, orgId?: string | null)
   )
 }
 
-async function fetchOrders(storeScope: string[] | null) {
+async function fetchOrders(storeScope: string[] | null, orgId?: string | null) {
+  // P0-1: Order has no orgId column — scope via store.orgId OR customer.orgId.
+  // Previously the second arg (auth.orgId) was silently dropped and an
+  // org-wide caller (storeScope=null) exported every tenant's orders + PII.
+  const orgFilter = orgId
+    ? { OR: [{ store: { orgId } }, { customer: { orgId } }] }
+    : {}
+  const where = {
+    ...(storeScope ? { storeId: { in: storeScope } } : {}),
+    ...orgFilter,
+  }
   const orders = await prisma.order.findMany({
-    where: storeScope ? { storeId: { in: storeScope } } : {},
+    where,
     include: { customer: { select: { name: true, phone: true } } },
     orderBy: { createdAt: 'desc' },
     take: 10000,
   })
   const remaining = await prisma.order.count({
     where: {
-      ...(storeScope ? { storeId: { in: storeScope } } : {}),
+      ...where,
       createdAt: { lt: orders[orders.length - 1]?.createdAt ?? new Date() },
     },
   })
@@ -130,12 +140,21 @@ async function fetchOrders(storeScope: string[] | null) {
   return orders
 }
 
-async function fetchInventory(storeScope: string[] | null) {
-  const balances = await prisma.inventoryBalance.findMany({
-    where: {
-      location: { active: true, ...(storeScope ? { storeId: { in: storeScope } } : {}) },
-      variant: { active: true },
+async function fetchInventory(storeScope: string[] | null, orgId?: string | null) {
+  // P0-1: a balance row joins a variant (org-scoped) with a location whose
+  // store may belong to another org (created via unscoped transfers before
+  // the fix). Filter BOTH sides; locations without a store fall back to the
+  // variant's org.
+  const where = {
+    location: {
+      active: true,
+      ...(storeScope ? { storeId: { in: storeScope } } : {}),
+      ...(orgId ? { OR: [{ store: { orgId } }, { storeId: null }] } : {}),
     },
+    variant: { active: true, ...(orgId ? { orgId } : {}) },
+  }
+  const balances = await prisma.inventoryBalance.findMany({
+    where,
     include: {
       variant: { include: { product: { select: { name: true } } } },
       location: { select: { name: true } },
@@ -148,8 +167,7 @@ async function fetchInventory(storeScope: string[] | null) {
   // now counts past its last row's cursor and fails loudly instead.
   const remaining = await prisma.inventoryBalance.count({
     where: {
-      location: { active: true, ...(storeScope ? { storeId: { in: storeScope } } : {}) },
-      variant: { active: true },
+      ...where,
       onHand: { lte: balances[balances.length - 1]?.onHand ?? 0 },
       id: { notIn: balances.map((b) => b.id) },
     },
@@ -174,7 +192,10 @@ async function fetchCustomers(_storeScope?: string[] | null, orgId?: string | nu
     take: 10000,
   })
   const remaining = await prisma.customer.count({
-    where: { code: { gt: customers[customers.length - 1]?.code ?? '' } },
+    where: {
+      ...(orgId ? { orgId } : {}),
+      code: { gt: customers[customers.length - 1]?.code ?? '' },
+    },
   })
   if (remaining > 0) throw exportTruncated(remaining)
   const agg = await prisma.order.groupBy({
@@ -194,15 +215,21 @@ async function fetchCustomers(_storeScope?: string[] | null, orgId?: string | nu
   })
 }
 
-async function fetchRevenue(storeScope: string[] | null) {
+async function fetchRevenue(storeScope: string[] | null, orgId?: string | null) {
   const since = new Date(Date.now() - 30 * 86_400_000)
-  // Store-scope clamp mirrors fetchOrders — an unscoped caller still sees all.
-  const storeFilter = storeScope ? Prisma.sql`AND "storeId" IN (${Prisma.join(storeScope)})` : Prisma.empty
+  // P0-1: scope revenue to the caller's org via the order's store or customer.
+  // Previously an unscoped caller saw every tenant's revenue.
+  const storeFilter = storeScope ? Prisma.sql`AND o."storeId" IN (${Prisma.join(storeScope)})` : Prisma.empty
+  const orgFilter = orgId
+    ? Prisma.sql`AND (s."orgId" = ${orgId} OR c."orgId" = ${orgId})`
+    : Prisma.empty
   const rows = await prisma.$queryRaw<{ date: string; orders: number; revenue: number }[]>`
-    SELECT DATE("createdAt") AS date, COUNT(*)::int AS orders, COALESCE(SUM(total), 0)::int AS revenue
-    FROM "Order"
-    WHERE "createdAt" >= ${since} AND status NOT IN ('CANCELLED')${storeFilter}
-    GROUP BY DATE("createdAt")
+    SELECT DATE(o."createdAt") AS date, COUNT(*)::int AS orders, COALESCE(SUM(o.total), 0)::int AS revenue
+    FROM "Order" o
+    LEFT JOIN "Store" s ON s.id = o."storeId"
+    LEFT JOIN "Customer" c ON c.id = o."customerId"
+    WHERE o."createdAt" >= ${since} AND o.status NOT IN ('CANCELLED')${storeFilter}${orgFilter}
+    GROUP BY DATE(o."createdAt")
     ORDER BY date DESC
   `
   return rows.map((r) => ({
