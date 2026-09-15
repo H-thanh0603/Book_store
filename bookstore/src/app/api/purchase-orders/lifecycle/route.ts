@@ -32,8 +32,14 @@ export async function POST(req: NextRequest) {
     if (!needed) fail(400, "VALIDATION", "Unknown action");
     const auth = await requirePermission(needed);
     if (!b.poId) fail(400, "VALIDATION", "poId required");
-    const po = await prisma.purchaseOrder.findUnique({ where: { id: b.poId }, include: { items: true } });
+    const po = await prisma.purchaseOrder.findUnique({
+      where: { id: b.poId },
+      include: { items: true, supplier: { select: { orgId: true } } },
+    });
     if (!po) fail(404, "NOT_FOUND", "PO not found");
+    // P0-5: PO scoped via supplier.orgId — foreign POs are 404.
+    if (auth.orgId && po.supplier.orgId !== auth.orgId)
+      fail(404, "NOT_FOUND", "PO not found");
 
     if (b.action === "confirm_supplier") {
       // Supplier confirms the order — allowed once, from approved/sent
@@ -147,18 +153,20 @@ export async function POST(req: NextRequest) {
 // GET /api/purchase-orders/lifecycle?poId= — full detail incl. receipts and price history
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission("purchase.create");
+    const auth = await requirePermission("purchase.create");
     const poId = req.nextUrl.searchParams.get("poId");
     if (!poId) fail(400, "VALIDATION", "poId required");
     const detail = await prisma.purchaseOrder.findUnique({
       where: { id: poId },
       include: {
-        supplier: { select: { id: true, code: true, name: true, leadTimeDays: true, paymentTerms: true } },
+        supplier: { select: { id: true, code: true, name: true, orgId: true, leadTimeDays: true, paymentTerms: true } },
         items: { include: { variant: { select: { sku: true, product: { select: { name: true } } } } } },
         receipts: { include: { items: true }, orderBy: { receivedAt: "desc" } },
       },
     });
     if (!detail) fail(404, "NOT_FOUND", "PO not found");
+    if (auth.orgId && detail.supplier.orgId !== auth.orgId)
+      fail(404, "NOT_FOUND", "PO not found");
     return ok(detail);
   } catch (err) {
     return apiError(err);

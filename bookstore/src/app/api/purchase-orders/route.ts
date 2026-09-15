@@ -7,6 +7,18 @@ import { MovementType } from "@/generated/prisma/client";
 
 type PoItemInput = { variantId: string; quantity: number; unitCost?: unknown; damagedQty?: number };
 
+/** P0-5: POs are scoped via supplier.orgId (PurchaseOrder itself has no
+ *  orgId column). Foreign-org POs surface as 404, never 403, so ids
+ *  cannot be probed across tenants. */
+function assertSupplierOrg(
+  supplier: { orgId: string } | null | undefined,
+  auth: { orgId: string | null },
+) {
+  if (!auth.orgId) return; // legacy admin
+  if (!supplier || supplier.orgId !== auth.orgId)
+    fail(404, "NOT_FOUND", "Supplier not found");
+}
+
 function parseItems(raw: unknown): PoItemInput[] {
   if (!Array.isArray(raw) || raw.length === 0) fail(400, "VALIDATION", "items required");
   return raw.map((i: Record<string, unknown>) => {
@@ -31,12 +43,25 @@ export async function POST(req: NextRequest) {
       // FK targets validated up front: junk ids surface as 404, not P2003 → 500.
       const supplier = await prisma.supplier.findUnique({ where: { id: body.supplierId } });
       if (!supplier) fail(404, "NOT_FOUND", "Supplier not found");
+      assertSupplierOrg(supplier, auth);
       const warehouse = await prisma.warehouse.findUnique({ where: { id: body.warehouseId } });
       if (!warehouse) fail(404, "NOT_FOUND", "Warehouse not found");
       const items = parseItems(body.items).map((item: PoItemInput) => ({
         ...item,
         unitCost: toMoney(item.unitCost, "unitCost"),
       }));
+      // Variants are org-scoped: a PO may only order the caller's SKUs.
+      if (auth.orgId) {
+        const variants = await prisma.productVariant.findMany({
+          where: { id: { in: items.map((i) => i.variantId) } },
+          select: { id: true, orgId: true },
+        });
+        const byId = new Map(variants.map((v) => [v.id, v.orgId]));
+        for (const item of items) {
+          if (byId.get(item.variantId) !== auth.orgId)
+            fail(404, "NOT_FOUND", `Variant ${item.variantId} not found`);
+        }
+      }
       const number = await nextBusinessNumber("PO");
       const po = await prisma.$transaction(async (tx) => {
         const created = await tx.purchaseOrder.create({
@@ -70,8 +95,12 @@ export async function POST(req: NextRequest) {
     if (body.action === "submit") {
       const auth = await requirePermission("purchase.create");
       const po = await prisma.$transaction(async (tx) => {
-        const current = await tx.purchaseOrder.findUnique({ where: { id: body.poId } });
+        const current = await tx.purchaseOrder.findUnique({
+          where: { id: body.poId },
+          include: { supplier: { select: { orgId: true } } },
+        });
         if (!current) fail(404, "NOT_FOUND", "PO not found");
+        assertSupplierOrg(current.supplier, auth);
         if (current.status !== "draft")
           fail(409, "INVALID_STATUS_TRANSITION", `Cannot submit PO in status ${current.status}`);
         const claimed = await tx.purchaseOrder.updateMany({
@@ -89,8 +118,12 @@ export async function POST(req: NextRequest) {
     if (body.action === "approve") {
       const auth = await requirePermission("purchase.approve");
       const po = await prisma.$transaction(async (tx) => {
-        const current = await tx.purchaseOrder.findUnique({ where: { id: body.poId } });
+        const current = await tx.purchaseOrder.findUnique({
+          where: { id: body.poId },
+          include: { supplier: { select: { orgId: true } } },
+        });
         if (!current) fail(404, "NOT_FOUND", "PO not found");
+        assertSupplierOrg(current.supplier, auth);
         // Self-approval blocked: creator cannot approve their own PO.
         if (current.orderedBy === auth.userId)
           fail(403, "FORBIDDEN", "Cannot approve your own purchase order");
@@ -116,9 +149,10 @@ export async function POST(req: NextRequest) {
         await tx.$queryRaw`SELECT id FROM "PurchaseOrder" WHERE id = ${body.poId} FOR UPDATE`;
         const po = await tx.purchaseOrder.findUnique({
           where: { id: body.poId },
-          include: { items: true },
+          include: { items: true, supplier: { select: { orgId: true } } },
         });
         if (!po) fail(404, "NOT_FOUND", "PO not found");
+        assertSupplierOrg(po.supplier, auth);
         if (![ "approved", "sent", "partially_received" ].includes(po.status))
           fail(409, "INVALID_STATUS_TRANSITION", `Cannot receive PO in status ${po.status}`);
 
@@ -196,8 +230,9 @@ export async function POST(req: NextRequest) {
 // GET /api/purchase-orders
 export async function GET() {
   try {
-    await requirePermission("purchase.create");
+    const auth = await requirePermission("purchase.create");
     const pos = await prisma.purchaseOrder.findMany({
+      where: auth.orgId ? { supplier: { orgId: auth.orgId } } : {},
       include: { supplier: true, items: { include: { variant: true } } },
       orderBy: { createdAt: "desc" },
       take: 50,
