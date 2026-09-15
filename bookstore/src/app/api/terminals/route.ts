@@ -14,6 +14,8 @@ export async function GET(req: NextRequest) {
         ...(auth.orgId ? { store: { orgId: auth.orgId } } : {}),
         ...(scope ? { storeId: { in: scope } } : storeId ? { storeId } : {}),
       },
+      // Consistency cap (audit perf): terminals per org are tens, not millions.
+      take: 500,
     });
     return ok({ terminals });
   } catch (err) {

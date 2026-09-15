@@ -15,7 +15,10 @@ export async function GET() {
   try {
     const auth = await requirePermission("settings.write");
     if (!auth.orgId) return ok({ code: "VALIDATION", message: "caller has no org" }, 400);
-    const overrides = await prisma.lossPreventionRule.findMany({ where: { orgId: auth.orgId } });
+    const overrides = await prisma.lossPreventionRule.findMany({
+      where: { orgId: auth.orgId },
+      take: 200,
+    });
     const effective = await Promise.all(
       KINDS.map(async (kind) => ({
         kind,

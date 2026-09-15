@@ -17,6 +17,8 @@ export async function GET() {
         ...(scope ? { id: { in: scope } } : {}),
       },
       select: { id: true, name: true, code: true },
+      // Consistency cap (audit perf): stores per org are bounded by plan limits.
+      take: 500,
     });
     return ok({ stores });
   } catch (err) {
