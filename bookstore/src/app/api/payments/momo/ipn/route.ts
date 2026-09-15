@@ -3,6 +3,7 @@ import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 import { settleMomoResponse } from "@/lib/momo";
 import { emit } from "@/lib/webhook-bus";
 import { prisma } from "@/lib/db";
+import { defaultOrgId } from "@/lib/org-scope";
 
 /**
  * MoMo IPN (server-to-server callback). Accepts GET (query params) and POST
@@ -32,10 +33,7 @@ async function handle(req: NextRequest) {
         select: { order: { select: { store: { select: { region: { select: { orgId: true } } } } } } },
       }).catch(() => null)
     : null;
-  const emitOrgId =
-    org?.order?.store?.region?.orgId
-    ?? (await prisma.organization.findFirst({ orderBy: { createdAt: "asc" }, select: { id: true } }))?.id
-    ?? "default";
+  const emitOrgId = org?.order?.store?.region?.orgId ?? (await defaultOrgId());
   emit({
     eventId: `momo:${completed ? "completed" : "failed"}:${txnRef}`,
     eventType: completed ? "payment.completed" : "payment.failed",

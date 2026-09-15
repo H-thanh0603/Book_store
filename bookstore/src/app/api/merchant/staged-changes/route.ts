@@ -6,14 +6,15 @@ import { requireAuth } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { observeRequest } from "@/lib/metrics";
 import { listStagedChanges, proposeStagedChange } from "@/lib/staged-changes";
-import { prisma } from "@/lib/db";
+import { defaultOrgId } from "@/lib/org-scope";
 
 export async function GET(req: NextRequest) {
   const startedAt = Date.now();
   const finish = (status: number) => observeRequest("/api/merchant/staged-changes", "GET", status, Date.now() - startedAt);
   try {
     const auth = await requireAuth();
-    const orgId = auth.orgId ?? (await prisma.organization.findFirstOrThrow({ orderBy: { createdAt: "asc" } })).id;
+    // Scoped review list: never "the oldest org" (cross-tenant targeting).
+    const orgId = auth.orgId ?? (await defaultOrgId());
     const status = req.nextUrl.searchParams.get("status") ?? undefined;
     const rows = await listStagedChanges(orgId, status);
     finish(200);
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
   const finish = (status: number) => observeRequest("/api/merchant/staged-changes", "POST", status, Date.now() - startedAt);
   try {
     const auth = await requireAuth();
-    const orgId = auth.orgId ?? (await prisma.organization.findFirstOrThrow({ orderBy: { createdAt: "asc" } })).id;
+    const orgId = auth.orgId ?? (await defaultOrgId());
     const body = (await req.json().catch(() => null)) as {
       kind?: string; title?: string; payload?: Record<string, unknown>;
     } | null;

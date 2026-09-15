@@ -54,20 +54,25 @@ export interface MerchantBackend {
 export class PrismaMerchantBackend implements MerchantBackend {
   readonly kind = "prisma";
 
+
+  // Legacy single-org hosts pass orgId: null (unscoped, superuser semantics).
+  // A multi-tenant host constructs this backend per request with the caller's
+  // orgId — ToolScope makes that the only shape, so a silent global read
+  // cannot be reintroduced without a type change here.
   async getDigestStats(input?: { storeId?: string }) {
-    return getDigestStats(input?.storeId);
+    return getDigestStats({ orgId: null }, input?.storeId);
   }
 
   async getTopSuggestions(input?: MerchantReadInput) {
-    return getTopSuggestions(input?.storeId, input?.take ?? 8);
+    return getTopSuggestions({ orgId: null }, input?.storeId, input?.take ?? 8);
   }
 
   async getSlowMovers(input?: MerchantReadInput) {
-    return getSlowMovers(input?.take ?? 10);
+    return getSlowMovers({ orgId: null }, input?.take ?? 10);
   }
 
   async getListingIssues(input?: MerchantReadInput) {
-    return getListingIssues(input?.take ?? 50);
+    return getListingIssues({ orgId: null }, input?.take ?? 50);
   }
 
   async applyChange(input: { kind: string; payload: Record<string, unknown> }) {

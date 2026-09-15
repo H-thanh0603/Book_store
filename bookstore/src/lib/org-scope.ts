@@ -15,6 +15,7 @@
 
 import type { Prisma } from "../generated/prisma/client";
 import type { AuthContext } from "./auth";
+import { prisma } from "./db";
 
 type OrgFilter = { orgId: string };
 
@@ -62,3 +63,25 @@ export function assertSameOrg(auth: AuthContext, claimedOrgId: string | null | u
 //   When B2 follow-ups land they should add withOrg to /api/invoices,
 //   /api/webhooks, and the new org-scoped routes; Order-scoped routes
 //   already use resolveStoreScope which is the right tool there.
+
+/**
+ * Resolve the caller's org or, for the legacy org-less superuser, the seeded
+ * demo org. FAIL-CLOSED: with no orgs in the database this throws instead of
+ * returning a fabricated "default" id.
+ *
+ * History: routes used to inline `auth.orgId ?? organization.findFirstOrThrow
+ * (orderBy createdAt asc)` — silent cross-tenant targeting once a second org
+ * exists. New code must call this helper instead; when the legacy superuser
+ * path is retired, delete the fallback here too.
+ */
+export async function defaultOrgId(): Promise<string> {
+  const org = await prisma.organization.findFirst({
+    where: { slug: "melio" },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  if (org) return org.id;
+  const fallback = await prisma.organization.findFirst({ orderBy: { createdAt: "asc" }, select: { id: true } });
+  if (!fallback) throw Object.assign(new Error("No organization exists — cannot resolve scope"), { status: 500 });
+  return fallback.id;
+}

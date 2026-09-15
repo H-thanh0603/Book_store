@@ -4,6 +4,7 @@ import { settleVnpayResponse } from "@/lib/vnpay";
 import { emit } from "@/lib/webhook-bus";
 import { settleBillingPayment } from "@/lib/billing";
 import { prisma } from "@/lib/db";
+import { defaultOrgId } from "@/lib/org-scope";
 
 /**
  * VNPay IPN (server-to-server callback). Response shape is owned by the VNPay
@@ -33,8 +34,10 @@ export async function GET(req: NextRequest) {
   }
   // PAY-003 (audit 2026-08-30): emit to the owning org, not a hardcoded
   // "default" — order payments scope via Order→Store→Region, billing-cycle
-  // payments via their BillingInvoice.orgId. Falls back to the first org for
-  // unknown refs so the event still lands somewhere auditable.
+  // payments via their BillingInvoice.orgId. Unknown refs resolve via
+  // defaultOrgId (seeded demo org for the legacy superuser; throws when no
+  // org exists) so the event still lands somewhere auditable — and so a
+  // second tenant never silently claims another org's payment event.
   const org = await prisma.webPayment.findUnique({
     where: { txnRef },
     select: {
@@ -42,10 +45,8 @@ export async function GET(req: NextRequest) {
       billingInvoice: { select: { orgId: true } },
     },
   }).catch(() => null);
-  const emitOrgId =
-    org?.order?.store?.region?.orgId ?? org?.billingInvoice?.orgId
-    ?? (await prisma.organization.findFirst({ orderBy: { createdAt: "asc" }, select: { id: true } }))?.id
-    ?? "default";
+  const emitOrgId = org?.order?.store?.region?.orgId ?? org?.billingInvoice?.orgId
+    ?? (await defaultOrgId());
   // Fire-and-forget: the VNPay contract is owned by the response below.
   // emit() is itself idempotent on eventId, so a VNPay retry is safe.
   emit({

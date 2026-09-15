@@ -19,6 +19,7 @@ import {
   runMerchantTurn,
   type MerchantSkill,
 } from "@/lib/merchant-agent";
+import { defaultOrgId } from "@/lib/org-scope";
 
 const SKILLS: MerchantSkill[] = ["digest", "explain", "inventory", "promo", "catalog"];
 const MERCHANT_DAILY_LIMIT = Number(process.env.MERCHANT_DAILY_LIMIT) || 500;
@@ -75,7 +76,10 @@ export async function POST(req: NextRequest) {
     const contextJson = rawContext === undefined ? undefined : redactPii(rawContext);
     // Approval-surface wiring: propose_change stages PENDING rows attributed
     // to this staff user; nothing the model says applies itself.
-    const orgId = auth.orgId ?? (await prisma.organization.findFirstOrThrow({ orderBy: { createdAt: "asc" } })).id;
+    // defaultOrgId(): legacy org-less callers land on the seeded demo org —
+    // never "the oldest org", which silently crossed tenants once a second
+    // org existed (audit: cross-tenant leak via merchant agent).
+    const orgId = auth.orgId ?? (await defaultOrgId());
     const permissions = auth.roles.flatMap((r) => r.permissions);
     const switches = merchantSwitches();
     const allowPropose =
@@ -84,6 +88,7 @@ export async function POST(req: NextRequest) {
       (skill === "catalog" && switches.enableListingEdits);
     const { text, usage } = await runMerchantTurn(skill as MerchantSkill, history, contextJson, {
       allowPropose,
+      scope: { orgId },
       propose: async (kind, title, payload) =>
         proposeStagedChange(kind, title, payload, { orgId, userId: auth.userId, permissions }),
     });

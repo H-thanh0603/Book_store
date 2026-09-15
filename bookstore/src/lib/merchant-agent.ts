@@ -4,6 +4,11 @@
 // READ tools only: the model explains and proposes; every write is a staged
 // change the human applies through existing APIs (replenishment accept,
 // promotion create, product PATCH). The model never calls a mutation.
+// Audit (cross-tenant leak): digest/top_suggestions/slow_movers/listing_issues
+// previously queried without any org filter and the route picked "the oldest
+// org" for org-less callers — tenant B's staff AI could read tenant A's stock,
+// prices and replenishment data. Every read tool now takes a mandatory
+// ToolScope { orgId } and filters by ProductVariant.orgId.
 //
 // Skills: digest (daily ops digest), explain (performance-insights),
 // inventory (inventory-operations Q&A), promo (pricing-promotions drafts),
@@ -11,6 +16,7 @@
 
 import { prisma } from "./db";
 import { callLlm, llmConfigured, type LlmMessage } from "./llm";
+import { defaultOrgId } from "./org-scope";
 
 export type MerchantSkill = "digest" | "explain" | "inventory" | "promo" | "catalog";
 
@@ -70,16 +76,34 @@ export type DigestStats = {
   openTransfers: number;
 };
 
-export async function getDigestStats(storeId?: string): Promise<DigestStats> {
-  const locFilter = storeId ? { location: { storeId } } : {};
+/** Org scope every read tool executes under. Mandatory — no unscoped reads.
+ *  orgId = null means the legacy org-less superuser: queries drop the org
+ *  filter entirely (same semantics as withOrg), never "first org wins". */
+export type ToolScope = { orgId: string | null };
+
+/** Prisma filter fragment for the scope: { orgId } when scoped, {} for the
+ *  legacy superuser. orgId columns are NOT NULL, so a literal null filter
+ *  would silently match zero rows — empty object is the correct "all". */
+function orgWhere(scope: ToolScope): { orgId: string } | Record<string, never> {
+  return scope.orgId ? { orgId: scope.orgId } : {};
+}
+
+export async function getDigestStats(scope: ToolScope, storeId?: string): Promise<DigestStats> {
+  // Inventory/PO/transfer org boundary goes through variant.orgId /
+  // supplier.orgId / location.store.orgId — the same joins the transfers API
+  // uses (no direct orgId column on these models).
+  const orgStores = orgWhere(scope);
+  const locFilter = storeId
+    ? { location: { storeId, store: orgStores } }
+    : { location: { store: orgStores } };
   const [openSuggestions, outOfStockLines, pendingPO, openTransfers] = await Promise.all([
-    prisma.replenishmentSuggestion.count({ where: { status: "OPEN", recommendedQty: { gt: 0 }, ...locFilter } }),
+    prisma.replenishmentSuggestion.count({ where: { status: "OPEN", recommendedQty: { gt: 0 }, variant: orgStores, ...locFilter } }),
     prisma.inventoryBalance.count({
-      where: { onHand: { lte: 0 }, location: storeId ? { storeId } : { active: true } },
+      where: { onHand: { lte: 0 }, variant: orgStores, location: storeId ? { storeId, store: orgStores } : { store: orgStores } },
     }),
-    prisma.purchaseOrder.count({ where: { status: "pending_approval" } }),
+    prisma.purchaseOrder.count({ where: { status: "pending_approval", supplier: orgStores } }),
     prisma.stockTransfer.count({
-      where: { status: { in: ["REQUESTED", "APPROVED", "PICKING", "IN_TRANSIT"] } },
+      where: { status: { in: ["REQUESTED", "APPROVED", "PICKING", "IN_TRANSIT"] }, fromLocation: { store: orgStores } },
     }),
   ]);
   return { openSuggestions, outOfStockLines, pendingPO, openTransfers };
@@ -117,9 +141,15 @@ export function toSuggestionRow(s: {
   };
 }
 
-export async function getTopSuggestions(storeId?: string, take = 8): Promise<SuggestionRow[]> {
+export async function getTopSuggestions(scope: ToolScope, storeId?: string, take = 8): Promise<SuggestionRow[]> {
+  const orgStores = orgWhere(scope);
   const rows = await prisma.replenishmentSuggestion.findMany({
-    where: { status: "OPEN", recommendedQty: { gt: 0 }, ...(storeId ? { location: { storeId } } : {}) },
+    where: {
+      status: "OPEN",
+      recommendedQty: { gt: 0 },
+      variant: orgStores,
+      ...(storeId ? { location: { storeId, store: orgStores } } : {}),
+    },
     include: { variant: { include: { product: true } }, location: true },
     orderBy: { recommendedQty: "desc" },
     take: Math.min(Math.max(take, 1), 20),
@@ -146,18 +176,25 @@ export function filterSlowMovers(
     .sort((a, b) => b.onHand - a.onHand);
 }
 
-export async function getSlowMovers(take = 10): Promise<SlowMover[]> {
+export async function getSlowMovers(scope: ToolScope, take = 10): Promise<SlowMover[]> {
+  const orgStores = orgWhere(scope);
   const since = new Date(Date.now() - 30 * 86_400_000);
   const [balances, sales, prices] = await Promise.all([
     prisma.inventoryBalance.findMany({
-      where: { onHand: { gte: 10 }, location: { active: true } },
+      where: { onHand: { gte: 10 }, variant: orgStores, location: { active: true } },
       include: { variant: { include: { product: true } } },
       take: 300,
     }),
     prisma.inventoryMovement.groupBy({
-      by: ["variantId"], where: { type: "SALE", createdAt: { gte: since } }, _sum: { quantity: true },
+      by: ["variantId"],
+      where: { type: "SALE", createdAt: { gte: since }, variant: orgStores },
+      _sum: { quantity: true },
     }),
-    prisma.price.findMany({ where: { validTo: null }, select: { variantId: true, amount: true }, take: 500 }),
+    prisma.price.findMany({
+      where: { validTo: null, variant: orgStores },
+      select: { variantId: true, amount: true },
+      take: 500,
+    }),
   ]);
   const sold = new Map(sales.map((s) => [s.variantId, Math.max(0, -(s._sum.quantity ?? 0))]));
   const priceByVariant = new Map(prices.map((p) => [p.variantId, Number(p.amount)]));
@@ -200,9 +237,10 @@ export function detectListingIssues(
   return out;
 }
 
-export async function getListingIssues(take = 50): Promise<ListingIssue[]> {
+export async function getListingIssues(scope: ToolScope, take = 50): Promise<ListingIssue[]> {
+  const orgStores = orgWhere(scope);
   const products = await prisma.product.findMany({
-    where: { status: "active" },
+    where: { status: "active", ...orgWhere(scope) },
     include: {
       category: { select: { name: true } },
       author: { select: { name: true } },
@@ -266,6 +304,7 @@ export const SKILL_TOOLS: Record<MerchantSkill, ({ type: "function"; function: {
 async function execMerchantTool(
   name: string,
   args: Record<string, unknown>,
+  scope: ToolScope,
   propose?: ProposeChangeFn,
 ): Promise<unknown> {
   switch (name) {
@@ -282,16 +321,17 @@ async function execMerchantTool(
       }
     }
     case "digest_stats":
-      return getDigestStats(typeof args.storeId === "string" ? args.storeId : undefined);
+      return getDigestStats(scope, typeof args.storeId === "string" ? args.storeId : undefined);
     case "top_suggestions":
       return getTopSuggestions(
+        scope,
         typeof args.storeId === "string" ? args.storeId : undefined,
         typeof args.take === "number" ? args.take : 8,
       );
     case "slow_movers":
-      return getSlowMovers(typeof args.take === "number" ? args.take : 10);
+      return getSlowMovers(scope, typeof args.take === "number" ? args.take : 10);
     case "listing_issues":
-      return getListingIssues(typeof args.take === "number" ? args.take : 50);
+      return getListingIssues(scope, typeof args.take === "number" ? args.take : 50);
     default:
       return { error: "unknown tool" };
   }
@@ -309,8 +349,11 @@ export async function runMerchantTurn(
     propose?: ProposeChangeFn;
     /** enable_* switches: a disabled system removes propose_change for its skills. */
     allowPropose?: boolean;
+    /** Mandatory org scope — every read tool filters to this org. */
+    scope: ToolScope;
   },
 ): Promise<{ text: string; usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number } }> {
+  const scope = opts?.scope ?? { orgId: await defaultOrgId() };
   const allTools = SKILL_TOOLS[skill];
   const tools =
     opts?.allowPropose === false ? allTools.filter((t) => t.function.name !== "propose_change") : allTools;
@@ -331,7 +374,12 @@ export async function runMerchantTurn(
     for (const call of calls) {
       let result: unknown;
       try {
-        result = await execMerchantTool(call.function.name, JSON.parse(call.function.arguments || "{}"), opts?.propose);
+        result = await execMerchantTool(
+          call.function.name,
+          JSON.parse(call.function.arguments || "{}"),
+          scope,
+          opts?.propose,
+        );
       } catch {
         result = { error: "tool failed" };
       }

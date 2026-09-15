@@ -7,8 +7,10 @@ import { getListingIssues } from "@/lib/merchant-agent";
 
 export async function GET() {
   try {
-    await requirePermission("product.update");
-    return ok({ issues: await getListingIssues(100) });
+    const auth = await requirePermission("product.update");
+    // Tenant isolation: listing issues never cross orgs.
+    const issues = await getListingIssues({ orgId: auth.orgId }, 100);
+    return ok({ issues });
   } catch (err) {
     return apiError(err);
   }

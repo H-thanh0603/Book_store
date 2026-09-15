@@ -3,6 +3,7 @@ import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 import { settleZaloPayResponse } from "@/lib/zalopay";
 import { emit } from "@/lib/webhook-bus";
 import { prisma } from "@/lib/db";
+import { defaultOrgId } from "@/lib/org-scope";
 
 /**
  * ZaloPay IPN (JSON POST). The MAC covers the raw postData, so the raw text
@@ -25,10 +26,7 @@ export async function POST(req: NextRequest) {
         select: { order: { select: { store: { select: { region: { select: { orgId: true } } } } } } },
       }).catch(() => null)
     : null;
-  const emitOrgId =
-    org?.order?.store?.region?.orgId
-    ?? (await prisma.organization.findFirst({ orderBy: { createdAt: "asc" }, select: { id: true } }))?.id
-    ?? "default";
+  const emitOrgId = org?.order?.store?.region?.orgId ?? (await defaultOrgId());
   emit({
     eventId: `zalopay:${completed ? "completed" : "failed"}:${txnRef}`,
     eventType: completed ? "payment.completed" : "payment.failed",
