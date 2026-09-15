@@ -12,7 +12,15 @@ export async function GET(req: NextRequest) {
     const scopedStoreIds = auth.roles.filter((role) => role.permissions.includes("reports.store.view") && role.storeId).map((role) => role.storeId!);
     const locationScope = storeId ? { storeId } : hasGlobalScope ? undefined : { storeId: { in: scopedStoreIds } };
     const suggestions = await prisma.replenishmentSuggestion.findMany({
-      where: { recommendedQty: { gt: 0 }, location: locationScope },
+      where: {
+        recommendedQty: { gt: 0 },
+        location: {
+          ...locationScope,
+          // P0-3: suggestions were readable across tenants.
+          ...(auth.orgId ? { OR: [{ store: { orgId: auth.orgId } }, { storeId: null }] } : {}),
+        },
+        ...(auth.orgId ? { variant: { orgId: auth.orgId } } : {}),
+      },
       include: { variant: { include: { product: true } }, location: true },
       orderBy: { recommendedQty: "desc" }, take: 500,
     });
@@ -26,7 +34,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const auth = await requirePermission("purchase.create");
-    if (body.action === "generate") return ok({ suggestions: await generateReplenishmentSuggestions() });
+    if (body.action === "generate") return ok({ suggestions: await generateReplenishmentSuggestions(auth.orgId) });
     if (!body.suggestionId || !["ACCEPTED", "DISMISSED"].includes(body.status))
       fail(400, "VALIDATION", "Use action=generate or provide suggestionId and ACCEPTED/DISMISSED status");
 

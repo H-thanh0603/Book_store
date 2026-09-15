@@ -13,7 +13,7 @@ const REPLENISHMENT_BATCH = 20;
  * sibling location of the same store holds surplus, record it in the rationale
  * so staff can transfer instead of ordering.
  */
-export async function generateReplenishmentSuggestions() {
+export async function generateReplenishmentSuggestions(orgId?: string | null) {
   const [historyDays, safetyStock, defaultLeadTimeDays] = await Promise.all([
     getSystemConfig("replenishment.historyDays", 30),
     getSystemConfig("replenishment.safetyStock", 10),
@@ -21,9 +21,18 @@ export async function generateReplenishmentSuggestions() {
   ]);
   const since = new Date(Date.now() - historyDays * 86_400_000);
   const priorSince = new Date(since.valueOf() - historyDays * 86_400_000);
+  // P0-3: previously scanned every tenant's balances/movements and wrote
+  // cross-org suggestions. Scope all inputs to the caller's org.
+  const balanceWhere = {
+    location: {
+      active: true,
+      ...(orgId ? { OR: [{ store: { orgId } }, { storeId: null }] } : {}),
+    },
+    variant: { active: true, ...(orgId ? { orgId } : {}) },
+  };
   const [balances, sales, priorSales] = await Promise.all([
     prisma.inventoryBalance.findMany({
-      where: { location: { active: true }, variant: { active: true } },
+      where: balanceWhere,
       include: { variant: { include: { product: true } }, location: { select: { id: true, storeId: true } } },
     }),
     prisma.inventoryMovement.groupBy({
@@ -48,6 +57,7 @@ export async function generateReplenishmentSuggestions() {
     FROM "SupplierProductPrice" spp
     JOIN "Supplier" s ON s.id = spp."supplierId"
     WHERE spp."variantId" = ANY(${variantIds}::text[])
+      ${orgId ? Prisma.sql`AND s."orgId" = ${orgId}` : Prisma.empty}
     ORDER BY spp."variantId", spp."recordedAt" DESC
   `;
   const sourcingByVariant = new Map<string, { leadTimeDays: number; unitCost: bigint }>();
@@ -95,12 +105,26 @@ export async function generateReplenishmentSuggestions() {
 
   // Store balancing: annotate OPEN suggestions whose variant sits in surplus at a
   // sibling location of the same store — a transfer beats a purchase order.
+  // P0-3: both reads scoped to the org so balancing never pairs a suggestion
+  // with a foreign location's surplus.
   const openSuggestions = await prisma.replenishmentSuggestion.findMany({
-    where: { recommendedQty: { gt: 0 }, status: "OPEN" },
+    where: {
+      recommendedQty: { gt: 0 },
+      status: "OPEN",
+      ...(orgId
+        ? {
+            variant: { orgId },
+            location: { OR: [{ store: { orgId } }, { storeId: null }] },
+          }
+        : {}),
+    },
     include: { location: { select: { id: true, storeId: true } } },
   });
   const availability = await prisma.inventoryBalance.findMany({
-    where: { variantId: { in: [...new Set(openSuggestions.map((s) => s.variantId))] } },
+    where: {
+      variantId: { in: [...new Set(openSuggestions.map((s) => s.variantId))] },
+      ...(orgId ? { variant: { orgId } } : {}),
+    },
     select: { variantId: true, locationId: true, onHand: true, reserved: true },
   });
   const availByKey = new Map(availability.map((b) => [`${b.variantId}:${b.locationId}`, b.onHand - b.reserved]));
@@ -136,7 +160,15 @@ export async function generateReplenishmentSuggestions() {
     await Promise.all(pendingBalancing.slice(i, i + REPLENISHMENT_BATCH));
 
   return prisma.replenishmentSuggestion.findMany({
-    where: { recommendedQty: { gt: 0 } },
+    where: {
+      recommendedQty: { gt: 0 },
+      ...(orgId
+        ? {
+            variant: { orgId },
+            location: { OR: [{ store: { orgId } }, { storeId: null }] },
+          }
+        : {}),
+    },
     include: { variant: { include: { product: true } }, location: true },
     orderBy: { recommendedQty: "desc" },
   });
@@ -160,9 +192,20 @@ export async function applySuggestionDecision(
 ): Promise<{ suggestionId: string; status: string; created: { kind: string; number?: string; id: string } | null }> {
   const suggestion = await prisma.replenishmentSuggestion.findUnique({
     where: { id: suggestionId },
-    include: { variant: true, location: true },
+    include: {
+      variant: true,
+      location: { include: { store: { select: { orgId: true } } } },
+    },
   });
   if (!suggestion) fail(404, "NOT_FOUND", "Suggestion not found");
+  // P0-3: the suggestion itself must belong to the caller's org — variant
+  // org plus location store org. Otherwise org A accepts org B's suggestion
+  // and materializes a foreign PO/transfer.
+  if (auth.orgId) {
+    const locOrg = suggestion.location.store?.orgId ?? null;
+    if (suggestion.variant.orgId !== auth.orgId || (locOrg !== null && locOrg !== auth.orgId))
+      fail(404, "NOT_FOUND", "Suggestion not found");
+  }
   // Store scope: the caller must cover the suggestion's own location.
   assertStoreAccess(auth, suggestion.location.storeId, "purchase.create");
 
@@ -178,8 +221,13 @@ export async function applySuggestionDecision(
     if (status === "ACCEPTED" && suggestion.recommendedQty > 0) {
       const balancedFrom = (suggestion.rationale as { balancedFrom?: { locationId: string; qty: number } }).balancedFrom;
       if (balancedFrom) {
-        const sourceLoc = await tx.stockLocation.findUnique({ where: { id: balancedFrom.locationId } });
+        const sourceLoc = await tx.stockLocation.findUnique({
+          where: { id: balancedFrom.locationId },
+          include: { store: { select: { orgId: true } } },
+        });
         if (!sourceLoc) fail(400, "VALIDATION", "Balancing source location no longer exists");
+        if (auth.orgId && sourceLoc.store && sourceLoc.store.orgId !== auth.orgId)
+          fail(404, "NOT_FOUND", "Balancing source location not found");
         assertStoreAccess(auth, sourceLoc.storeId, "purchase.create");
         const transfer = await createTransfer({
           fromLocationId: balancedFrom.locationId,
@@ -192,10 +240,16 @@ export async function applySuggestionDecision(
       } else {
         // ponytail: central warehouse + latest supplier price cost. Route by store or
         // cheapest supplier once multi-warehouse purchasing lands.
+        // P0-3: warehouses are global, but the sourcing supplier must be the
+        // caller's own — otherwise the PO is raised against a foreign supplier.
         const warehouse = await tx.warehouse.findFirst({ where: { isCentral: true } })
           ?? await tx.warehouse.findFirst();
         const price = await tx.supplierProductPrice.findFirst({
-          where: { variantId: suggestion.variantId }, orderBy: { recordedAt: "desc" },
+          where: {
+            variantId: suggestion.variantId,
+            ...(auth.orgId ? { supplier: { orgId: auth.orgId } } : {}),
+          },
+          orderBy: { recordedAt: "desc" },
         });
         if (!warehouse || !price) fail(400, "VALIDATION", "No warehouse or supplier price to source this PO");
         const po = await createPurchaseOrder({
