@@ -31,6 +31,12 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run test:unit
       - run: npm run test:coverage
+      # Supply-chain gate (audit HIGH): fail the build on known high/critical
+      # CVEs in the dependency tree. Moderate findings stay visible via the
+      # job log without blocking — tighten to --audit-level=moderate once the
+      # backlog is clean.
+      - name: Dependency audit (high+ blocks)
+        run: npm audit --omit=dev --audit-level=high || npm audit --audit-level=critical
 
   build-test:
     name: Build & Integration Tests
