@@ -128,8 +128,7 @@ async function main() {
     await prisma.stockLocation.deleteMany({ where: { store: { region: { orgId: { in: [orgA.id, orgB.id] } } } } });
     await prisma.store.deleteMany({ where: { orgId: { in: [orgA.id, orgB.id] } } });
     await prisma.region.deleteMany({ where: { orgId: { in: [orgA.id, orgB.id] } } });
-    await prisma.category.deleteMany({ where: { id: cat.id } });
-    await prisma.category.deleteMany({ where: { id: cat.id } });
+    await prisma.category.deleteMany({ where: { name: `IsoCat-${RUN_ID}` } });
     await prisma.webhookDelivery.deleteMany({ where: { endpointId: { in: [epA.id, epB.id] } } });
     await prisma.webhookEndpoint.deleteMany({ where: { id: { in: [epA.id, epB.id] } } });
     await prisma.organization.deleteMany({ where: { id: { in: [orgA.id, orgB.id] } } });
