@@ -25,27 +25,34 @@ export async function PUT(
   // org (audit SEC-005 — counts link to org only via the location chain).
   const existing = await prismaRead.inventoryCount.findUnique({
     where: { id },
-    include: { location: { include: { store: { include: { region: { select: { orgId: true } } } } } } },
+    include: { location: { include: { store: { select: { orgId: true, region: { select: { orgId: true } } } } } } },
   });
   if (!existing) return apiError({ status: 404, code: "NOT_FOUND", message: "Inventory count not found" });
-  if (auth.orgId && existing.location.store?.region?.orgId !== auth.orgId)
+  if (auth.orgId && (existing.location.store?.orgId ?? existing.location.store?.region?.orgId ?? null) !== auth.orgId)
     return apiError({ status: 404, code: "NOT_FOUND", message: "Inventory count not found" });
   if (existing.status !== "DRAFT") {
     return apiError({ status: 400, code: "VALIDATION", message: "Only DRAFT counts can be updated" });
   }
 
   if (action === "update_items" && Array.isArray(items)) {
-    // Update counted quantities
+    // P0-4: item rows were updated by bare id — a guessed itemId from
+    // ANOTHER count/org was writable. Constrain to this count and validate.
+    for (const item of items) {
+      if (typeof item?.id !== "string" || !item.id)
+        return apiError({ status: 400, code: "VALIDATION", message: "Each item needs an id" });
+      if (!Number.isInteger(item.countedQty) || item.countedQty < 0 || item.countedQty > 100_000_000)
+        return apiError({ status: 400, code: "VALIDATION", message: `countedQty for item ${item.id} must be an integer between 0 and 100000000` });
+    }
     await withTxRetry(() =>
       prisma.$transaction(
         async (tx) => {
           for (const item of items) {
-            if (item.id && typeof item.countedQty === "number") {
-              await tx.inventoryCountItem.update({
-                where: { id: item.id },
-                data: { countedQty: item.countedQty },
-              });
-            }
+            const updated = await tx.inventoryCountItem.updateMany({
+              where: { id: item.id, inventoryCountId: id },
+              data: { countedQty: item.countedQty },
+            });
+            if (updated.count !== 1)
+              throw Object.assign(new Error(`Count item ${item.id} not found in this count`), { status: 404, code: "NOT_FOUND" });
           }
         },
         TX_OPTIONS
@@ -138,7 +145,7 @@ export async function GET(
   const count = await prismaRead.inventoryCount.findUnique({
     where: { id },
     include: {
-      location: { select: { id: true, name: true, store: { select: { region: { select: { orgId: true } } } } } },
+      location: { select: { id: true, name: true, store: { select: { orgId: true, region: { select: { orgId: true } } } } } },
       items: {
         include: {
           variant: {
@@ -153,7 +160,7 @@ export async function GET(
   });
 
   if (!count) return apiError({ status: 404, code: "NOT_FOUND", message: "Not found" });
-  if (auth.orgId && count.location.store?.region?.orgId !== auth.orgId)
+  if (auth.orgId && (count.location.store?.orgId ?? count.location.store?.region?.orgId ?? null) !== auth.orgId)
     return apiError({ status: 404, code: "NOT_FOUND", message: "Not found" });
   return ok({ count });
 }
