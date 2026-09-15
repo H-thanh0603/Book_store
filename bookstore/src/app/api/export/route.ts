@@ -3,6 +3,7 @@ import { exportData, exportFilename } from '@/lib/exports/generic'
 import { EXPORT_TYPES } from '@/lib/exports/datasets'
 import { enqueueExportJob } from '@/lib/exports/async-job'
 import { requirePermission, resolveStoreScope } from '@/lib/auth'
+import { enforceRateLimit } from '@/lib/rate-limit'
 import { apiError } from '@/lib/api'
 
 function parseTypeFormat(searchParams: URLSearchParams) {
@@ -23,6 +24,11 @@ export async function GET(request: NextRequest) {
     const { type, format } = parseTypeFormat(searchParams)
 
     const auth = await requirePermission(EXPORT_TYPES[type].permission)
+
+    // P1-5: the sync path builds up to 10k rows in-request — bound it per
+    // user so one account can't hold workers with back-to-back exports.
+    // Large/recurring exports belong on POST (async job → var/exports/).
+    await enforceRateLimit("export-sync", auth.userId, 5, 60_000)
 
     const scope = resolveStoreScope(auth)
     const storeScope = scope === null ? null : scope
@@ -61,6 +67,7 @@ export async function POST(request: NextRequest) {
     if (!auth.orgId) {
       throw Object.assign(new Error('Export requires an org-scoped account'), { status: 403, code: 'FORBIDDEN' })
     }
+    await enforceRateLimit("export-async", auth.userId, 20, 60_000)
     const job = await enqueueExportJob({
       orgId: auth.orgId,
       requestedBy: auth.userId,
