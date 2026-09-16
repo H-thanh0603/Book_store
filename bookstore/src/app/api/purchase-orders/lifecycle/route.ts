@@ -11,8 +11,8 @@ import { audit, requirePermission } from "@/lib/auth";
 import { apiError, ok, fail, toMoney } from "@/lib/api";
 import { assertPoTransition } from "@/lib/purchasing";
 
-const PAYABLE_TOTAL = (items: { quantity: number; unitCost: bigint }[]) =>
-  items.reduce((s, i) => s + i.quantity * Number(i.unitCost), 0);
+const PAYABLE_TOTAL = (items: { quantity: number; unitCost: bigint }[]): bigint =>
+  items.reduce((s, i) => s + BigInt(i.quantity) * i.unitCost, 0n);
 
 // Auth BEFORE any record load: an unauthenticated caller must not be able to
 // probe valid poIds via 404-vs-403/409 differentiation (or force a DB hit per guess).
@@ -74,7 +74,11 @@ export async function POST(req: NextRequest) {
 
     if (b.action === "record_invoice") {
       if (!b.invoiceNumber) fail(400, "VALIDATION", "invoiceNumber required");
-      const amount = toMoney(b.invoiceAmount ?? PAYABLE_TOTAL(po.items), "invoiceAmount");
+      // P2-8: server-computed total stays in BigInt (quantity × unitCost can
+      // exceed 2^53 on bulk POs); client-supplied amounts still via toMoney.
+      const amount = b.invoiceAmount !== undefined && b.invoiceAmount !== null
+        ? toMoney(b.invoiceAmount, "invoiceAmount")
+        : PAYABLE_TOTAL(po.items);
       if (!["sent", "partially_received", "received"].includes(po.status)) fail(409, "INVALID_STATUS_TRANSITION", `Cannot record invoice for PO in status ${po.status}`);
       // Invoice is editable while unpaid; once partially_paid/paid the payable
       // record is frozen — no reset-to-unpaid after money has moved.
