@@ -136,6 +136,10 @@ export default function PosPage() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [pendingSync, setPendingSync] = useState(0);
+  // P1: client-side double-submit guard — server idempotency is the real
+  // safety net, but disabling the buttons during flight stops accidental
+  // double-taps from queuing two identical sales.
+  const [paying, setPaying] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const paymentAttemptRef = useRef<{ signature: string; key: string } | null>(null);
 
@@ -317,6 +321,8 @@ export default function PosPage() {
   }
 
   async function pay(method: string) {
+    if (paying) return;
+    setPaying(true);
     const chargeTotal = quote ? quote.total : total;
     const requestBody = {
       action: "sale", shiftId, storeId, customerId: customerId || undefined,
@@ -364,10 +370,11 @@ export default function PosPage() {
       setCustomerId("");
       setCoupon("");
       searchRef.current?.focus();
+      setPaying(false);
       return;
     }
 
-    const d = await r.json();
+    const d = await r.json().catch(() => ({}));
     if (r.ok) {
       paymentAttemptRef.current = null;
       setLastTx({
@@ -388,6 +395,7 @@ export default function PosPage() {
     } else {
       setMsg({ text: d.message, type: "error" });
     }
+    setPaying(false);
   }
 
   async function refund() {
@@ -888,7 +896,7 @@ export default function PosPage() {
                     {[100000, 200000, 500000, 1000000].map((amt) => (
                       <button
                         key={amt}
-                        disabled={!lines.length || amt < payable}
+                        disabled={!lines.length || amt < payable || paying}
                         onClick={() => {
                           // Quick cash: pay with this amount, no change calculation needed server-side
                           // Just use CASH method with the actual total
@@ -903,20 +911,20 @@ export default function PosPage() {
 
                   <div className="grid grid-cols-2 gap-2">
                     <button
-                      disabled={!lines.length}
+                      disabled={!lines.length || paying}
                       onClick={() => pay("CASH")}
                       className="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-white/50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
                     >
                       <Banknote className="w-4 h-4" />
-                      Tiền mặt
+                      {paying ? "Đang xử lý…" : "Tiền mặt"}
                     </button>
                     <button
-                      disabled={!lines.length}
+                      disabled={!lines.length || paying}
                       onClick={() => pay("QR")}
                       className="py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-white/50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
                     >
                       <QrCode className="w-4 h-4" />
-                      QR
+                      {paying ? "Đang xử lý…" : "QR"}
                     </button>
                   </div>
                 </div>

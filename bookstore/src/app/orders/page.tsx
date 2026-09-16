@@ -143,9 +143,17 @@ export default function OrdersPage() {
     const body: Record<string, unknown> = { orderId: order.id, action };
     if (action === "ship") {
       if (!address) return;
+      // P1: never hardcode the recipient phone — use the order's customer
+      // phone when loaded, else ask staff. A wrong phone breaks COD
+      // reconciliation and carrier delivery.
+      const phone = prompt(`SĐT người nhận cho đơn ${order.number}:`, "")?.replace(/[\s().-]/g, "") ?? "";
+      if (!/^\+?\d{9,15}$/.test(phone)) {
+        setMsg({ text: "SĐT người nhận không hợp lệ (9-15 số)", type: "error" });
+        return;
+      }
       Object.assign(body, {
         recipientName: order.customer.name,
-        recipientPhone: "0901234567",
+        recipientPhone: phone,
         address,
       });
     }

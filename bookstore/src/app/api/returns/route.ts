@@ -79,6 +79,38 @@ export async function POST(req: NextRequest) {
           where: { id: current.id },
           data: { payments: { create: { method, amount: current.refundTotal, receivedBy: auth.userId } } },
         });
+        // P1: claw back loyalty earned by the original order (refType order).
+        // Same guarded pattern as POS refundSale: fail if points already spent.
+        let loyaltyClawed = 0;
+        const orderForLoyalty = current.orderId
+          ? await tx.order.findUnique({ where: { id: current.orderId }, select: { customerId: true } })
+          : null;
+        if (orderForLoyalty?.customerId && current.orderId) {
+          const earnedRows = await tx.loyaltyTransaction.findMany({
+            where: { refType: "order", refId: current.orderId, type: "EARN" },
+            select: { points: true, accountId: true },
+          });
+          const totalEarned = earnedRows.reduce((s, r) => s + r.points, 0);
+          if (totalEarned > 0) {
+            const acct = await tx.loyaltyAccount.findUnique({ where: { customerId: orderForLoyalty.customerId } });
+            if (acct) {
+              const adjusted = await tx.loyaltyAccount.updateMany({
+                where: { id: acct.id, points: { gte: totalEarned } },
+                data: { points: { decrement: totalEarned } },
+              });
+              if (adjusted.count !== 1)
+                fail(400, "VALIDATION", "Customer no longer has enough points to revoke");
+              const after = await tx.loyaltyAccount.findUniqueOrThrow({ where: { id: acct.id } });
+              await tx.loyaltyTransaction.create({
+                data: {
+                  accountId: acct.id, points: -totalEarned, balanceAfter: after.points,
+                  type: "REDEEM", refType: "return", refId: current.id,
+                },
+              });
+              loyaltyClawed = totalEarned;
+            }
+          }
+        }
         // Tax compliance (EINV-001 follow-up): a refunded sale with an ISSUED
         // e-invoice must surface it — flag the row so staff cancel/adjust at
         // T-VAN instead of silently keeping a fiscal invoice for returned goods.
@@ -97,10 +129,10 @@ export async function POST(req: NextRequest) {
             });
           }
         }
-        await audit(auth.userId, "return.refund", "Return", current.id, { amount: Number(current.refundTotal), method, einvoiceFlag }, tx);
-        return { ...updated, einvoiceFlag };
+        await audit(auth.userId, "return.refund", "Return", current.id, { amount: Number(current.refundTotal), method, einvoiceFlag, loyaltyClawed }, tx);
+        return { ...updated, einvoiceFlag, loyaltyClawed };
       }, TX_OPTIONS);
-      return ok({ number: ret.number, status: ret.status, refundTotal: Number(ret.refundTotal), einvoiceFlag: ret.einvoiceFlag });
+      return ok({ number: ret.number, status: ret.status, refundTotal: Number(ret.refundTotal), einvoiceFlag: ret.einvoiceFlag, loyaltyClawed: ret.loyaltyClawed });
     }
     if (body.action !== "receive") fail(400, "VALIDATION", "Unknown action");
 
