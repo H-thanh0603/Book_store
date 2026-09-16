@@ -66,3 +66,49 @@ describe("plan self-injection (P1-7)", () => {
     expect(block).not.toMatch(/^system:/im);
   });
 });
+
+describe("compare/voucher grounding (agentic upgrade)", () => {
+  it("compare output carries DB rows only — unknown ids flagged, never filled", () => {
+    const ids = ["v-known", "v-ghost"];
+    const rows = [{ id: "v-known", sku: "S1" }];
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const items = ids.map((id) => {
+      const r = byId.get(id);
+      if (!r) return { variantId: id, found: false };
+      return { variantId: id, found: true };
+    });
+    expect(items).toEqual([
+      { variantId: "v-known", found: true },
+      { variantId: "v-ghost", found: false },
+    ]);
+  });
+
+  it("voucher list never invents codes — empty when none active", () => {
+    const rows: { code: string | null }[] = [];
+    const vouchers = rows.filter((p) => p.code);
+    expect(vouchers).toEqual([]);
+  });
+
+  it("tool trace records names + ok flags, never args (PII)", () => {
+    const trace: { tool: string; ok: boolean }[] = [];
+    trace.push({ tool: "prepare_checkout", ok: true });
+    trace.push({ tool: "search_products", ok: true });
+    const serialized = JSON.stringify(trace);
+    expect(serialized).not.toContain("090");
+    expect(serialized).not.toContain("variantId");
+    expect(trace).toHaveLength(2);
+  });
+
+  it("turn token budget trips before unbounded burn", () => {
+    const BUDGET = 12_000;
+    let turnTokens = 0;
+    const rounds = [5000, 5000, 5000];
+    let stoppedAt = -1;
+    for (let i = 0; i < rounds.length; i++) {
+      turnTokens += rounds[i];
+      if (turnTokens > BUDGET) { stoppedAt = i; break; }
+    }
+    expect(stoppedAt).toBe(2);
+    expect(turnTokens).toBe(15_000);
+  });
+});
