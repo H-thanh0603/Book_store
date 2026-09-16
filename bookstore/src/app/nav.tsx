@@ -30,6 +30,7 @@ import {
   Stamp,
   Tags,
   Star,
+  Zap,
 } from "lucide-react";
 import SupportWidget from "./support-widget";
 import { csrfHeaders } from "@/lib/csrf-client";
@@ -65,6 +66,7 @@ const NAV_PERMISSION: Record<string, string> = {
   "/promotions": "promotion.view",
   "/gift-cards": "giftcard.view",
   "/dashboard": "reports.store.view",
+  "/actions": "reports.store.view",
   "/approvals": "promotion.manage",
   "/reports": "reports.store.view",
   "/team": "admin.users",
@@ -126,6 +128,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: ShieldCheck,
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/actions", label: "AI Action Center", icon: Zap },
       { href: "/approvals", label: "Duyệt AI", icon: Stamp },
       { href: "/reports", label: "Báo cáo", icon: Activity },
       { href: "/team", label: "Nhân sự", icon: Users },
