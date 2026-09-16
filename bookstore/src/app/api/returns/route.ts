@@ -79,10 +79,28 @@ export async function POST(req: NextRequest) {
           where: { id: current.id },
           data: { payments: { create: { method, amount: current.refundTotal, receivedBy: auth.userId } } },
         });
-        await audit(auth.userId, "return.refund", "Return", current.id, { amount: Number(current.refundTotal), method }, tx);
-        return updated;
+        // Tax compliance (EINV-001 follow-up): a refunded sale with an ISSUED
+        // e-invoice must surface it — flag the row so staff cancel/adjust at
+        // T-VAN instead of silently keeping a fiscal invoice for returned goods.
+        // No auto-cancel: cancellation is a legal act needing human review.
+        let einvoiceFlag: string | null = null;
+        if (current.orderId) {
+          const inv = await tx.eInvoice.findFirst({
+            where: { orderId: current.orderId, status: "ISSUED" },
+            select: { id: true, invoiceNumber: true },
+          });
+          if (inv) {
+            einvoiceFlag = inv.invoiceNumber ?? inv.id;
+            await tx.eInvoice.update({
+              where: { id: inv.id },
+              data: { errorMessage: `REFUND_PENDING: return ${current.number} refunded — cancel/adjust at T-VAN` },
+            });
+          }
+        }
+        await audit(auth.userId, "return.refund", "Return", current.id, { amount: Number(current.refundTotal), method, einvoiceFlag }, tx);
+        return { ...updated, einvoiceFlag };
       }, TX_OPTIONS);
-      return ok({ number: ret.number, status: ret.status, refundTotal: Number(ret.refundTotal) });
+      return ok({ number: ret.number, status: ret.status, refundTotal: Number(ret.refundTotal), einvoiceFlag: ret.einvoiceFlag });
     }
     if (body.action !== "receive") fail(400, "VALIDATION", "Unknown action");
 
