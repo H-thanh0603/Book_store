@@ -98,9 +98,12 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
     })
       .then(async (res) => {
         if (!res.ok) throw Object.assign(new Error(String(res.status)), { status: res.status });
-        const data = (await res.json()) as { text: string; items: ProductSuggestion[]; comparison?: ComparedRow[]; chatId?: string; plan?: { title: string; status: string }[] };
+        const data = (await res.json()) as { text: string; items: ProductSuggestion[]; comparison?: ComparedRow[]; chatId?: string; plan?: { title: string; status: string }[]; cartUpdated?: boolean };
         if (typeof data.chatId === "string" && data.chatId) setChatId(data.chatId);
         setMessages((prev) => [...prev, { sender: "ai", text: data.text, items: data.items, comparison: data.comparison, plan: data.plan }]);
+        // Shared cart: the agent rewrote server lines — refresh the visible
+        // cart so the shopper sees the agent's hand without reloading.
+        if (data.cartUpdated) window.dispatchEvent(new Event("melio:cart-refresh"));
       })
       .catch((err: Error & { status?: number }) => {
         // 429 rate-limited / 5xx configured-but-broken: honest message, no

@@ -681,6 +681,9 @@ export async function POST(req: NextRequest) {
           items: groundedItems,
           // Structured comparison table for side-by-side UI rendering.
           ...(lastComparison && lastComparison.length >= 2 ? { comparison: lastComparison } : {}),
+          // Shared-cart signal: the agent rewrote the server cart this turn —
+          // the shop UI pulls fresh lines instead of showing stale ones.
+          ...(toolTrace.some((t) => t.tool === "sync_cart" && t.ok) ? { cartUpdated: true } : {}),
           // Checkout handoff: the card renders the validated cart; the HOST
           // completes it — the agent never creates the order itself.
           ...(parsed.checkout === true && checkoutCard ? { checkoutCard } : {}),

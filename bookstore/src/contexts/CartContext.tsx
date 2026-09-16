@@ -23,6 +23,7 @@ type CartContextType = {
   updateQuantity: (variantId: string, quantity: number) => void;
   removeItem: (variantId: string) => void;
   clearCart: () => void;
+  refreshFromServer: () => void;
   itemCount: number;
   subtotal: number;
 };
@@ -86,8 +87,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // the agent sees the same lines. agent_cart merges first (above), then a
   // later pull overrides with the server truth. Store optional: sync is
   // per store when the host pins one, global otherwise.
-  useEffect(() => {
-    if (!loaded) return;
+  // P4: extracted to refreshFromServer + a window event so the chat UI can
+  // pull right after the agent's sync_cart succeeds — the shopper sees the
+  // agent's hand in the cart without reloading.
+  const refreshFromServer = useCallback(() => {
     try {
       const syncId = localStorage.getItem("melio.storefront.sync");
       if (!syncId) return;
@@ -97,11 +100,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (raw.customerId) qs.set("customerId", raw.customerId);
       if (raw.phone) qs.set("phone", raw.phone);
       if (raw.storeId) qs.set("storeId", raw.storeId);
-      let cancelled = false;
       fetch(`/api/storefront/cart?${qs}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
-          if (cancelled || !d?.cart?.items) return;
+          if (!d?.cart?.items) return;
           // Merge server into local: server quantities win, local-only stays.
           setCart((prev) => {
             const byId = new Map(prev.map((l) => [l.variantId, l]));
@@ -123,13 +125,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
           });
         })
         .catch(() => {});
-      return () => {
-        cancelled = true;
-      };
     } catch {
       // sync is best-effort — never block the storefront
     }
-  }, [loaded]);
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    refreshFromServer();
+    // Agent-driven refresh: AIConciergeModal dispatches this after a
+    // successful sync_cart so the visible cart follows the agent.
+    const onAgentCart = () => refreshFromServer();
+    window.addEventListener("melio:cart-refresh", onAgentCart);
+    return () => window.removeEventListener("melio:cart-refresh", onAgentCart);
+  }, [loaded, refreshFromServer]);
 
   useEffect(() => {
     if (!loaded || cart.length === 0) return;
@@ -193,7 +202,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ cart, addItem, updateQuantity, removeItem, clearCart, itemCount, subtotal }}
+      value={{ cart, addItem, updateQuantity, removeItem, clearCart, refreshFromServer, itemCount, subtotal }}
     >
       {children}
     </CartContext.Provider>
