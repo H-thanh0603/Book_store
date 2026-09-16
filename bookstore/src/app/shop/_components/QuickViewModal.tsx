@@ -1,8 +1,10 @@
 // Section 16: QUICK VIEW PRODUCT MODAL
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, ShoppingBag, Check } from "lucide-react";
 import ProductReviews from "./ProductReviews";
 import type { Product } from "./types";
+
+type Reco = { id: string; sku: string; name: string; score: number; reason: string };
 
 export default function QuickViewModal({
   product,
@@ -25,6 +27,21 @@ export default function QuickViewModal({
 }) {
   const [added, setAdded] = useState(false);
   const variant = product.variants[0];
+  // P4-6: "frequently bought together" from co-purchase history, scoped to
+  // the variant's org server-side. Best-effort: hides on any failure.
+  const [recos, setRecos] = useState<Reco[] | null>(null);
+  useEffect(() => {
+    if (!variant?.id) return;
+    setRecos(null);
+    fetch(`/api/storefront/recommendations?variantId=${encodeURIComponent(variant.id)}&take=4`)
+      .then(async (r) => {
+        if (!r.ok) return;
+        const d = await r.json();
+        const list = (d.recommendations as Reco[]) ?? [];
+        if (list.length > 0) setRecos(list);
+      })
+      .catch(() => {});
+  }, [variant?.id]);
   return (
     <div
       className="fixed inset-0 z-50 bg-[#1c1917]/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
@@ -143,6 +160,22 @@ export default function QuickViewModal({
         </div>
 
         <ProductReviews productId={product.id} />
+
+        {recos && recos.length > 0 ? (
+          <div>
+            <h5 className="text-xs font-bold text-slate-900 mb-2">Thường mua cùng:</h5>
+            <ul className="space-y-1.5">
+              {recos.map((r) => (
+                <li key={r.id} className="text-xs text-slate-600 flex items-center justify-between gap-2 rounded-xl bg-white border border-[#ede5d8] px-3 py-2">
+                  <span className="truncate">{r.name}</span>
+                  <span className="shrink-0 text-[10px] text-slate-400">
+                    {r.reason === "frequently_bought_together" ? "mua cùng" : r.reason === "similar_content" ? "tương tự" : "cùng thể loại"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </div>
   );
