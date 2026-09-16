@@ -58,6 +58,9 @@ export default function PosPage() {
   const [storeId, setStoreId] = useState<string>("");
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
   const [customerId, setCustomerId] = useState<string>("");
+  // P2-4: the customer dropdown used to list only the first API page —
+  // searching by name/phone/code hits the server so any customer is found.
+  const [customerQ, setCustomerQ] = useState("");
   const [refundNumber, setRefundNumber] = useState("");
   const [confirmCloseShift, setConfirmCloseShift] = useState(false);
   const [confirmRefund, setConfirmRefund] = useState(false);
@@ -693,7 +696,32 @@ export default function PosPage() {
             <div className="lg:col-span-5 xl:col-span-4">
               <div className="bg-white rounded-2xl border border-slate-200 shadow-md sticky top-4">
                 {/* Customer */}
-                <div className="p-3 border-b border-slate-100">
+                <div className="p-3 border-b border-slate-100 space-y-2">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      placeholder="Tìm KH theo tên / SĐT / mã…"
+                      value={customerQ}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setCustomerQ(v);
+                        const query = v.trim();
+                        if (query.length < 2) return;
+                        fetch(`/api/customers?q=${encodeURIComponent(query)}&pageSize=25`).then(async (r) => {
+                          if (!r.ok) return;
+                          const d = await r.json();
+                          const found = (d.customers as Customer[]) ?? [];
+                          // Merge server hits into the dropdown without
+                          // dropping the initially loaded page.
+                          setCustomers((prev) => {
+                            const ids = new Set(prev.map((c) => c.id));
+                            return [...prev, ...found.filter((c) => !ids.has(c.id))];
+                          });
+                        }).catch(() => {});
+                      }}
+                    />
+                  </div>
                   <div className="relative">
                     <User className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <select
