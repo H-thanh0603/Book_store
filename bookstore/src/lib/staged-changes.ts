@@ -11,6 +11,7 @@
 import { prisma } from "./db";
 import { Prisma } from "../generated/prisma/client";
 import { audit } from "./auth";
+import { getSystemConfig } from "./api";
 import { applySuggestionDecision } from "./replenishment";
 
 export const STAGED_KINDS = ["promotion.create", "product.patch", "suggestion.accept"] as const;
@@ -158,7 +159,54 @@ export async function proposeStagedChange(
     },
   });
   await audit(ctx.userId, "staged.propose", "staged_change", row.id, { kind });
+  // P4-1: auto-approve low-risk suggestion accepts — transfer-balancing or a
+  // PO whose estimated value sits under the configured threshold skips the
+  // human queue and applies immediately. Everything else stays PENDING.
+  if (kind === "suggestion.accept") {
+    const auto = await tryAutoApproveSuggestion(
+      row.id,
+      (validated.value as SuggestionAcceptPayload).suggestionId,
+      ctx,
+    );
+    if (auto.applied) return { proposed: true as const, id: row.id, kind, autoApplied: true as const };
+  }
   return { proposed: true as const, id: row.id, kind };
+}
+
+/**
+ * Auto-approve policy for suggestion.accept: apply immediately when the
+ * estimated cost is under `replenishment.autoApproveUnder` (default 2M₫).
+ * Estimate = recommendedQty × latest supplier unitCost. Transfers (store
+ * balancing, no purchase) always qualify. Returns { applied: false } when
+ * the row must stay in the human queue — never throws.
+ */
+async function tryAutoApproveSuggestion(
+  rowId: string,
+  suggestionId: string,
+  ctx: ReviewerContext & { roles?: { permissions: string[]; storeId: string | null }[] },
+): Promise<{ applied: boolean }> {
+  try {
+    const threshold = BigInt(await getSystemConfig("replenishment.autoApproveUnder", 2_000_000));
+    const suggestion = await prisma.replenishmentSuggestion.findUnique({
+      where: { id: suggestionId },
+      include: { variant: { select: { orgId: true } } },
+    });
+    // Suggestion carries no orgId column — scope via its variant's org.
+    if (!suggestion || suggestion.variant.orgId !== ctx.orgId) return { applied: false };
+    const balancedFrom = (suggestion.rationale as { balancedFrom?: { locationId: string } } | null)?.balancedFrom;
+    if (!balancedFrom) {
+      const price = await prisma.supplierProductPrice.findFirst({
+        where: { variantId: suggestion.variantId, supplier: { orgId: ctx.orgId } },
+        orderBy: { recordedAt: "desc" },
+      });
+      if (!price) return { applied: false };
+      if (BigInt(suggestion.recommendedQty) * price.unitCost > threshold) return { applied: false };
+    }
+    const res = await reviewStagedChange(rowId, "APPROVE", ctx, "auto-approved: under threshold");
+    return { applied: res.reviewed && res.status === "APPLIED" };
+  } catch {
+    return { applied: false };
+  }
 }
 
 export async function listStagedChanges(orgId: string, status?: string) {
