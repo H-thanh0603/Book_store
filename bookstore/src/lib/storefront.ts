@@ -124,7 +124,9 @@ async function listStorefrontProductsUncached(input: {
   const q = input.q?.trim().slice(0, 80) || undefined;
   // Per-word AND search: every word must appear in one of the searched fields,
   // so word order no longer matters ("potter hary" works).
-  const words = q ? q.split(/\s+/).slice(0, 6) : [];
+  // P2-2: single-char words are dropped from the AND — a 1-char `contains`
+  // matches a large share of the catalog and defeats the trigram index.
+  const words = q ? q.split(/\s+/).filter((w) => w.length >= 2).slice(0, 6) : [];
   const store = input.storeId
     ? await prismaRead.store.findFirst({ where: { id: input.storeId, active: true }, select: { id: true, orgId: true } })
     : await prismaRead.store.findFirst({ where: { active: true }, orderBy: { code: "asc" }, select: { id: true, orgId: true } });
@@ -257,19 +259,28 @@ async function listStorefrontProductsUncached(input: {
   // Gemini outage costs nothing on queries exact/trigram already answered.
   // Matches by meaning, not spelling ("sách về xây thói quen" → Atomic Habits).
   // Silent no-op without GEMINI_API_KEY; any error logs and keeps old behavior.
+  // P2-2: distance cutoff + own statement timeout — without a cutoff the
+  // top-100-nearest rows return even when nothing is semantically close,
+  // and without a timeout a big embedding table pins the pool slot.
   if (!rows.length && words.length && process.env.GEMINI_API_KEY) {
     try {
       const vec = await embedText(words.join(" "));
       if (vec) {
-        const hits = await prismaRead.$queryRaw<{ id: string }[]>`
-          SELECT e."productId" AS id
-          FROM "ProductEmbedding" e
-          JOIN "Product" p ON p.id = e."productId"
-          WHERE p.status = 'active' AND p."orgId" = ${orgId}
-            ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
-            ${input.brandId ? Prisma.sql`AND p."brandId" = ${input.brandId}` : Prisma.empty}
-          ORDER BY e.embedding <=> ${`[${vec.join(",")}]`}::vector
-          LIMIT 100`;
+        const SEMANTIC_DISTANCE_CUTOFF = Number(process.env.SEMANTIC_DISTANCE_CUTOFF ?? 0.6);
+        const SEMANTIC_TIMEOUT_MS = Math.max(50, Number(process.env.SEMANTIC_SEARCH_TIMEOUT_MS ?? 2000) || 2000);
+        const hits = await prismaRead.$transaction(async (tx) => {
+          await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${SEMANTIC_TIMEOUT_MS}`);
+          return tx.$queryRaw<{ id: string }[]>`
+            SELECT e."productId" AS id
+            FROM "ProductEmbedding" e
+            JOIN "Product" p ON p.id = e."productId"
+            WHERE p.status = 'active' AND p."orgId" = ${orgId}
+              ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
+              ${input.brandId ? Prisma.sql`AND p."brandId" = ${input.brandId}` : Prisma.empty}
+              AND e.embedding <=> ${`[${vec.join(",")}]`}::vector < ${SEMANTIC_DISTANCE_CUTOFF}
+            ORDER BY e.embedding <=> ${`[${vec.join(",")}]`}::vector
+            LIMIT 100`;
+        });
         if (hits.length)
           rows = await prismaRead.product.findMany({
             where: { id: { in: hits.map((h) => h.id) }, orgId },
