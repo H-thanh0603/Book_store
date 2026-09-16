@@ -45,24 +45,29 @@ export async function generateReplenishmentSuggestions(orgId?: string | null) {
   const soldByBalance = new Map(sales.map((row) => [`${row.variantId}:${row.locationId}`, Math.max(0, -(row._sum.quantity ?? 0))]));
   const priorByBalance = new Map(priorSales.map((row) => [`${row.variantId}:${row.locationId}`, Math.max(0, -(row._sum.quantity ?? 0))]));
 
-  // Lead time + cost: latest supplier price per variant names the sourcing supplier.
-  // DISTINCT ON pushes "latest per variant" into PostgreSQL instead of shipping
-  // the whole price-history table to Node.
+  // Lead time + cost: cheapest recent supplier price per variant names the
+  // sourcing supplier (P4-5: was latest-recorded regardless of price).
+  // DISTINCT ON pushes "cheapest recent per variant" into PostgreSQL instead
+  // of shipping the whole price-history table to Node. Recency bound
+  // (default 180d) keeps stale quotes from winning on price alone.
   const variantIds = [...new Set(balances.map((b) => b.variantId))];
+  const priceLookbackDays = await getSystemConfig("replenishment.priceLookbackDays", 180);
+  const priceSince = new Date(Date.now() - priceLookbackDays * 86_400_000);
   const latestPrices = await prisma.$queryRaw<
-    { variantId: string; leadTimeDays: number; unitCost: bigint }[]
+    { variantId: string; supplierId: string; leadTimeDays: number; unitCost: bigint }[]
   >`
     SELECT DISTINCT ON (spp."variantId")
-           spp."variantId", s."leadTimeDays", spp."unitCost"
+           spp."variantId", spp."supplierId", s."leadTimeDays", spp."unitCost"
     FROM "SupplierProductPrice" spp
     JOIN "Supplier" s ON s.id = spp."supplierId"
     WHERE spp."variantId" = ANY(${variantIds}::text[])
+      AND spp."recordedAt" >= ${priceSince}
       ${orgId ? Prisma.sql`AND s."orgId" = ${orgId}` : Prisma.empty}
-    ORDER BY spp."variantId", spp."recordedAt" DESC
+    ORDER BY spp."variantId", spp."unitCost" ASC, spp."recordedAt" DESC
   `;
-  const sourcingByVariant = new Map<string, { leadTimeDays: number; unitCost: bigint }>();
+  const sourcingByVariant = new Map<string, { supplierId: string; leadTimeDays: number; unitCost: bigint }>();
   for (const row of latestPrices)
-    sourcingByVariant.set(row.variantId, { leadTimeDays: row.leadTimeDays, unitCost: row.unitCost });
+    sourcingByVariant.set(row.variantId, { supplierId: row.supplierId, leadTimeDays: row.leadTimeDays, unitCost: row.unitCost });
 
   // Upserts run in bounded batches instead of unbounded Promise.all — a big
   // catalog no longer opens hundreds of simultaneous queries against the pool.
@@ -80,7 +85,7 @@ export async function generateReplenishmentSuggestions(orgId?: string | null) {
     const rationale = {
       historyDays, soldUnits, priorSoldUnits, daysOfCover: forecast.daysOfCover,
       leadTimeSource: sourcing ? "supplier" : "default",
-      ...(sourcing ? { unitCost: Number(sourcing.unitCost) } : {}),
+      ...(sourcing ? { unitCost: Number(sourcing.unitCost), supplierId: sourcing.supplierId, sourcing: "cheapest-recent" } : {}),
       formula: "ceil(blend(current,prior avgDaily) * leadTimeDays + safetyStock - available - incoming)",
     } satisfies Prisma.InputJsonValue;
 
@@ -238,18 +243,24 @@ export async function applySuggestionDecision(
         });
         result = { kind: "transfer", number: transfer.number, id: transfer.id };
       } else {
-        // ponytail: central warehouse + latest supplier price cost. Route by store or
-        // cheapest supplier once multi-warehouse purchasing lands.
+        // P4-5: source from the cheapest recent supplier quote recorded in
+        // the rationale at generate time; fall back to a live cheapest
+        // lookup so old suggestions still route correctly.
+        const rationaleSourcing = (suggestion.rationale as { supplierId?: string } | null)?.supplierId;
         // P0-3: warehouses are global, but the sourcing supplier must be the
         // caller's own — otherwise the PO is raised against a foreign supplier.
         const warehouse = await tx.warehouse.findFirst({ where: { isCentral: true } })
           ?? await tx.warehouse.findFirst();
-        const price = await tx.supplierProductPrice.findFirst({
-          where: {
-            variantId: suggestion.variantId,
-            ...(auth.orgId ? { supplier: { orgId: auth.orgId } } : {}),
-          },
-          orderBy: { recordedAt: "desc" },
+        const orgScope = auth.orgId ? { supplier: { orgId: auth.orgId } } : {};
+        let price = rationaleSourcing
+          ? await tx.supplierProductPrice.findFirst({
+              where: { variantId: suggestion.variantId, supplierId: rationaleSourcing, ...orgScope },
+              orderBy: { recordedAt: "desc" },
+            })
+          : null;
+        price ??= await tx.supplierProductPrice.findFirst({
+          where: { variantId: suggestion.variantId, ...orgScope },
+          orderBy: [{ unitCost: "asc" }, { recordedAt: "desc" }],
         });
         if (!warehouse || !price) fail(400, "VALIDATION", "No warehouse or supplier price to source this PO");
         const po = await createPurchaseOrder({
