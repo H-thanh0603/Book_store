@@ -527,6 +527,14 @@ export async function POST(req: NextRequest) {
       total?: number; fitsBudget?: boolean; reason?: string;
     };
     let lastPlan: ComboPlan | null = null;
+    // Last successful comparison of this turn — returned as a structured
+    // table so the chat UI renders side-by-side columns, not prose.
+    type ComparedRow = {
+      variantId: string; found: boolean; sku?: string; variantName?: string;
+      productName?: string; description?: string; price?: number | null;
+      available?: number; inStock?: boolean;
+    };
+    let lastComparison: ComparedRow[] | null = null;
     // Per-turn token budget (P4): 3 rounds × ~800 completion + prompt can
     // burn credits on a confused model. Accumulate and break past the cap;
     // the loop-exhausted fallback below still answers from grounded data.
@@ -671,6 +679,8 @@ export async function POST(req: NextRequest) {
           ...(currentPlan ? { plan: currentPlan } : {}),
           text: finalText,
           items: groundedItems,
+          // Structured comparison table for side-by-side UI rendering.
+          ...(lastComparison && lastComparison.length >= 2 ? { comparison: lastComparison } : {}),
           // Checkout handoff: the card renders the validated cart; the HOST
           // completes it — the agent never creates the order itself.
           ...(parsed.checkout === true && checkoutCard ? { checkoutCard } : {}),
@@ -939,6 +949,8 @@ export async function POST(req: NextRequest) {
             compared = { ok: false, reason: "tool failed" };
           }
           trace("compare_products", (compared as {ok?: boolean})?.ok === true);
+          if ((compared as { ok?: boolean })?.ok === true)
+            lastComparison = ((compared as { items?: ComparedRow[] }).items ?? []).filter((i) => i.found);
           messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(compared).slice(0, 6000) });
           continue;
         }
