@@ -145,47 +145,38 @@ export async function stockOnHand(p: ReportParams): Promise<ReportResult> {
     // `quantity` and `variant.price` — neither column exists — so this report
     // threw a Prisma validation error on every call. Value now uses the
     // current retail price row.
+    // P2-1: the Prisma findMany + JS group-by loaded every balance plus a
+    // per-variant price subquery. GROUP BY + LATERAL price in SQL instead.
     const now = new Date();
-    const balances = await prisma.inventoryBalance.findMany({
-      where: {
-        ...(p.storeId ? { location: { storeId: p.storeId } } : { location: { store: { region: { orgId: p.orgId } } } }),
-      },
-      select: {
-        onHand: true,
-        location: { select: { name: true, store: { select: { name: true, code: true } } } },
-        variant: {
-          select: {
-            sku: true,
-            product: { select: { name: true } },
-            prices: {
-              where: { priceList: { kind: "retail" }, validFrom: { lte: now }, OR: [{ validTo: null }, { validTo: { gt: now } }] },
-              orderBy: { validFrom: "desc" },
-              take: 1,
-            },
-          },
-        },
-      },
-    });
-    type Row = { sku: string; name: string; store: string; loc: string; qty: number; value: bigint };
-    const map = new Map<string, Row>();
-    for (const b of balances) {
-      const key = `${b.variant.sku}::${b.location.store?.code ?? "_"}::${b.location.name}`;
-      const cur = map.get(key) ?? {
-        sku: b.variant.sku, name: b.variant.product.name,
-        store: b.location.store?.name ?? "—", loc: b.location.name,
-        qty: 0, value: 0n,
-      };
-      cur.qty += b.onHand;
-      cur.value += (b.variant.prices[0]?.amount ?? 0n) * BigInt(b.onHand);
-      map.set(key, cur);
-    }
-    const rows = [...map.values()].sort((a, b) => Number(b.value - a.value))
-      .map((r) => [r.sku, r.name, r.store, r.loc, r.qty, Number(r.value)]);
-    const totalValue = balances.reduce((s, b) => s + (b.variant.prices[0]?.amount ?? 0n) * BigInt(b.onHand), 0n);
+    const rows = await prisma.$queryRaw<{
+      sku: string; name: string; store: string; loc: string; qty: number; value: bigint;
+    }[]>`
+      SELECT v.sku, pr.name, s.name AS store, l.name AS loc,
+             SUM(b."onHand")::int AS qty,
+             SUM(b."onHand" * COALESCE(p.amount, 0))::bigint AS value
+      FROM "InventoryBalance" b
+      JOIN "ProductVariant" v ON v.id = b."variantId"
+      JOIN "Product" pr ON pr.id = v."productId"
+      JOIN "StockLocation" l ON l.id = b."locationId"
+      LEFT JOIN "Store" s ON s.id = l."storeId"
+      LEFT JOIN "Region" rg ON rg.id = s."regionId"
+      LEFT JOIN LATERAL (
+        SELECT pl.amount FROM "Price" pl
+        JOIN "PriceList" k ON k.id = pl."priceListId"
+        WHERE pl."variantId" = v.id AND k.kind = 'retail'
+          AND pl."validFrom" <= ${now}
+          AND (pl."validTo" IS NULL OR pl."validTo" > ${now})
+        ORDER BY pl."validFrom" DESC LIMIT 1
+      ) p ON true
+      WHERE rg."orgId" = ${p.orgId} OR (l."storeId" IS NULL AND v."orgId" = ${p.orgId})
+        ${p.storeId ? Prisma.sql`AND s.id = ${p.storeId}` : Prisma.empty}
+      GROUP BY v.sku, pr.name, s.name, l.name
+      ORDER BY value DESC`;
+    const totalValue = rows.reduce((s, r) => s + r.value, 0n);
     return {
       columns: ["SKU", "Sản phẩm", "Cửa hàng", "Vị trí", "Tồn", "Giá trị (đ)"],
-      rows,
-      summary: { totalValue: Number(totalValue), totalRows: balances.length },
+      rows: rows.map((r) => [r.sku, r.name, r.store ?? "—", r.loc, r.qty, Number(r.value)]),
+      summary: { totalValue: Number(totalValue), totalRows: rows.length },
     };
   });
 }
@@ -299,9 +290,12 @@ export async function topStaff(p: ReportParams): Promise<ReportResult> {
 export async function slowStock(p: ReportParams): Promise<ReportResult> {
   return cached("slow-stock", p, async () => {
     const cutoff = new Date(p.to.getTime() - 60 * 86_400_000);
+    // P2-1: the cutoff used to filter in JS after fetching top-200 by stock —
+    // true slow movers outside the top-200 were missed. Push the predicate
+    // into SQL via NOT EXISTS so the LIMIT applies to actual slow stock.
     const rows = await prisma.$queryRaw<{
       sku: string; name: string; store: string; qty: number;
-      price: bigint; lastSale: Date | null;
+      price: bigint; lastSale: Date | null; value: bigint;
     }[]>`
       SELECT v.sku, pr.name, s.name AS store,
              b."onHand"::int AS qty,
@@ -315,7 +309,15 @@ export async function slowStock(p: ReportParams): Promise<ReportResult> {
              ), 0)::bigint AS price,
              (SELECT MAX(m."createdAt") FROM "InventoryMovement" m
                WHERE m."variantId" = v.id AND m."locationId" = b."locationId"
-                 AND m.type = 'SALE') AS "lastSale"
+                 AND m.type = 'SALE') AS "lastSale",
+             (b."onHand" * COALESCE((
+               SELECT pl.amount FROM "Price" pl
+               JOIN "PriceList" k ON k.id = pl."priceListId"
+               WHERE pl."variantId" = v.id AND k.kind = 'retail'
+                 AND pl."validFrom" <= ${p.to}
+                 AND (pl."validTo" IS NULL OR pl."validTo" > ${p.to})
+               ORDER BY pl."validFrom" DESC LIMIT 1
+             ), 0))::bigint AS value
       FROM "InventoryBalance" b
       JOIN "ProductVariant" v ON v.id = b."variantId"
       JOIN "Product" pr ON pr.id = v."productId"
@@ -325,17 +327,21 @@ export async function slowStock(p: ReportParams): Promise<ReportResult> {
       WHERE rg."orgId" = ${p.orgId}
         ${p.storeId ? Prisma.sql`AND s.id = ${p.storeId}` : Prisma.empty}
         AND b."onHand" > 0 AND v.active
-      ORDER BY b."onHand" DESC
-      LIMIT 200`;
-    const slow = rows.filter((r) => !r.lastSale || r.lastSale < cutoff);
-    const value = slow.reduce((s, r) => s + BigInt(r.qty) * r.price, 0n);
+        AND NOT EXISTS (
+          SELECT 1 FROM "InventoryMovement" m
+          WHERE m."variantId" = v.id AND m."locationId" = b."locationId"
+            AND m.type = 'SALE' AND m."createdAt" >= ${cutoff}
+        )
+      ORDER BY value DESC
+      LIMIT 100`;
+    const value = rows.reduce((s, r) => s + r.value, 0n);
     return {
       columns: ["SKU", "Sản phẩm", "Cửa hàng", "Tồn", "Giá bán (đ)", "Giá trị tồn (đ)", "Lần bán cuối"],
-      rows: slow.slice(0, 100).map((r) => [
-        r.sku, r.name, r.store, r.qty, Number(r.price), Number(BigInt(r.qty) * r.price),
+      rows: rows.map((r) => [
+        r.sku, r.name, r.store, r.qty, Number(r.price), Number(r.value),
         r.lastSale ? r.lastSale.toISOString().slice(0, 10) : "chưa từng bán",
       ]),
-      summary: { slowSkus: slow.length, slowValue: Number(value) },
+      summary: { slowSkus: rows.length, slowValue: Number(value) },
     };
   });
 }
