@@ -186,8 +186,8 @@ export default function CheckoutModal({
               {fulfillment === "pickup" && <Check className="w-4 h-4 text-[#8c2d19]" />}
             </div>
             <div className="mt-2">
-              <b className="block text-xs sm:text-sm text-slate-900 font-bold">Nhận Tại Cửa Hàng</b>
-              <span className="text-[11px] text-slate-500">{storeName}</span>
+              <b className="block text-xs sm:text-sm text-slate-900 font-bold">Đặt Giữ Tại Cửa Hàng</b>
+              <span className="text-[11px] text-slate-500">Giữ sách tại {storeName}</span>
             </div>
           </button>
         </div>
@@ -307,6 +307,9 @@ export default function CheckoutModal({
                 className="w-full bg-white border border-[#ede5d8] rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20 focus:border-[#8c2d19]"
               />
             </div>
+          )}
+          {fulfillment === "pickup" && (
+            <p className="text-xs text-[#6b3928]">Sách được giữ tạm tại {storeName}; xem hạn nhận trong Lịch sử đơn hàng sau khi đặt.</p>
           )}
 
           {/* Gift Wrapping Selector */}
@@ -444,7 +447,7 @@ export default function CheckoutModal({
             }
             className="px-6 py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-xs sm:text-sm shadow-xl transition-all hover:scale-[1.02]"
           >
-            {submitting ? "Đang xử lý đơn..." : "Xác Nhận Đặt Hàng"}
+            {submitting ? "Đang xử lý đơn..." : fulfillment === "pickup" ? "Xác Nhận Đặt Giữ Sách" : "Xác Nhận Đặt Hàng"}
           </button>
         </div>
       </div>
