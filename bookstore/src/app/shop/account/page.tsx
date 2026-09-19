@@ -19,6 +19,13 @@ type AuthState =
   | { anonymous: true }
   | { customerId: string; email: string | null; phone: string; name: string };
 
+type Member = {
+  code: string;
+  points: number;
+  tier: string;
+  transactions: { id: string; points: number; balanceAfter: number; type: string; createdAt: string }[];
+};
+
 // N4c: tier benefits table (single source: /api/loyalty/redeem-voucher).
 function TierBenefits() {
   const [benefits, setBenefits] = useState<Record<string, string[]> | null>(null);
@@ -55,6 +62,8 @@ function AccountInner() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [member, setMember] = useState<Member | null>(null);
+  const customerId = auth && !("anonymous" in auth) ? auth.customerId : null;
 
   // Auto-consume ?verify=... if present.
   useEffect(() => {
@@ -66,7 +75,7 @@ function AccountInner() {
         body: JSON.stringify({ action: "verify_email", token: verifyToken }),
       });
       const data = await res.json();
-      if (res.ok && data?.data?.verified) {
+      if (res.ok && data?.verified) {
         setMsg("Email đã được xác nhận. Cảm ơn bạn!");
         router.replace("/shop/account");
       } else {
@@ -80,9 +89,19 @@ function AccountInner() {
     void (async () => {
       const res = await fetch("/api/storefront/auth", { method: "GET" });
       const data = await res.json();
-      setAuth(data?.data ?? { anonymous: true });
+      setAuth(data ?? { anonymous: true });
     })();
   }, []);
+
+  useEffect(() => {
+    if (!customerId) { setMember(null); return; }
+    void (async () => {
+      const res = await fetch("/api/storefront/account");
+      if (!res.ok) return;
+      const data = await res.json();
+      setMember(data.member ?? null);
+    })();
+  }, [customerId]);
 
   async function submitLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -98,7 +117,7 @@ function AccountInner() {
     const data = await res.json();
     setBusy(false);
     if (!res.ok) { setErr(data?.error?.message ?? "Đăng nhập thất bại"); return; }
-    setAuth({ customerId: data.data.customerId, email: null, phone: identifier, name: "" });
+    setAuth({ customerId: data.customerId, email: null, phone: identifier, name: "" });
     setMsg("Đăng nhập thành công.");
     router.refresh();
   }
@@ -119,7 +138,7 @@ function AccountInner() {
     const data = await res.json();
     setBusy(false);
     if (!res.ok) { setErr(data?.error?.message ?? "Đăng ký thất bại"); return; }
-    setAuth({ customerId: data.data.customerId, email, phone, name });
+    setAuth({ customerId: data.customerId, email, phone, name });
     setMsg("Đăng ký thành công. Kiểm tra email để xác nhận.");
     router.refresh();
   }
@@ -142,6 +161,22 @@ function AccountInner() {
           <div><b>{auth.name || auth.phone}</b></div>
           {auth.email ? <div className="text-slate-500">{auth.email}</div> : null}
         </div>
+        {member ? (
+          <section className="rounded-2xl border border-[#e8dac5] bg-[#faf4ea] p-4 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-[#8c2d19] font-bold">Thẻ thành viên {member.code}</p>
+                <p className="text-xs text-slate-600 mt-1">Hạng {member.tier}</p>
+              </div>
+              <b className="text-2xl text-[#8c2d19]">{member.points.toLocaleString("vi-VN")} <span className="text-xs">điểm</span></b>
+            </div>
+            {member.transactions.length > 0 ? (
+              <div className="border-t border-[#e8dac5] pt-2 text-xs text-slate-600">
+                Gần nhất: {member.transactions[0].points > 0 ? "+" : ""}{member.transactions[0].points} điểm ({member.transactions[0].type})
+              </div>
+            ) : <p className="text-xs text-slate-500">Điểm sẽ được cộng sau mỗi đơn hàng đủ điều kiện.</p>}
+          </section>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           <Link href="/shop/orders" className="px-4 py-2 rounded-2xl bg-[#8c2d19] hover:bg-[#7a2816] text-white text-xs font-bold shadow-xs">Lịch sử đơn hàng</Link>
           <Link href="/shop/wishlist" className="px-4 py-2 rounded-2xl border border-slate-200 bg-white text-slate-700 text-xs font-bold">Sách yêu thích</Link>
