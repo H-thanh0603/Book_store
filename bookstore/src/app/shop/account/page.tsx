@@ -21,6 +21,7 @@ type AuthState =
 
 type Member = {
   code: string;
+  birthday: string | null;
   points: number;
   tier: string;
   transactions: { id: string; points: number; balanceAfter: number; type: string; createdAt: string }[];
@@ -130,10 +131,11 @@ function AccountInner() {
     const email = String(fd.get("email") ?? "");
     const phone = String(fd.get("phone") ?? "");
     const password = String(fd.get("password") ?? "");
+    const birthday = String(fd.get("birthday") ?? "");
     const res = await fetch("/api/storefront/auth", {
       method: "POST",
       headers: { "content-type": "application/json", ...(await csrfHeaders()) },
-      body: JSON.stringify({ action: "signup", name, email, phone, password }),
+      body: JSON.stringify({ action: "signup", name, email, phone, password, birthday: birthday || undefined }),
     });
     const data = await res.json();
     setBusy(false);
@@ -153,6 +155,23 @@ function AccountInner() {
     router.refresh();
   }
 
+  async function submitBirthday(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setErr(null); setMsg(null); setBusy(true);
+    const fd = new FormData(e.currentTarget);
+    const birthday = String(fd.get("birthday") ?? "");
+    const res = await fetch("/api/storefront/account", {
+      method: "PATCH",
+      headers: { "content-type": "application/json", ...(await csrfHeaders()) },
+      body: JSON.stringify({ birthday: birthday || null }),
+    });
+    const data = await res.json();
+    setBusy(false);
+    if (!res.ok) { setErr(data?.error?.message ?? "Lưu ngày sinh thất bại"); return; }
+    setMember((m) => (m ? { ...m, birthday: data.birthday } : m));
+    setMsg("Đã lưu ngày sinh — sinh nhật sẽ có quà!");
+  }
+
   if (auth && !("anonymous" in auth)) {
     return (
       <div className="max-w-md mx-auto p-6 space-y-4">
@@ -170,6 +189,23 @@ function AccountInner() {
               </div>
               <b className="text-2xl text-[#8c2d19]">{member.points.toLocaleString("vi-VN")} <span className="text-xs">điểm</span></b>
             </div>
+            {!member.birthday ? (
+              <form onSubmit={submitBirthday} className="flex gap-2 items-center border-t border-[#e8dac5] pt-3">
+                <input
+                  name="birthday"
+                  type="date"
+                  required
+                  max={new Date().toISOString().slice(0, 10)}
+                  aria-label="Ngày sinh nhận quà"
+                  className="flex-1 min-w-0 rounded-xl border border-[#e8dac5] bg-white px-2.5 py-2 text-xs"
+                />
+                <button disabled={busy} className="shrink-0 px-3 py-2 rounded-xl bg-[#8c2d19] text-white text-xs font-bold disabled:opacity-60 cursor-pointer">
+                  🎂 Nhận quà SN
+                </button>
+              </form>
+            ) : (
+              <p className="text-xs text-slate-500 border-t border-[#e8dac5] pt-2">🎂 Sinh nhật {member.birthday} — sẽ có quà tự động!</p>
+            )}
             {member.transactions.length > 0 ? (
               <div className="border-t border-[#e8dac5] pt-2 text-xs text-slate-600">
                 Gần nhất: {member.transactions[0].points > 0 ? "+" : ""}{member.transactions[0].points} điểm ({member.transactions[0].type})
@@ -246,6 +282,10 @@ function AccountInner() {
           <label className="block text-xs font-medium text-slate-600">
             Số điện thoại
             <input name="phone" type="tel" required pattern="[0-9+\-\s()]{8,20}" className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20" />
+          </label>
+          <label className="block text-xs font-medium text-slate-600">
+            Ngày sinh <span className="text-slate-400">(nhận quà sinh nhật hàng năm)</span>
+            <input name="birthday" type="date" max={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/20" />
           </label>
           <label className="block text-xs font-medium text-slate-600">
             Mật khẩu (tối thiểu 10 ký tự)
