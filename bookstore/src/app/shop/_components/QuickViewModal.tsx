@@ -142,18 +142,19 @@ export default function QuickViewModal({
                   <Check className="w-4 h-4" />
                   Đã thêm ✓ — Xem giỏ hàng
                 </button>
-              ) : (
+              ) : variant?.available ? (
                 <button
                   onClick={() => {
                     onAddToCart(product);
                     setAdded(true);
                   }}
-                  disabled={!variant?.available}
-                  className="w-full py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                  className="w-full py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
                 >
                   <ShoppingBag className="w-4 h-4" />
-                  {variant?.available ? "Thêm Vào Giỏ Hàng Ngay" : "Tạm Hết Hàng"}
+                  Thêm Vào Giỏ Hàng Ngay
                 </button>
+              ) : (
+                <StockAlertForm variantId={variant?.id} />
               )}
             </div>
           </div>
@@ -178,5 +179,65 @@ export default function QuickViewModal({
         ) : null}
       </div>
     </div>
+  );
+}
+
+/** Back-in-stock signup: phone → StockAlert, job pings on restock. */
+function StockAlertForm({ variantId }: { variantId?: string }) {
+  const [phone, setPhone] = useState("");
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  if (done)
+    return (
+      <p className="w-full py-3 rounded-2xl bg-[#dcfce7] text-[#14532d] font-bold text-xs sm:text-sm text-center">
+        ✓ Có hàng sẽ báo ngay qua SMS/thông báo!
+      </p>
+    );
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!variantId || busy) return;
+        setBusy(true);
+        setErr(null);
+        try {
+          const r = await fetch("/api/storefront/stock-alerts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ variantId, phone }),
+          });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(d.message ?? "Đăng ký thất bại");
+          setDone(true);
+        } catch (e) {
+          setErr(e instanceof Error ? e.message : "Đăng ký thất bại");
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <p className="text-xs font-bold text-slate-700">Tạm hết hàng — để lại SĐT, có hàng báo ngay:</p>
+      <div className="flex gap-2">
+        <input
+          type="tel"
+          required
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="09xxxxxxxx"
+          aria-label="Số điện thoại nhận tin có hàng"
+          className="flex-1 min-w-0 rounded-xl border border-[#ede5d8] bg-white px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/30"
+        />
+        <button
+          type="submit"
+          disabled={busy}
+          className="shrink-0 px-4 py-2.5 rounded-xl bg-[#8c2d19] hover:bg-[#6f2314] disabled:opacity-60 text-white font-bold text-xs cursor-pointer"
+        >
+          {busy ? "…" : "Báo tôi"}
+        </button>
+      </div>
+      {err && <p className="text-[11px] text-red-600">{err}</p>}
+    </form>
   );
 }
