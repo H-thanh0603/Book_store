@@ -33,6 +33,25 @@ export type QuotePreview = {
 
 const defaultCustomer = { name: "", phone: "", email: "", address: "" };
 const FREE_SHIPPING_THRESHOLD = 250000;
+
+/** Fire-and-forget funnel batch (C retention): view/add/checkout/purchase
+ *  counts land in /api/metrics for conversion-rate math. Never awaits. */
+const funnelQueue: string[] = [];
+let funnelTimer: ReturnType<typeof setTimeout> | null = null;
+export function trackFunnel(event: "view_item" | "add_to_cart" | "begin_checkout" | "purchase") {
+  funnelQueue.push(event);
+  if (funnelTimer) return;
+  funnelTimer = setTimeout(() => {
+    funnelTimer = null;
+    const events = funnelQueue.splice(0, 20);
+    if (!events.length) return;
+    fetch("/api/storefront/funnel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ events }),
+    }).catch(() => {});
+  }, 2000);
+}
 /** Hero slides — kept in the hook so the rotation timer owns one source of truth. */
 const featuredCampaignCount = 4;
 
@@ -364,6 +383,7 @@ export function useStorefront() {
       price: variant.price,
       available: variant.available,
     });
+    trackFunnel("add_to_cart");
     showToast(`✨ Đã thêm "${product.name}" vào giỏ hàng!`);
     setCartOpen(true);
   }
@@ -596,6 +616,7 @@ export function useStorefront() {
         return;
       }
       setSuccess({ number: data.number, total: data.total });
+      trackFunnel("purchase");
       clearCart();
       setCheckoutOpen(false);
     } catch {

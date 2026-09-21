@@ -135,11 +135,27 @@ export function VoucherHub({ vouchers, onApply }: { vouchers: Voucher[]; onApply
 export function NewsletterBox() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
+    if (!email.trim() || busy) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await fetch("/api/storefront/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error?.message ?? d.message ?? "Đăng ký thất bại");
       setSubscribed(true);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Đăng ký thất bại");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -174,12 +190,14 @@ export function NewsletterBox() {
             />
             <button
               type="submit"
-              className="px-6 py-3 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-xs shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              disabled={busy}
+              className="px-6 py-3 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] disabled:opacity-60 text-white font-bold text-xs shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
             >
-              Nhận Tin Mới
+              {busy ? "Đang gửi..." : "Nhận Tin Mới"}
             </button>
           </form>
         )}
+        {err && <p className="text-[11px] text-red-600 font-semibold">{err}</p>}
       </div>
     </section>
   );

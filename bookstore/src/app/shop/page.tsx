@@ -12,7 +12,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Feather } from "lucide-react";
 
-import { useStorefront } from "./_components/useStorefront";
+import { useStorefront, trackFunnel } from "./_components/useStorefront";
 import {
   featuredCampaigns,
   departments,
@@ -71,6 +71,13 @@ function OverlaySkeleton({ label }: { label: string }) {
 export default function ShopPage() {
   const s = useStorefront();
   const [copiedOrder, setCopiedOrder] = useState(false);
+
+  // Single funnel-tracked quick-view entry — every onQuickView prop below
+  // routes through here so view_item counts stay complete.
+  const viewProduct = (p: Parameters<typeof s.setQuickViewProduct>[0]) => {
+    if (p) trackFunnel("view_item");
+    s.setQuickViewProduct(p);
+  };
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -142,7 +149,7 @@ export default function ShopPage() {
         setSearchFocused={s.setSearchFocused}
         searchMatches={s.searchMatches}
         onSearchPick={(p) => {
-          s.setQuickViewProduct(p);
+          viewProduct(p);
           s.setSearchFocused(false);
         }}
         stores={s.catalog?.stores ?? []}
@@ -201,7 +208,7 @@ export default function ShopPage() {
           onOnlyInStock={s.setOnlyInStock}
           onCategory={s.setCategoryId}
           onResetFilters={s.resetAllFilters}
-          onQuickView={s.setQuickViewProduct}
+          onQuickView={viewProduct}
           onShelfFinder={s.setShelfProduct}
           onFlipbook={s.setFlipbookProduct}
           onToggleFavorite={s.toggleFavorite}
@@ -225,7 +232,7 @@ export default function ShopPage() {
           onMood={s.setActiveMood}
           products={s.moodFilteredProducts}
           money={money}
-          onQuickView={s.setQuickViewProduct}
+          onQuickView={viewProduct}
         />
 
         {/* 8. AUTHOR SPOTLIGHT */}
@@ -299,11 +306,13 @@ export default function ShopPage() {
         freeShippingThreshold={s.freeShippingThreshold}
         progressToFreeShipping={s.progressToFreeShipping}
         shipEstimate={s.shipEstimate}
+        allProducts={s.allProducts}
         money={money}
         onClose={() => s.setCartOpen(false)}
         onChangeQuantity={s.changeQuantity}
         onRemoveLine={s.removeCartLine}
         onCheckout={() => {
+          trackFunnel("begin_checkout");
           s.setCartOpen(false);
           s.setCheckoutOpen(true);
         }}
