@@ -114,7 +114,17 @@ export async function PATCH(req: NextRequest) {
       if ("parentId" in b) {
         if (!b.parentId) data.parentId = null;
         else {
+          if (b.parentId === b.id) fail(400, "VALIDATION", "Category cannot be its own parent");
           await requireRow(await prisma.category.findUnique({ where: { id: b.parentId } }), "Parent category");
+          // Cycle guard: walk the proposed parent's ancestor chain — if it
+          // reaches this category, the update would close a loop and break
+          // every recursive tree walk downstream.
+          let ancestor: string | null = b.parentId;
+          for (let depth = 0; depth < 100 && ancestor; depth++) {
+            if (ancestor === b.id) fail(400, "VALIDATION", "Category parent would create a cycle");
+            const row = await prisma.category.findUnique({ where: { id: ancestor }, select: { parentId: true } });
+            ancestor = row?.parentId ?? null;
+          }
           data.parentId = b.parentId;
         }
       }
