@@ -3,7 +3,7 @@ import { prisma, TX_OPTIONS } from "@/lib/db";
 import { requirePermission, assertStoreAccess, audit } from "@/lib/auth";
 import { apiError, fail, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
-import { MovementType } from "@/generated/prisma/client";
+import { MovementType, type OrderStatus } from "@/generated/prisma/client";
 
 // POST /api/fulfillment — ship, collect, deliver, or cancel a reserved online order.
 export async function POST(req: NextRequest) {
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
         // F1 picking queue: ALLOCATED → PICKING → PACKED → READY walk the
         // order down the shelf before ship/collect. Each step is a guarded
         // claim on the exact previous status — no migration, statuses exist.
-        const steps: Record<string, { from: string[]; to: string; label: string }> = {
+        const steps: Record<string, { from: OrderStatus[]; to: OrderStatus; label: string }> = {
           start_pick: { from: ["PAID", "CONFIRMED", "ALLOCATED"], to: "PICKING", label: "order.start_pick" },
           pack: { from: ["PICKING"], to: "PACKED", label: "order.pack" },
           ready: { from: ["PACKED"], to: "READY", label: "order.ready" },
