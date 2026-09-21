@@ -22,6 +22,9 @@ export type Product = {
   brand?: { name: string } | null;
   author?: { name: string } | null;
   publisher?: { name: string } | null;
+  /** Approved-review aggregate from the catalog row (0/0 = no reviews yet). */
+  ratingAvg: number;
+  ratingCount: number;
   /**
    * Optional cover image path (e.g. "/products/<id>.jpg" served from /public).
    * When absent, components render a styled placeholder so layout never shifts.

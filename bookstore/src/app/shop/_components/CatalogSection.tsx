@@ -1,9 +1,21 @@
 // Section 10: FULL CATALOG WITH FACETED FILTERS, SORTING & VIEW MODES
 import {
-  BookOpen, Grid3X3, Heart, LayoutGrid, List, Plus, RotateCcw, ShoppingBag, SlidersHorizontal,
+  BookOpen, Grid3X3, Heart, LayoutGrid, List, Plus, RotateCcw, ShoppingBag, SlidersHorizontal, Star,
 } from "lucide-react";
 import type { Product } from "./types";
 import ProductCover from "./ProductCover";
+
+/** Compact star row: average + count. Renders nothing when no reviews yet. */
+export function RatingStars({ avg, count, className = "" }: { avg: number; count: number; className?: string }) {
+  if (!count) return null;
+  return (
+    <span className={`inline-flex items-center gap-1 ${className}`} aria-label={`${avg} trên 5 sao từ ${count} đánh giá`}>
+      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+      <b className="text-xs text-slate-800">{avg}</b>
+      <span className="text-[11px] text-slate-400">({count})</span>
+    </span>
+  );
+}
 
 type ViewMode = "grid5" | "grid3" | "list";
 
@@ -310,6 +322,8 @@ function ProductRow({
             {product.author?.name ?? product.brand?.name ?? product.publisher?.name ?? "Melio"}
           </p>
 
+          <RatingStars avg={product.ratingAvg} count={product.ratingCount} />
+
           <div className="flex items-center gap-3 pt-1 text-xs">
             <button onClick={() => onShelfFinder(product)} className="text-slate-600 hover:text-slate-950 flex items-center gap-1 font-medium cursor-pointer">
               📍 Vị trí kệ sách
@@ -413,6 +427,8 @@ function ProductCard({
         >
           {product.name}
         </h3>
+
+        <RatingStars avg={product.ratingAvg} count={product.ratingCount} />
 
         <div className="mt-auto pt-3 border-t border-[#f3ece1] flex items-end justify-between gap-2">
           <div>

@@ -29,7 +29,10 @@ async function fuzzyAllowed(orgId: string): Promise<boolean> {
 // Cache layer: Redis (shared across instances) with in-process fallback.
 const CATALOG_TTL_SEC = 30;
 type CatalogResult = {
-  products: { id: string; name: string; description: string | null; createdAt: Date; variants: unknown[] }[];
+  products: {
+    id: string; name: string; description: string | null; createdAt: Date;
+    ratingAvg: number; ratingCount: number; variants: unknown[];
+  }[];
   categories: { id: string; name: string }[];
   stores: { id: string; name: string; code: string }[];
   storeId: string;
@@ -141,6 +144,12 @@ async function listStorefrontProductsUncached(input: {
       category: { select: { id: true, name: true } },
       brand: { select: { name: true } },
       author: { select: { name: true } }, publisher: { select: { name: true } },
+      // Card social proof: approved-review count + average come with the
+      // catalog row so cards render stars without N+1 review fetches.
+      reviews: {
+        where: { status: "APPROVED" },
+        select: { rating: true },
+      },
       variants: {
         where: { active: true },
         select: {
@@ -302,7 +311,11 @@ async function listStorefrontProductsUncached(input: {
         ? [{ id: variant.id, name: variant.name, sku: variant.sku, price: Number(price.amount), available }]
         : [];
     });
-    return variants.length ? [{ ...product, image: product.imageUrl, variants }] : [];
+    if (!variants.length) return [];
+    const ratings = product.reviews.map((r) => r.rating);
+    const ratingCount = ratings.length;
+    const ratingAvg = ratingCount ? Math.round((ratings.reduce((s, r) => s + r, 0) / ratingCount) * 10) / 10 : 0;
+    return [{ ...product, reviews: undefined, image: product.imageUrl, variants, ratingAvg, ratingCount }];
   });
   // Price-range filter + sort run in memory over the in-stock set: variant
   // prices live in the related Price table (no single sortable column), and
