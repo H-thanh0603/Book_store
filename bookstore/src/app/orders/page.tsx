@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Nav from "../nav";
 import Pager from "@/components/Pager";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -59,7 +59,7 @@ export default function OrdersPage() {
   const [pendingReturn, setPendingReturn] = useState<Order | null>(null);
   const [pendingShip, setPendingShip] = useState<Order | null>(null);
 
-  async function loadOrders(p = 1, q?: string, status?: string) {
+  const loadOrders = useCallback(async (p = 1, q?: string, status?: string) => {
     const params = new URLSearchParams({ page: String(p), pageSize: String(PAGE_SIZE) });
     const qq = (q ?? searchFilter).trim();
     const ss = status ?? statusFilter;
@@ -72,15 +72,14 @@ export default function OrdersPage() {
       setPage(d.page);
       setTotal(d.total);
     }
-  }
+  }, [searchFilter, statusFilter]);
 
   // Debounced server filter — the old client-side filter ran over the
   // current page only, so matches on other pages never appeared.
   useEffect(() => {
     const timer = window.setTimeout(() => { void loadOrders(1); }, 300);
     return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- filter-driven reload
-  }, [searchFilter, statusFilter]);
+  }, [searchFilter, statusFilter, loadOrders]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -98,6 +97,7 @@ export default function OrdersPage() {
       if (r.ok) setStores((await r.json()).stores);
     });
     return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only bootstrap
   }, []);
 
   useEffect(() => {
