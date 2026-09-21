@@ -39,6 +39,8 @@ type Line = {
   name: string;
   quantity: number;
   unitPrice: number;
+  /** Manager-approved manual price (pos.override_price): sent as unitPrice. */
+  overridden?: boolean;
 };
 type Customer = {
   id: string;
@@ -224,6 +226,23 @@ export default function PosPage() {
     setLines((ls) => ls.filter((x) => x.variantId !== variantId));
   };
 
+  // F1 price override: prompt a new unit price + reason. The server honors
+  // client prices only for pos.override_price holders and audits the count —
+  // this UI just collects the intent; permission stays server-side.
+  const overridePrice = (variantId: string) => {
+    const line = lines.find((l) => l.variantId === variantId);
+    if (!line) return;
+    const raw = prompt(`Giá mới cho "${line.name}" (giá gốc ${line.unitPrice.toLocaleString("vi-VN")} ₫):`, String(line.unitPrice));
+    if (raw === null) return;
+    const price = Math.floor(Number(raw.replace(/[^\d]/g, "")));
+    if (!Number.isFinite(price) || price < 0 || price > 1_000_000_000) {
+      setMsg({ text: "Giá không hợp lệ", type: "error" });
+      return;
+    }
+    setLines((ls) => ls.map((x) => (x.variantId === variantId ? { ...x, unitPrice: price, overridden: true } : x)));
+    setMsg({ text: `Đã sửa giá "${line.name}" → ${price.toLocaleString("vi-VN")} ₫ (cần quyền quản lý khi thanh toán)`, type: "info" });
+  };
+
   async function openShift() {
     const res = await fetch("/api/terminals?storeId=" + storeId);
     const term = res.ok ? (await res.json()).terminals?.[0] : null;
@@ -333,7 +352,12 @@ export default function PosPage() {
     const requestBody = {
       action: "sale", shiftId, storeId, customerId: customerId || undefined,
       couponCode: coupon.trim() ? coupon.trim().toUpperCase() : undefined,
-      items: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
+      // Overridden lines carry their manager price; the server honors it
+      // only for pos.override_price holders (else server retail wins).
+      items: lines.map((l) => ({
+        variantId: l.variantId, quantity: l.quantity,
+        ...(l.overridden ? { unitPrice: l.unitPrice } : {}),
+      })),
       payments: [{ method, amount: chargeTotal }],
     };
     const signature = JSON.stringify(requestBody);
@@ -830,8 +854,18 @@ export default function PosPage() {
                             <p className="text-xs font-semibold text-[#1c1917] truncate">{l.name}</p>
                             <p className="text-[11px] text-slate-500 font-mono">
                               {l.unitPrice.toLocaleString("vi-VN")} ₫ × {l.quantity}
+                              {l.overridden && <span className="ml-1 font-bold text-amber-700">(giá sửa)</span>}
                             </p>
                           </div>
+
+                          <button
+                            onClick={() => overridePrice(l.variantId)}
+                            title={`Sửa giá ${l.name} (cần quyền quản lý)`}
+                            aria-label={`Sửa giá ${l.name}`}
+                            className="w-8 h-8 rounded-lg bg-[#faf4ea] hover:bg-amber-100 flex items-center justify-center text-slate-500 hover:text-amber-700 shrink-0"
+                          >
+                            ✏️
+                          </button>
 
                           <div className="flex items-center gap-1 shrink-0">
                             <button
