@@ -2,6 +2,7 @@
 import {
   BookOpen, Grid3X3, Heart, LayoutGrid, List, Plus, RotateCcw, ShoppingBag, SlidersHorizontal, Star,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { Product } from "./types";
 import ProductCover from "./ProductCover";
 
@@ -63,6 +64,12 @@ export default function CatalogSection({
   onAddToCart: (p: Product) => void;
 }) {
   const money = (v: number) => `${v.toLocaleString("vi-VN")} ₫`;
+  // Progressive reveal (L1): the server returns the full sorted set with a
+  // total — reveal 48 at a time so a 500-row catalog doesn't mount 500 cards.
+  const PAGE = 48;
+  const [visible, setVisible] = useState(PAGE);
+  useEffect(() => { setVisible(PAGE); }, [query, categoryId, products.length]);
+  const shown = products.slice(0, visible);
 
   return (
     <section id="catalog" className="scroll-mt-24 rounded-3xl bg-white p-6 sm:p-10 border border-[#ede5d8] shadow-xs space-y-6">
@@ -82,7 +89,7 @@ export default function CatalogSection({
               : "Toàn Bộ Sản Phẩm Đang Mở Bán"}
           </h2>
           <p className="text-xs text-slate-500 mt-1 font-medium">
-            Hiển thị {products.length} sản phẩm sẵn sàng giao nhanh tại <b>{activeStoreName}</b>
+            Hiển thị {shown.length}/{products.length} sản phẩm sẵn sàng giao nhanh tại <b>{activeStoreName}</b>
           </p>
         </div>
 
@@ -219,7 +226,7 @@ export default function CatalogSection({
       ) : viewMode === "list" ? (
         /* LIST VIEW MODE */
         <div className="space-y-4">
-          {products.map((product) => (
+          {shown.map((product) => (
             <ProductRow
               key={product.id}
               product={product}
@@ -242,7 +249,7 @@ export default function CatalogSection({
               : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
           }`}
         >
-          {products.map((product) => (
+          {shown.map((product) => (
             <ProductCard
               key={product.id}
               product={product}
@@ -253,6 +260,17 @@ export default function CatalogSection({
               onAddToCart={onAddToCart}
             />
           ))}
+        </div>
+      )}
+
+      {visible < products.length && (
+        <div className="pt-2 text-center">
+          <button
+            onClick={() => setVisible((v) => v + PAGE)}
+            className="px-6 py-3 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+          >
+            Xem thêm {Math.min(PAGE, products.length - visible)} / {products.length} sản phẩm
+          </button>
         </div>
       )}
     </section>

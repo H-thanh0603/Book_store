@@ -33,6 +33,7 @@ type CatalogResult = {
     id: string; name: string; description: string | null; createdAt: Date;
     ratingAvg: number; ratingCount: number; variants: unknown[];
   }[];
+  total: number;
   categories: { id: string; name: string }[];
   stores: { id: string; name: string; code: string }[];
   storeId: string;
@@ -191,7 +192,7 @@ async function listStorefrontProductsUncached(input: {
       where: { active: true, orgId }, select: { id: true, name: true, code: true }, orderBy: { code: "asc" },
     }),
   ]);
-  if (stockedIds.length === 0) return { products: [], categories, stores, storeId: store.id };
+  if (stockedIds.length === 0) return { products: [], total: 0, categories, stores, storeId: store.id };
   const exactRows = await prismaRead.product.findMany({
       where: {
         status: "active",
@@ -212,7 +213,10 @@ async function listStorefrontProductsUncached(input: {
         } : {}),
       },
       ...catalogSelect,
-      orderBy: { name: "asc" }, take: 100,
+      // No take here: price sort/filter run in memory below, so the working
+      // set must be complete. Pagination slices the sorted list at the end.
+      // Bounded by the stocked-id gate (in-stock variants at this store).
+      orderBy: { name: "asc" }, take: 2000,
     });
 
   let rows = exactRows;
@@ -335,7 +339,10 @@ async function listStorefrontProductsUncached(input: {
       default: return a.name.localeCompare(b.name, "vi");
     }
   });
-  return { products: sorted, categories, stores, storeId: store.id };
+  // L1: the old take:100 silently hid everything past row 100. Return the
+  // full sorted set with a total (capped at 2000 — spec catalog is 100–500);
+  // the client reveals it in batches via "Xem thêm".
+  return { products: sorted, total: sorted.length, categories, stores, storeId: store.id };
 }
 
 export type StorefrontCheckoutInput = {

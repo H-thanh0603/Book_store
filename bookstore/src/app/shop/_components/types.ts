@@ -37,6 +37,7 @@ export type StoreOption = { id: string; name: string; code: string };
 
 export type Catalog = {
   products: Product[];
+  total: number;
   categories: { id: string; name: string }[];
   stores: StoreOption[];
   storeId: string;
