@@ -26,6 +26,10 @@ export async function POST(req: NextRequest) {
         // inventory from nothing) and refunded money for goods never delivered.
         if (order.status === "CANCELLED")
           fail(400, "INVALID_STATUS_TRANSITION", "Cannot return items on a CANCELLED order");
+        // Over-return race: two concurrent creates both read priorReturns
+        // before either commits. Lock the order row so the loser waits,
+        // then re-reads committed returns and fails the guard correctly.
+        await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${order.id} FOR UPDATE`;
         // Cumulative over-return guard: total returned per order item (all returns,
         // any status except REJECTED) can never exceed the ordered quantity.
         const priorReturned = new Map<string, number>();
