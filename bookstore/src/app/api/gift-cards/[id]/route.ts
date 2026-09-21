@@ -62,6 +62,27 @@ export async function PUT(
     return ok({ message: "Gift card activated" });
   }
 
+  // F2 lifecycle: void a card with remaining balance — zeroes it with a
+  // ledger row (audit trail preserved), then deactivates. Only a zero or
+  // positive balance can void; redemptions racing the void serialize on
+  // the balance row inside the transaction.
+  if (action === "void") {
+    if (!reason?.trim()) return apiError({ status: 400, code: "VALIDATION", message: "Reason is required to void" });
+    const voided = await prisma.$transaction(async (tx) => {
+      const card = await tx.giftCard.findUniqueOrThrow({ where: { id } });
+      if (!card.active) return apiError({ status: 409, code: "VALIDATION", message: "Card already inactive" }) as never;
+      if (card.balance > 0n)
+        await tx.giftCardTransaction.create({
+          data: {
+            giftCardId: id, amount: -card.balance, balanceAfter: 0n,
+            refType: "void", refId: reason.trim(),
+          },
+        });
+      return tx.giftCard.update({ where: { id }, data: { balance: 0n, active: false } });
+    });
+    return ok({ giftCard: voided });
+  }
+
   return apiError({ status: 400, code: "VALIDATION", message: "Invalid action" });
 }
 
