@@ -298,6 +298,7 @@ export default function ShopPage() {
         storeName={s.activeStore?.name ?? "Melio"}
         freeShippingThreshold={s.freeShippingThreshold}
         progressToFreeShipping={s.progressToFreeShipping}
+        shipEstimate={s.shipEstimate}
         money={money}
         onClose={() => s.setCartOpen(false)}
         onChangeQuantity={s.changeQuantity}

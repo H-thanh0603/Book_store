@@ -140,6 +140,7 @@ export function CartDrawer({
   storeName,
   freeShippingThreshold,
   progressToFreeShipping,
+  shipEstimate,
   money,
   onClose,
   onChangeQuantity,
@@ -153,6 +154,7 @@ export function CartDrawer({
   storeName: string;
   freeShippingThreshold: number;
   progressToFreeShipping: number;
+  shipEstimate: { fee: number; freeShip: boolean; threshold: number } | null;
   money: (v: number) => string;
   onClose: () => void;
   onChangeQuantity: (variantId: string, delta: number) => void;
@@ -278,9 +280,28 @@ export function CartDrawer({
         {/* Cart Footer */}
         {cart.length > 0 && (
           <div className="p-5 border-t border-[#ede5d8] bg-white space-y-3">
-            <div className="flex items-center justify-between text-xs text-slate-600">
-              <span>Tạm tính giỏ hàng:</span>
-              <span className="text-lg font-black text-[#8c2d19]">{money(subtotal)}</span>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs text-slate-600">
+                <span>Tạm tính giỏ hàng:</span>
+                <span className="font-bold text-slate-900">{money(subtotal)}</span>
+              </div>
+              {/* Early shipping estimate — removes the fee surprise that
+                  kills checkout conversion. Quote at checkout stays authoritative. */}
+              <div className="flex items-center justify-between text-xs text-slate-600">
+                <span>Phí giao hàng (dự kiến):</span>
+                <span className={`font-bold ${shipEstimate?.freeShip ? "text-[#14532d]" : ""}`}>
+                  {!shipEstimate ? "…" : shipEstimate.freeShip ? "Miễn phí" : `~${money(shipEstimate.fee)}`}
+                </span>
+              </div>
+              {shipEstimate && !shipEstimate.freeShip && (
+                <p className="text-[11px] text-slate-400">Phí chính xác theo địa chỉ ở bước thanh toán.</p>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-700">Tổng dự kiến:</span>
+              <span className="text-lg font-black text-[#8c2d19]">
+                {shipEstimate ? money(subtotal + (shipEstimate.freeShip ? 0 : shipEstimate.fee)) : money(subtotal)}
+              </span>
             </div>
 
             <button

@@ -69,6 +69,7 @@ export function useStorefront() {
   const [couponInput, setCouponInput] = useState("");
   const [quote, setQuote] = useState<QuotePreview | null>(null);
   const [quoteChecking, setQuoteChecking] = useState(false);
+  const [shipEstimate, setShipEstimate] = useState<{ fee: number; freeShip: boolean; threshold: number } | null>(null);
   const [pendingStore, setPendingStore] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ number: string; total: number } | null>(null);
   const [fulfillment, setFulfillment] = useState<Fulfillment>("delivery");
@@ -138,6 +139,25 @@ export function useStorefront() {
     heroPausedRef.current = false;
     setHeroPaused(false);
   }
+
+  // Cart-drawer shipping estimate — subtotal only, no address needed.
+  // Debounced so quantity taps don't spam; quote at checkout stays authoritative.
+  useEffect(() => {
+    if (cart.length === 0) {
+      setShipEstimate(null);
+      return;
+    }
+    const subtotal = cart.reduce((s, l) => s + l.price * l.quantity, 0);
+    const timer = window.setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/storefront/shipping-estimate?subtotal=${subtotal}`);
+        if (r.ok) setShipEstimate(await r.json());
+      } catch {
+        // Best-effort — drawer still shows the subtotal without it.
+      }
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [cart]);
 
   // Debounced coupon/cart preview — mirrors the real promotion engine so the
   // displayed total always matches what checkout will charge.
@@ -602,7 +622,7 @@ export function useStorefront() {
     giftWrapping, setGiftWrapping, giftMessage, setGiftMessage,
     fulfillment, setFulfillment, customer, setCustomer,
     paymentMethod, setPaymentMethod,
-    couponInput, setCouponInput, quote, quoteChecking,
+    couponInput, setCouponInput, quote, quoteChecking, shipEstimate,
     pendingStore, confirmStoreChange, cancelStoreChange,
     // totals / derived
     itemCount, subtotal: cartSubtotal, discountTotal, wrappingFee, grandTotal,
