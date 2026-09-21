@@ -3,6 +3,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
+import { withOrg } from "@/lib/org-scope";
 import { apiError, ok, fail, reqStr } from "@/lib/api";
 import { Prisma } from "../../../generated/prisma/client";
 
@@ -77,10 +78,12 @@ export async function POST(req: NextRequest) {
       await audit("catalog.create", kind, row.id, auth.userId, { name: row.name });
       return ok({ [kind.slice(0, -1)]: row }, 201);
     }
-    // barcodes
+    // barcodes — tenant isolation: resolve the variant inside the caller's
+    // org (same pattern as products PATCH newBarcode). A bare id lookup
+    // would let one tenant attach barcodes to another tenant's variants.
     const barcode = reqStr(b.barcode, "barcode", 128);
     const variantId = typeof b.variantId === "string" ? b.variantId : "";
-    await requireRow(await prisma.productVariant.findUnique({ where: { id: variantId } }), "Variant");
+    await requireRow(await prisma.productVariant.findFirst({ where: withOrg(auth, { id: variantId }) }), "Variant");
     try {
       const bc = await prisma.productBarcode.create({ data: { barcode, variantId, type: ["EAN13", "ISBN", "INTERNAL", "SUPPLIER"].includes(b.type) ? b.type : "INTERNAL" } });
       await audit("catalog.create", "ProductBarcode", bc.barcode, auth.userId, { variantId: bc.variantId });
@@ -210,7 +213,12 @@ export async function DELETE(req: NextRequest) {
       await audit("catalog.delete", "Publisher", id, auth.userId);
       return ok({ deleted: true });
     }
-    // barcodes — delete by barcode value
+    // barcodes — delete by barcode value. Barcode itself is globally
+    // unique (@id), so resolve its variant and enforce the org boundary
+    // before deleting — otherwise one tenant deletes another's barcode.
+    const bcRow = await prisma.productBarcode.findUnique({ where: { barcode: id }, include: { variant: { select: { orgId: true } } } });
+    if (!bcRow) fail(404, "NOT_FOUND", "Not found");
+    if (auth.orgId && bcRow.variant.orgId !== auth.orgId) fail(404, "NOT_FOUND", "Not found");
     await del(() => prisma.productBarcode.delete({ where: { barcode: id } }));
     await audit("catalog.delete", "ProductBarcode", id, auth.userId);
     return ok({ deleted: true });
