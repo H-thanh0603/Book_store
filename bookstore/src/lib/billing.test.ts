@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('./db', () => ({ prisma: {} }))
 
 import { prisma } from './db'
-import { settleBillingPayment } from './billing'
+import { nextPeriodEnd, settleBillingPayment } from './billing'
 
 describe('settleBillingPayment (MONEY-002 gate)', () => {
   beforeEach(() => vi.restoreAllMocks())
@@ -67,5 +67,23 @@ describe('settleBillingPayment (MONEY-002 gate)', () => {
     })
     ;(prisma as unknown as Record<string, unknown>).webPayment = { findUnique }
     expect(await settleBillingPayment('bill_x')).toBe(false)
+  })
+})
+
+describe('nextPeriodEnd (month-end clamp)', () => {
+  it('clamps Jan 31 to Feb 28 instead of overflowing to Mar 3', () => {
+    const end = nextPeriodEnd(new Date(Date.UTC(2026, 0, 31, 12, 0, 0)))
+    expect(end.getUTCFullYear()).toBe(2026)
+    expect(end.getUTCMonth()).toBe(1)
+    expect(end.getUTCDate()).toBe(28)
+  })
+
+  it('clamps Mar 31 to Apr 30', () => {
+    expect(nextPeriodEnd(new Date(Date.UTC(2026, 2, 31))).getUTCDate()).toBe(30)
+  })
+
+  it('keeps mid-month days unchanged across year boundary', () => {
+    const end = nextPeriodEnd(new Date(Date.UTC(2026, 11, 15, 8, 30, 0)))
+    expect([end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()]).toEqual([2027, 0, 15])
   })
 })

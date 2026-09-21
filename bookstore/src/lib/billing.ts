@@ -61,6 +61,18 @@ export function buildBillingVnpayUrl(txnRef: string, amount: bigint, orderInfo: 
 
 export type IssueResult = { invoiceId: string; txnRef: string; url: string };
 
+// Calendar-safe +1 month: Jan 31 → Feb 28/29, not Mar 3.
+// setMonth overflows (31 Jan + 1 = 3 Mar), shortening/lengthening the
+// paid period by days. Clamp to the last day of the target month instead.
+export function nextPeriodEnd(start: Date): Date {
+  const firstOfTarget = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1));
+  const lastDay = new Date(Date.UTC(firstOfTarget.getUTCFullYear(), firstOfTarget.getUTCMonth() + 1, 0)).getUTCDate();
+  const end = new Date(firstOfTarget);
+  end.setUTCDate(Math.min(start.getUTCDate(), lastDay));
+  end.setUTCHours(start.getUTCHours(), start.getUTCMinutes(), start.getUTCSeconds(), start.getUTCMilliseconds());
+  return end;
+}
+
 // Create a PENDING BillingInvoice + linked PENDING WebPayment for the
 // org's current period. Returns the VNPay URL. Idempotent on the
 // (subscriptionId, periodStart) tuple so the "Pay" button is safe to spam.
@@ -84,8 +96,7 @@ export async function issueCycleInvoice(orgId: string, ip: string, baseUrl: stri
     };
   }
 
-  const periodEnd = new Date(sub.currentPeriodStart);
-  periodEnd.setMonth(periodEnd.getMonth() + 1);
+  const periodEnd = nextPeriodEnd(sub.currentPeriodStart);
   const amount = BigInt(sub.plan.monthlyPriceCents);
   const txnRef = `bill_${sub.id.slice(0, 8)}_${Date.now()}`;
 
