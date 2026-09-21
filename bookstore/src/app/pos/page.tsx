@@ -64,7 +64,7 @@ export default function PosPage() {
   const [refundNumber, setRefundNumber] = useState("");
   const [confirmCloseShift, setConfirmCloseShift] = useState(false);
   const [confirmRefund, setConfirmRefund] = useState(false);
-  const [lastTx, setLastTx] = useState<{ number: string; total: number; method: string; items: typeof lines; date: string } | null>(null);
+  const [lastTx, setLastTx] = useState<{ number: string; subtotal: number; discountTotal: number; total: number; method: string; items: typeof lines; date: string } | null>(null);
   const [coupon, setCoupon] = useState("");
   // Held bills (N1): park the current cart in localStorage slots when the
   // customer walks away — survives reload, per terminal. Split moves checked
@@ -269,7 +269,13 @@ export default function PosPage() {
 
   function addLine(p: Product) {
     const v = p.variants[0];
-    if (!v || !shiftId) return;
+    if (!v) return;
+    // L3: the old silent return when no shift is open swallowed scans —
+    // cashiers thought the barcode was broken. Say it out loud instead.
+    if (!shiftId) {
+      setMsg({ text: "Chưa mở ca — hãy mở ca trước khi quét/bán hàng", type: "error" });
+      return;
+    }
     setLines((ls) => {
       const ex = ls.find((l) => l.variantId === v.id);
       if (ex) return ls.map((l) => (l.variantId === v.id ? { ...l, quantity: l.quantity + 1 } : l));
@@ -380,6 +386,8 @@ export default function PosPage() {
       setLastTx({
         number: d.number,
         total: d.total,
+        discountTotal: d.discountTotal ?? quote?.discountTotal ?? 0,
+        subtotal: d.subtotal ?? total,
         method,
         items: [...lines],
         date: new Date().toLocaleString("vi-VN"),
@@ -460,8 +468,8 @@ export default function PosPage() {
         unitPrice: l.unitPrice,
         total: l.quantity * l.unitPrice,
       })),
-      subtotal: lastTx.total,
-      discountTotal: 0,
+      subtotal: lastTx.subtotal,
+      discountTotal: lastTx.discountTotal,
       total: lastTx.total,
       paymentMethod: lastTx.method === "CASH" ? "Tiền mặt" : "QR Code",
     };

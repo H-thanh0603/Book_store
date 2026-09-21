@@ -53,13 +53,19 @@ export default function OrdersPage() {
   const PAGE_SIZE = 25;
   const [searchFilter, setSearchFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [productSearch, setProductSearch] = useState("");
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [pendingCancel, setPendingCancel] = useState<Order[]>([]);
   const [pendingReturn, setPendingReturn] = useState<Order | null>(null);
   const [pendingShip, setPendingShip] = useState<Order | null>(null);
 
-  async function loadOrders(p = 1) {
-    const r = await fetch(`/api/orders?page=${p}&pageSize=${PAGE_SIZE}`);
+  async function loadOrders(p = 1, q?: string, status?: string) {
+    const params = new URLSearchParams({ page: String(p), pageSize: String(PAGE_SIZE) });
+    const qq = (q ?? searchFilter).trim();
+    const ss = status ?? statusFilter;
+    if (qq) params.set("q", qq);
+    if (ss !== "ALL") params.set("status", ss);
+    const r = await fetch(`/api/orders?${params}`);
     if (r.ok) {
       const d = await r.json();
       setOrders(d.orders);
@@ -67,6 +73,14 @@ export default function OrdersPage() {
       setTotal(d.total);
     }
   }
+
+  // Debounced server filter — the old client-side filter ran over the
+  // current page only, so matches on other pages never appeared.
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadOrders(1); }, 300);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filter-driven reload
+  }, [searchFilter, statusFilter]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -251,18 +265,9 @@ export default function OrdersPage() {
     }
   };
 
-  const filteredOrders = orders.filter((o) => {
-    const matchesSearch =
-      o.number.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      o.customer?.name?.toLowerCase().includes(searchFilter.toLowerCase());
-    const matchesStatus =
-      statusFilter === "ALL" ||
-      (statusFilter === "PROCESSING" && ["PAID", "CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(o.status)) ||
-      (statusFilter === "SHIPPED" && o.status === "SHIPPED") ||
-      (statusFilter === "DELIVERED" && o.status === "DELIVERED") ||
-      (statusFilter === "CANCELLED" && o.status === "CANCELLED");
-    return matchesSearch && matchesStatus;
-  });
+  // Server-filtered: search/status run in /api/orders (L2), so the table
+  // shows every match across pages — never a page-local subset.
+  const filteredOrders = orders;
 
   return (
     <main className="min-h-screen bg-[#faf7f2] pb-16">
@@ -279,7 +284,7 @@ export default function OrdersPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-[#faf4ea] text-[#574431]">
-              Tổng cộng: <b>{orders.length}</b> đơn
+              Tổng cộng: <b>{total}</b> đơn
             </span>
           </div>
         </div>
@@ -390,8 +395,24 @@ export default function OrdersPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-[#574431] mb-1">Chọn sản phẩm thêm vào đơn</label>
+                <input
+                  className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-1.5 text-xs mb-1.5 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  placeholder="Tìm tên sách / SKU..."
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                />
                 <div className="max-h-36 overflow-y-auto border border-[#ede5d8] rounded-xl p-1.5 space-y-1 bg-[#faf7f2]">
-                  {products.slice(0, 30).map((p) => (
+                  {products
+                    .filter((p) => {
+                      const q = productSearch.trim().toLowerCase();
+                      if (!q) return true;
+                      return (
+                        p.name.toLowerCase().includes(q) ||
+                        p.variants.some((v) => v.sku.toLowerCase().includes(q))
+                      );
+                    })
+                    .slice(0, 30)
+                    .map((p) => (
                     <button
                       key={p.id}
                       type="button"
