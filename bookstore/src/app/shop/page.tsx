@@ -311,6 +311,7 @@ export default function ShopPage() {
         onClose={() => s.setCartOpen(false)}
         onChangeQuantity={s.changeQuantity}
         onRemoveLine={s.removeCartLine}
+        onAddToCart={s.addToCart}
         onCheckout={() => {
           trackFunnel("begin_checkout");
           s.setCartOpen(false);
