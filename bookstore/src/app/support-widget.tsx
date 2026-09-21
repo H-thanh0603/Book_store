@@ -84,7 +84,7 @@ export default function SupportWidget() {
       </button>
 
       {open && (
-        <div id="melio-support-panel" role="dialog" aria-modal="true" aria-label="Hỗ trợ nhân viên" className="fixed bottom-20 right-4 z-50 w-96 h-[32rem] bg-white border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div id="melio-support-panel" role="dialog" aria-modal="true" aria-label="Hỗ trợ nhân viên" className="fixed bottom-20 right-4 z-50 w-[calc(100vw-2rem)] max-w-96 max-h-[70vh] h-[32rem] bg-white border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
           {!active ? (
             <>
               <div className="px-4 py-3 border-b bg-[#faf4ea] font-semibold text-sm text-[#1c1917]">Hỗ trợ ({list.length})</div>

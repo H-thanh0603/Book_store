@@ -210,6 +210,8 @@ export default function ProductsPage() {
                             <img
                               src={p.imageUrl}
                               alt={p.name}
+                              width={40}
+                              height={56}
                               className="w-10 h-14 object-cover rounded border border-[#ede5d8] shrink-0 bg-white"
                               loading="lazy"
                             />
