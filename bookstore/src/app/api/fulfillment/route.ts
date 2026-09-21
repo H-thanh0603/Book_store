@@ -115,7 +115,30 @@ export async function POST(req: NextRequest) {
       }
 
       const isPickup = body.action === "collect";
-      if (!isPickup && body.action !== "ship") fail(400, "VALIDATION", "Unknown action");
+      if (!isPickup && body.action !== "ship") {
+        // F1 picking queue: ALLOCATED → PICKING → PACKED → READY walk the
+        // order down the shelf before ship/collect. Each step is a guarded
+        // claim on the exact previous status — no migration, statuses exist.
+        const steps: Record<string, { from: string[]; to: string; label: string }> = {
+          start_pick: { from: ["PAID", "CONFIRMED", "ALLOCATED"], to: "PICKING", label: "order.start_pick" },
+          pack: { from: ["PICKING"], to: "PACKED", label: "order.pack" },
+          ready: { from: ["PACKED"], to: "READY", label: "order.ready" },
+        };
+        const step = steps[body.action];
+        if (!step) fail(400, "VALIDATION", "Unknown action");
+        if (!step.from.includes(order.status))
+          fail(409, "INVALID_STATUS_TRANSITION", `Cannot ${body.action} ${order.status} order`);
+        const claimed = await tx.order.updateMany({
+          where: { id: order.id, status: order.status }, data: { status: step.to },
+        });
+        if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Order was already updated");
+        await tx.order.update({
+          where: { id: order.id },
+          data: { statusHistory: { create: { fromStatus: order.status, toStatus: step.to, userId: auth.userId } } },
+        });
+        await audit(auth.userId, step.label, "Order", order.id, { number: order.number }, tx);
+        return { number: order.number, status: step.to };
+      }
       if ((isPickup && order.type !== "pickup") || (!isPickup && order.type === "pickup"))
         fail(409, "INVALID_STATUS_TRANSITION", "Fulfillment action does not match order type");
       if (!["PAID", "CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"].includes(order.status))
