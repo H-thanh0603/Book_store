@@ -28,6 +28,16 @@ type Balance = {
   damaged: number;
 };
 
+type Suggestion = {
+  id: string;
+  recommendedQty: number;
+  availableQty: number;
+  safetyStock: number;
+  status: string;
+  variant: { sku: string; product: { name: string } };
+  location: { name: string };
+};
+
 export default function InventoryPage() {
   const [balances, setBalances] = useState<Balance[]>([]);
   const [page, setPage] = useState(1);
@@ -70,8 +80,85 @@ export default function InventoryPage() {
       setErr(d.message);
     }
   }
-  const [poCreated, setPoCreated] = useState(false);
-  const [poCode, setPoCode] = useState("");
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [sugLoading, setSugLoading] = useState(false);
+  const [sugErr, setSugErr] = useState<string | null>(null);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [createdDocs, setCreatedDocs] = useState<{ suggestionId: string; number: string }[]>([]);
+
+  // Real replenishment flow: suggestions come from the server engine
+  // (GET /api/replenishment) and each accept materializes a real draft
+  // transfer or pending-approval PO (POST /api/replenishment).
+  async function loadSuggestions() {
+    setSugLoading(true);
+    setSugErr(null);
+    try {
+      const r = await fetch("/api/replenishment");
+      const d = await r.json();
+      if (r.ok) {
+        setSuggestions(d.suggestions ?? []);
+      } else {
+        setSugErr(d.message ?? "Không tải được đề xuất nhập hàng");
+      }
+    } catch {
+      setSugErr("Lỗi kết nối máy chủ");
+    } finally {
+      setSugLoading(false);
+    }
+  }
+
+  async function regenerateSuggestions() {
+    setSugLoading(true);
+    setSugErr(null);
+    try {
+      const r = await fetch("/api/replenishment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
+        body: JSON.stringify({ action: "generate" }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setSugErr(d.message ?? "Không tính được đề xuất mới");
+        return;
+      }
+      await loadSuggestions();
+    } catch {
+      setSugErr("Lỗi kết nối máy chủ");
+    } finally {
+      setSugLoading(false);
+    }
+  }
+
+  async function acceptSuggestion(id: string) {
+    setAcceptingId(id);
+    setSugErr(null);
+    try {
+      const r = await fetch("/api/replenishment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
+        body: JSON.stringify({ suggestionId: id, status: "ACCEPTED" }),
+      });
+      const d = await r.json();
+      if (r.ok) {
+        const number = d.created?.number ? String(d.created.number) : "đã ghi nhận";
+        setCreatedDocs((prev) => [...prev, { suggestionId: id, number }]);
+        setSuggestions((prev) => prev.filter((s) => s.id !== id));
+        loadData(page);
+      } else {
+        setSugErr(d.message ?? "Duyệt đề xuất thất bại");
+      }
+    } catch {
+      setSugErr("Lỗi kết nối máy chủ");
+    } finally {
+      setAcceptingId(null);
+    }
+  }
+
+  function openAutoPO() {
+    setAutoPOModalOpen(true);
+    setCreatedDocs([]);
+    void loadSuggestions();
+  }
 
   async function loadData(p = 1) {
     setLoading(true);
@@ -102,18 +189,13 @@ export default function InventoryPage() {
     (b.sku + b.product + b.location).toLowerCase().includes(q.toLowerCase())
   );
 
-  const lowStockItems = balances.filter((b) => b.available <= 15);
+  const lowStockCount = balances.filter((b) => b.available <= 15).length;
   const totalOnHand = balances.reduce((s, b) => s + b.onHand, 0);
   const totalAvailable = balances.reduce((s, b) => s + b.available, 0);
 
-  function createAutoPO() {
-    setPoCode(`PO-AUTO-${Date.now().toString().slice(-6)}`);
-    setPoCreated(true);
-    setTimeout(() => {
-      setAutoPOModalOpen(false);
-      setPoCreated(false);
-    }, 2500);
-  }
+  // NOTE: previously this modal generated a fake client-side PO code
+  // (PO-AUTO-*) without calling any API. It now lists real server
+  // replenishment suggestions and materializes real POs/transfers.
 
   return (
     <main className="min-h-screen bg-slate-50/60 pb-16">
@@ -146,11 +228,11 @@ export default function InventoryPage() {
               Phiếu hủy hàng
             </button>
             <button
-              onClick={() => setAutoPOModalOpen(true)}
+              onClick={openAutoPO}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-[#1c1917] font-bold text-xs rounded-xl shadow-xs transition-colors"
             >
               <Zap className="w-4 h-4 fill-slate-950" />
-              Đề Xuất Nhập Hàng Tự Động ({lowStockItems.length})
+              Đề Xuất Nhập Hàng Tự Động ({lowStockCount})
             </button>
 
             <button
@@ -176,14 +258,14 @@ export default function InventoryPage() {
         )}
 
         {/* Low stock alert banner */}
-        {lowStockItems.length > 0 && (
+        {lowStockCount > 0 && (
           <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-900 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Phát hiện <b>{lowStockItems.length} mặt hàng</b> sắp hết tại kệ (Tồn khả dụng &le; 15 cuốn). Khuyến nghị bổ sung ngay.</span>
+              <span>Phát hiện <b>{lowStockCount} mặt hàng</b> sắp hết tại kệ (Tồn khả dụng &le; 15 cuốn). Khuyến nghị bổ sung ngay.</span>
             </div>
             <button
-              onClick={() => setAutoPOModalOpen(true)}
+              onClick={openAutoPO}
               className="px-3 py-1 bg-amber-600 text-white rounded-lg text-[11px] font-bold hover:bg-amber-700 shrink-0"
             >
               Tạo PO Ngay
@@ -203,7 +285,7 @@ export default function InventoryPage() {
           </div>
           <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
             <span className="text-[11px] font-semibold text-amber-600">Cảnh báo sắp hết</span>
-            <div className="text-2xl font-bold text-amber-700 font-mono mt-1">{lowStockItems.length} SKUs</div>
+            <div className="text-2xl font-bold text-amber-700 font-mono mt-1">{lowStockCount} SKUs</div>
           </div>
           <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
             <span className="text-[11px] font-semibold text-[#d97706]">Đang luân chuyển</span>
@@ -334,48 +416,75 @@ export default function InventoryPage() {
                   <Zap className="w-5 h-5 fill-amber-700" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-slate-900">Đề Xuất Nhập Hàng Tự Động (AI PO)</h3>
-                  <p className="text-xs text-slate-500">Tự động tổng hợp các sản phẩm dưới định mức an toàn</p>
+                  <h3 className="font-bold text-lg text-slate-900">Đề Xuất Nhập Hàng Tự Động</h3>
+                  <p className="text-xs text-slate-500">Duyệt từng đề xuất để tạo PO / điều chuyển hàng thật</p>
                 </div>
               </div>
             </div>
 
-            {poCreated ? (
-              <div className="p-6 text-center space-y-2 bg-emerald-50 rounded-2xl border border-emerald-200">
-                <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
-                <h4 className="font-bold text-base text-emerald-900">Đã Tạo Đơn Mua Hàng Thành Công!</h4>
-                <p className="text-xs text-emerald-700">Mã PO: <b>{poCode}</b> đã gửi tới nhà cung cấp.</p>
+            {sugErr && (
+              <div className="p-3 text-xs text-red-700 bg-red-50 rounded-xl border border-red-200">
+                {sugErr}
+              </div>
+            )}
+
+            {createdDocs.length > 0 && (
+              <div className="p-4 space-y-1.5 bg-emerald-50 rounded-2xl border border-emerald-200">
+                <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  Đã tạo {createdDocs.length} chứng từ thật
+                </div>
+                {createdDocs.map((c) => (
+                  <p key={c.suggestionId} className="text-xs text-emerald-700">
+                    Mã chứng từ: <b className="font-mono">{c.number}</b>
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {sugLoading ? (
+              <div className="p-6 text-center text-xs text-slate-500">Đang tải đề xuất từ hệ thống…</div>
+            ) : suggestions.length === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-500">
+                Không có đề xuất nào đang mở. Nhấn “Tính lại đề xuất” để chạy engine bổ sung hàng.
               </div>
             ) : (
-              <>
-                <div className="max-h-60 overflow-y-auto space-y-2 text-xs">
-                  {lowStockItems.map((item, i) => (
-                    <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                      <div>
-                        <b className="block text-slate-900">{item.product}</b>
-                        <span className="text-slate-500">Tồn hiện tại: {item.available} | Đề xuất nhập: +50</span>
-                      </div>
-                      <span className="font-mono font-bold text-amber-700">+50 cuốn</span>
+              <div className="max-h-60 overflow-y-auto space-y-2 text-xs">
+                {suggestions.map((s) => (
+                  <div key={s.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <b className="block text-slate-900 truncate">{s.variant.product.name}</b>
+                      <span className="text-slate-500">
+                        {s.variant.sku} · {s.location.name} · Khả dụng: {s.availableQty} · An toàn: {s.safetyStock}
+                      </span>
                     </div>
-                  ))}
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={() => setAutoPOModalOpen(false)}
-                    className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
-                  >
-                    Hủy Bỏ
-                  </button>
-                  <button
-                    onClick={createAutoPO}
-                    className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-[#1c1917] font-bold text-xs shadow-md"
-                  >
-                    Xác Nhận Tạo Đơn Nhập
-                  </button>
-                </div>
-              </>
+                    <button
+                      onClick={() => acceptSuggestion(s.id)}
+                      disabled={acceptingId === s.id}
+                      className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-[#1c1917] font-bold text-[11px]"
+                    >
+                      {acceptingId === s.id ? "Đang tạo…" : `Duyệt +${s.recommendedQty}`}
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setAutoPOModalOpen(false)}
+                className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={regenerateSuggestions}
+                disabled={sugLoading}
+                className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-[#1c1917] font-bold text-xs shadow-md"
+              >
+                {sugLoading ? "Đang tính…" : "Tính lại đề xuất"}
+              </button>
+            </div>
           </div>
         </div>
       )}
