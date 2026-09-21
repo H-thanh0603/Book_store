@@ -47,7 +47,7 @@ export default function OrdersPage() {
         <div key={o.id} className="rounded-2xl border border-[#ede5d8] bg-white p-4 space-y-2">
           <div className="flex items-center justify-between">
             <div className="font-serif font-bold text-sm">{o.number}</div>
-            <span className="text-[10px] uppercase tracking-wider bg-[#faf7f2] text-slate-700 rounded-full px-2 py-0.5">{o.status}</span>
+            <span className="text-[11px] uppercase tracking-wider bg-[#faf7f2] text-slate-700 rounded-full px-2 py-0.5">{o.status}</span>
           </div>
           <ul className="text-xs text-slate-600 space-y-1">
             {o.items.map((it) => (

@@ -9,7 +9,7 @@ export function BlogSection({ articles }: { articles: BlogArticle[] }) {
     <section className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
         <div>
-          <span className="text-[10px] uppercase tracking-widest text-[#8c2d19] font-black">
+          <span className="text-[11px] uppercase tracking-widest text-[#8c2d19] font-black">
             TẠP CHÍ VĂN HÓA ĐỌC
           </span>
           <h2 className="font-serif font-black text-2xl sm:text-3xl text-slate-900 mt-0.5">
@@ -66,7 +66,7 @@ export function VoucherHub({ vouchers, onApply }: { vouchers: Voucher[]; onApply
 
       <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/15 pb-4">
         <div>
-          <span className="text-[10px] uppercase tracking-widest text-[#6b2113] bg-[#ffd56a] px-3 py-1 rounded-full font-black inline-flex items-center gap-1">
+          <span className="text-[11px] uppercase tracking-widest text-[#6b2113] bg-[#ffd56a] px-3 py-1 rounded-full font-black inline-flex items-center gap-1">
             <Sparkles className="w-3 h-3" /> KHO VOUCHER ĐỘC QUYỀN
           </span>
           <h2 className="font-serif font-black text-2xl sm:text-3xl mt-1.5 tracking-tight text-white">
@@ -146,7 +146,7 @@ export function NewsletterBox() {
   return (
     <section className="rounded-3xl bg-gradient-to-br from-[#faf4ea] via-[#fbf8f3] to-[#f3e5d0] p-8 sm:p-12 border border-[#e8dac5] shadow-xs text-center space-y-4">
       <div className="max-w-xl mx-auto space-y-3">
-        <span className="text-[10px] uppercase tracking-widest text-[#8c2d19] bg-white px-3.5 py-1 rounded-full font-black border border-[#e8dac5] shadow-2xs inline-flex items-center gap-1">
+        <span className="text-[11px] uppercase tracking-widest text-[#8c2d19] bg-white px-3.5 py-1 rounded-full font-black border border-[#e8dac5] shadow-2xs inline-flex items-center gap-1">
           <Mail className="w-3 h-3 text-[#8c2d19]" /> BẢN TIN VĂN HÓA ĐỌC
         </span>
         <h2 className="font-serif font-black text-2xl sm:text-4xl text-slate-900">

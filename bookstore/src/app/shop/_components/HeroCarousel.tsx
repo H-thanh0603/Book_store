@@ -101,7 +101,7 @@ export default function HeroCarousel({
             <div className="lg:col-span-5 hidden lg:flex justify-center relative">
               <div className="relative w-64 aspect-[3/4] rounded-2xl bg-gradient-to-tr from-white/20 via-white/10 to-transparent p-5 border-2 border-white/30 backdrop-blur-md shadow-2xl animate-float flex flex-col justify-between group">
                 <div className="bookmark-ribbon-gold" />
-                <div className="flex items-center justify-between text-[10px] font-mono font-black text-yellow-200 uppercase tracking-widest border-b border-white/20 pb-2">
+                <div className="flex items-center justify-between text-[11px] font-mono font-black text-yellow-200 uppercase tracking-widest border-b border-white/20 pb-2">
                   <span>MELIO FLAGSHIP</span>
                   <span>BẢN ĐẶC BIỆT</span>
                 </div>
@@ -126,7 +126,7 @@ export default function HeroCarousel({
                   </div>
                   <div>
                     <div className="leading-none text-[11px]">Freeship 250K</div>
-                    <small className="text-[10px] text-slate-400 font-normal">Giao hỏa tốc 2H</small>
+                    <small className="text-[11px] text-slate-400 font-normal">Giao hỏa tốc 2H</small>
                   </div>
                 </div>
 
@@ -197,7 +197,7 @@ export default function HeroCarousel({
           className="group relative overflow-hidden rounded-3xl p-5 bg-[#2e2620] text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">
+            <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">
               GIẢM ĐẾN 50%
             </span>
             <div className="size-9 rounded-2xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -222,7 +222,7 @@ export default function HeroCarousel({
           className="group relative overflow-hidden rounded-3xl p-5 bg-[#33302c] text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-black/20 backdrop-blur-xs">
+            <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-black/20 backdrop-blur-xs">
               TOP 100 TUẦN NÀY
             </span>
             <div className="size-9 rounded-2xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -247,7 +247,7 @@ export default function HeroCarousel({
           className="group relative overflow-hidden rounded-3xl p-5 bg-[#3a2f26] text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">
+            <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">
               LEGO &amp; SANRIO 100%
             </span>
             <div className="size-9 rounded-2xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -272,7 +272,7 @@ export default function HeroCarousel({
           className="group relative overflow-hidden rounded-3xl p-5 bg-[#243028] text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">
+            <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">
               ƯU ĐÃI TỰU TRƯỜNG
             </span>
             <div className="size-9 rounded-2xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">

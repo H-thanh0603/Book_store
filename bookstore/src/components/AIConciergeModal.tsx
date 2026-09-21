@@ -164,7 +164,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
                 </div>
                 <div>
                   <b className="block text-sm font-serif">Thủ Thư AI · Melio Concierge</b>
-                  <span className="text-[10px] text-amber-300 font-serif">Tư vấn sách &amp; Quà tặng cá nhân hóa 24/7</span>
+                  <span className="text-[11px] text-amber-300 font-serif">Tư vấn sách &amp; Quà tặng cá nhân hóa 24/7</span>
                 </div>
               </div>
               <button
@@ -230,7 +230,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
                             key={r}
                             onClick={() => sendFeedback(r, m.text)}
                             aria-label={r === "up" ? "Câu trả lời hữu ích" : "Câu trả lời chưa tốt"}
-                            className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold transition-colors ${
+                            className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold transition-colors ${
                               feedbackSent === r
                                 ? "bg-[#ede5d8] text-[#8c2d19]"
                                 : "text-slate-400 hover:text-[#8c2d19] hover:bg-[#faf4ea]"
@@ -290,7 +290,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
                               <tr key={c.variantId} className="border-t border-[#ede5d8] bg-white">
                                 <td className="px-2.5 py-1.5">
                                   <div className="font-bold text-slate-900">{c.productName}{c.variantName ? ` — ${c.variantName}` : ""}</div>
-                                  {c.sku ? <div className="text-[10px] text-slate-400">{c.sku}</div> : null}
+                                  {c.sku ? <div className="text-[11px] text-slate-400">{c.sku}</div> : null}
                                 </td>
                                 <td className="px-2.5 py-1.5 text-right font-bold text-[#8c2d19] whitespace-nowrap">
                                   {c.price != null ? `${c.price.toLocaleString("vi-VN")} ₫` : "—"}
@@ -304,7 +304,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
                                       onClick={() => {
                                         onAddToCart({ id: c.variantId, productId: c.variantId, name: c.productName ?? "", price: c.price ?? 0, category: "", reason: "So sánh trong chat" });
                                       }}
-                                      className="px-2 py-1 bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-[10px] rounded-lg whitespace-nowrap"
+                                      className="px-2 py-1 bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-[11px] rounded-lg whitespace-nowrap"
                                     >
                                       + Thêm
                                     </button>
@@ -327,7 +327,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
                 <button
                   key={i}
                   onClick={() => handleSend(p)}
-                  className="px-2.5 py-1 rounded-full bg-[#faf7f2] hover:bg-[#ede5d8] text-[10px] font-serif text-slate-700 whitespace-nowrap border border-[#ede5d8]"
+                  className="px-2.5 py-1 rounded-full bg-[#faf7f2] hover:bg-[#ede5d8] text-[11px] font-serif text-slate-700 whitespace-nowrap border border-[#ede5d8]"
                 >
                   {p}
                 </button>

@@ -67,7 +67,7 @@ export default function QuickViewModal({
           <div className="sm:col-span-5">
             <div className="aspect-[4/5] rounded-2xl bg-gradient-to-tr from-[#1c1917] via-[#2d2521] to-[#171412] p-6 text-white flex flex-col justify-between shadow-xl border border-white/15 relative">
               <div className="bookmark-ribbon" />
-              <span className="text-[10px] font-serif uppercase tracking-widest text-amber-300 font-bold">
+              <span className="text-[11px] font-serif uppercase tracking-widest text-amber-300 font-bold">
                 {product.category.name}
               </span>
               <h3 className="font-serif font-black text-xl sm:text-2xl text-amber-100 leading-snug my-auto">
@@ -82,7 +82,7 @@ export default function QuickViewModal({
           {/* Details & Specs (7 cols) */}
           <div className="sm:col-span-7 space-y-4 font-serif">
             <div>
-              <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase tracking-widest bg-[#faf4ea] text-[#8c2d19] border border-[#e8dac5] font-bold">
+              <span className="inline-block px-3 py-1 rounded-full text-[11px] uppercase tracking-widest bg-[#faf4ea] text-[#8c2d19] border border-[#e8dac5] font-bold">
                 {product.category.name}
               </span>
               <h3 id="quickview-title" className="font-black text-2xl text-slate-900 leading-tight mt-2">
@@ -168,7 +168,7 @@ export default function QuickViewModal({
               {recos.map((r) => (
                 <li key={r.id} className="text-xs text-slate-600 flex items-center justify-between gap-2 rounded-xl bg-white border border-[#ede5d8] px-3 py-2">
                   <span className="truncate">{r.name}</span>
-                  <span className="shrink-0 text-[10px] text-slate-400">
+                  <span className="shrink-0 text-[11px] text-slate-400">
                     {r.reason === "frequently_bought_together" ? "mua cùng" : r.reason === "similar_content" ? "tương tự" : "cùng thể loại"}
                   </span>
                 </li>

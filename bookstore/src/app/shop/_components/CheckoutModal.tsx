@@ -134,7 +134,7 @@ export default function CheckoutModal({
       >
         <div className="flex items-start justify-between">
           <div>
-            <span className="text-[10px] uppercase tracking-widest text-[#8c2d19] bg-[#faf4ea] px-2.5 py-0.5 rounded font-bold border border-[#e8dac5]">
+            <span className="text-[11px] uppercase tracking-widest text-[#8c2d19] bg-[#faf4ea] px-2.5 py-0.5 rounded font-bold border border-[#e8dac5]">
               {paymentMethod === "COD" ? "Thanh Toán Khi Nhận Hàng (COD)"
                 : `Thanh Toán Qua ${GATEWAY_META[paymentMethod]?.label ?? paymentMethod}`}
             </span>

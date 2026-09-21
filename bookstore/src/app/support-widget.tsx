@@ -79,7 +79,7 @@ export default function SupportWidget() {
       >
         {open ? <X className="w-5 h-5" aria-hidden="true" /> : <MessageCircle className="w-5 h-5" aria-hidden="true" />}
         {!open && openCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{openCount}</span>
+          <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{openCount}</span>
         )}
       </button>
 
@@ -144,5 +144,5 @@ function StatusPill({ status }: { status: "OPEN" | "ESCALATED" | "CLOSED" }) {
   const cls = status === "ESCALATED" ? "bg-amber-100 text-amber-700"
     : status === "CLOSED" ? "bg-slate-200 text-slate-600"
     : "bg-emerald-100 text-emerald-700";
-  return <span className={"ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold " + cls}>{status}</span>;
+  return <span className={"ml-2 inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold " + cls}>{status}</span>;
 }

@@ -21,7 +21,7 @@ export default function ReadingLounge({
     <section className="rounded-3xl bg-white p-6 sm:p-10 border border-slate-200/80 shadow-xs space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
         <div>
-          <span className="text-[10px] uppercase tracking-widest text-[#8c2d19] font-black">
+          <span className="text-[11px] uppercase tracking-widest text-[#8c2d19] font-black">
             KHÔNG GIAN ĐỌC CẢM XÚC
           </span>
           <h2 className="font-serif font-black text-2xl sm:text-3xl text-slate-900 mt-0.5">

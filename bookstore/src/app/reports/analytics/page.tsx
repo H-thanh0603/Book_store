@@ -98,12 +98,12 @@ export default function AnalyticsPage() {
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Từ ngày</label>
+              <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Từ ngày</label>
               <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
                 className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs" />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Đến ngày</label>
+              <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Đến ngày</label>
               <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
                 className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs" />
             </div>

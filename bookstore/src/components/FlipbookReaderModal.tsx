@@ -63,7 +63,7 @@ export default function FlipbookReaderModal({
         {/* Top Controls */}
         <div className="flex items-center justify-between border-b border-inherit pb-4">
           <div>
-            <span className="text-[10px] uppercase tracking-widest font-bold opacity-75">
+            <span className="text-[11px] uppercase tracking-widest font-bold opacity-75">
               ĐỌC THỬ TRÍCH ĐOẠN 3D
             </span>
             <h3 className="font-black text-xl leading-tight mt-0.5">{productName}</h3>
@@ -113,7 +113,7 @@ export default function FlipbookReaderModal({
 
         {/* Page Content with Drop Cap */}
         <div className={`space-y-4 text-justify ${fontClasses[fontSize]}`}>
-          <div className="text-center font-mono text-[10px] tracking-widest uppercase opacity-60 border-b border-inherit pb-2">
+          <div className="text-center font-mono text-[11px] tracking-widest uppercase opacity-60 border-b border-inherit pb-2">
             {pages[currentPage - 1].chapter} · TRANG 0{currentPage} / 0{pages.length}
           </div>
           <p className="drop-cap pt-2">{pages[currentPage - 1].content}</p>

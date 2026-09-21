@@ -220,7 +220,7 @@ export default function ActionsPage() {
                     <p className="text-xs text-slate-700 bg-[#faf6ef] border border-[#e8dac5] rounded-xl px-3 py-2.5">
                       <b>Nhận định:</b> {why.hypothesis}
                     </p>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-[11px] text-slate-400">
                       Số liệu từ dữ liệu thật. <Link href="/approvals" className="underline">Mở trang duyệt</Link> để hành động.
                     </p>
                   </>

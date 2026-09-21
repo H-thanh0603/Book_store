@@ -49,7 +49,7 @@ export default function AnnouncementBar({
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
         {/* Rotating Ticker */}
         <div className="flex items-center gap-2 text-center sm:text-left transition-all duration-300">
-          <span className={`px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black tracking-wider ${current.badgeColor}`}>
+          <span className={`px-2.5 py-0.5 rounded-full text-[11px] uppercase font-black tracking-wider ${current.badgeColor}`}>
             {current.tag}
           </span>
           <span className="font-medium text-[11px] sm:text-xs flex items-center gap-1.5">

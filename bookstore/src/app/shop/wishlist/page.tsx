@@ -101,7 +101,7 @@ export default function WishlistPage() {
           ))}
         </ul>
       )}
-      <p className="text-[10px] text-slate-400">
+      <p className="text-[11px] text-slate-400">
         <Link href="/shop/account" className="underline">Đăng nhập</Link> để đồng bộ danh sách lên tài khoản.
       </p>
     </div>

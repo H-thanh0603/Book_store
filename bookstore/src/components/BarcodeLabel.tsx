@@ -51,7 +51,7 @@ export default function BarcodeLabel({
     <div className="inline-flex flex-col items-center bg-white border border-slate-200 rounded-lg p-2">
       <svg ref={svgRef} />
       {name && (
-        <p className="text-[10px] text-slate-600 mt-1 text-center max-w-[160px] truncate">{name}</p>
+        <p className="text-[11px] text-slate-600 mt-1 text-center max-w-[160px] truncate">{name}</p>
       )}
       {price != null && price > 0 && (
         <p className="text-xs font-bold text-indigo-700">{price.toLocaleString("vi-VN")} ₫</p>

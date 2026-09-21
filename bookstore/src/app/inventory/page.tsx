@@ -198,15 +198,15 @@ export default function InventoryPage() {
   // replenishment suggestions and materializes real POs/transfers.
 
   return (
-    <main className="min-h-screen bg-slate-50/60 pb-16">
+    <main className="min-h-screen bg-[#faf7f2] pb-16">
       <Nav />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
         {/* Header bar */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              <h1 className="text-2xl font-bold text-[#1c1917] tracking-tight">
                 Quản Lý Tồn Kho Toàn Hệ Thống
               </h1>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
@@ -231,14 +231,14 @@ export default function InventoryPage() {
               onClick={openAutoPO}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-[#1c1917] font-bold text-xs rounded-xl shadow-xs transition-colors"
             >
-              <Zap className="w-4 h-4 fill-slate-950" />
+              <Zap className="w-4 h-4 fill-[#1c1917]" />
               Đề Xuất Nhập Hàng Tự Động ({lowStockCount})
             </button>
 
             <button
               onClick={() => loadData(page)}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-[#faf4ea] hover:bg-[#ede5d8] text-[#574431] transition-colors"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
               Làm mới
@@ -275,41 +275,41 @@ export default function InventoryPage() {
 
         {/* 5 Stock Status Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-xs">
             <span className="text-[11px] font-semibold text-slate-500">Tồn thực tế (On Hand)</span>
-            <div className="text-2xl font-bold text-slate-900 font-mono mt-1">{totalOnHand.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-[#1c1917] font-mono mt-1">{totalOnHand.toLocaleString()}</div>
           </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-xs">
             <span className="text-[11px] font-semibold text-emerald-600">Khả dụng bán (Available)</span>
             <div className="text-2xl font-bold text-emerald-700 font-mono mt-1">{totalAvailable.toLocaleString()}</div>
           </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-xs">
             <span className="text-[11px] font-semibold text-amber-600">Cảnh báo sắp hết</span>
             <div className="text-2xl font-bold text-amber-700 font-mono mt-1">{lowStockCount} SKUs</div>
           </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-xs">
             <span className="text-[11px] font-semibold text-[#d97706]">Đang luân chuyển</span>
             <div className="text-2xl font-bold text-[#b45309] font-mono mt-1">Hoạt động</div>
           </div>
         </div>
 
         {/* Balances table */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="bg-white rounded-2xl border border-[#ede5d8] shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-[#ede5d8] flex items-center justify-between">
             <div className="relative w-72">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Lọc theo SKU, tên sách, vị trí..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-900 focus:outline-none"
+                className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl pl-9 pr-3 py-1.5 text-xs text-[#1c1917] focus:outline-none"
               />
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 uppercase font-semibold text-[11px]">
+              <thead className="bg-[#faf7f2] text-slate-500 border-b border-[#ede5d8] uppercase font-semibold text-[11px]">
                 <tr>
                   <th className="p-4">Sản Phẩm &amp; SKU</th>
                   <th className="p-4">Vị Trí Kho / Kệ</th>
@@ -318,15 +318,15 @@ export default function InventoryPage() {
                   <th className="p-4 text-center">Trạng Thái</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-mono">
+              <tbody className="divide-y divide-[#ede5d8] font-mono">
                 {filtered.map((b, i) => (
-                  <tr key={i} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="p-4 font-sans font-bold text-slate-900">
+                  <tr key={i} className="hover:bg-[#faf7f2] transition-colors">
+                    <td className="p-4 font-sans font-bold text-[#1c1917]">
                       <div>{b.product}</div>
                       <div className="text-[11px] font-mono text-slate-400">{b.sku}</div>
                     </td>
                     <td className="p-4 font-sans">
-                      <div className="flex items-center gap-1.5 text-slate-700">
+                      <div className="flex items-center gap-1.5 text-[#574431]">
                         <MapPin className="w-3.5 h-3.5 text-slate-400" />
                         {b.location}
                       </div>
@@ -335,11 +335,11 @@ export default function InventoryPage() {
                     <td className="p-4 text-center font-bold text-emerald-600">{b.available}</td>
                     <td className="p-4 text-center font-sans">
                       {b.available <= 15 ? (
-                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800">
                           Sắp hết
                         </span>
                       ) : (
-                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
                           Đủ hàng
                         </span>
                       )}
@@ -349,7 +349,7 @@ export default function InventoryPage() {
               </tbody>
             </table>
           </div>
-          <div className="border-t border-slate-100">
+          <div className="border-t border-[#ede5d8]">
             <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={(p) => loadData(p)} />
           </div>
         </div>
@@ -360,8 +360,8 @@ export default function InventoryPage() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg text-slate-900">Phiếu hủy hàng hỏng</h3>
-              <button onClick={() => setDmgOpen(false)} className="p-2 rounded-full hover:bg-slate-100" aria-label="Đóng">
+              <h3 className="font-bold text-lg text-[#1c1917]">Phiếu hủy hàng hỏng</h3>
+              <button onClick={() => setDmgOpen(false)} className="p-2 rounded-full hover:bg-[#faf4ea]" aria-label="Đóng">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -370,12 +370,12 @@ export default function InventoryPage() {
               value={dmgSku}
               onChange={(e) => setDmgSku(e.target.value)}
               placeholder="SKU (VD: BK-DEmen-01)"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono"
+              className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-2 text-xs font-mono"
             />
             <select
               value={dmgLoc}
               onChange={(e) => setDmgLoc(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+              className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-2 text-xs"
             >
               <option value="">— Chọn vị trí —</option>
               {[...new Set(balances.filter((b) => !dmgSku.trim() || b.sku === dmgSku.trim()).map((b) => b.location))].map((loc) => (
@@ -387,14 +387,14 @@ export default function InventoryPage() {
               value={dmgQty}
               onChange={(e) => setDmgQty(Number(e.target.value))}
               placeholder="Số lượng"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+              className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-2 text-xs"
             />
             <textarea
               value={dmgReason}
               onChange={(e) => setDmgReason(e.target.value)}
               placeholder="Lý do hủy (VD: ướt mưa, rách bìa, hết hạn...)"
               rows={2}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+              className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-2 text-xs"
             />
             <button
               onClick={submitDamage}
@@ -416,7 +416,7 @@ export default function InventoryPage() {
                   <Zap className="w-5 h-5 fill-amber-700" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-slate-900">Đề Xuất Nhập Hàng Tự Động</h3>
+                  <h3 className="font-bold text-lg text-[#1c1917]">Đề Xuất Nhập Hàng Tự Động</h3>
                   <p className="text-xs text-slate-500">Duyệt từng đề xuất để tạo PO / điều chuyển hàng thật</p>
                 </div>
               </div>
@@ -451,9 +451,9 @@ export default function InventoryPage() {
             ) : (
               <div className="max-h-60 overflow-y-auto space-y-2 text-xs">
                 {suggestions.map((s) => (
-                  <div key={s.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+                  <div key={s.id} className="p-3 rounded-xl bg-[#faf7f2] border border-[#ede5d8] flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <b className="block text-slate-900 truncate">{s.variant.product.name}</b>
+                      <b className="block text-[#1c1917] truncate">{s.variant.product.name}</b>
                       <span className="text-slate-500">
                         {s.variant.sku} · {s.location.name} · Khả dụng: {s.availableQty} · An toàn: {s.safetyStock}
                       </span>
@@ -473,7 +473,7 @@ export default function InventoryPage() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setAutoPOModalOpen(false)}
-                className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+                className="flex-1 py-3 rounded-xl bg-[#faf4ea] hover:bg-[#ede5d8] text-[#574431] font-bold text-xs"
               >
                 Đóng
               </button>
