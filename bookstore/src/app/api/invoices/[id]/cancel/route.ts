@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { withOrg } from "@/lib/org-scope";
 import { apiError, ok, fail } from "@/lib/api";
@@ -62,6 +62,6 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
         });
         fail(502, "VALIDATION", "Provider cancel failed", { provider: locked.provider, message: msg });
       }
-    });
+    }, TX_OPTIONS);
   } catch (e) { return apiError(e); }
 }

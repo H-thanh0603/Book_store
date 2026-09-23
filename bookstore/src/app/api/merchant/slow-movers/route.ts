@@ -5,12 +5,12 @@
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { getSlowMovers } from "@/lib/merchant-agent";
-import { defaultOrgId } from "@/lib/org-scope";
+import { requireOrgId } from "@/lib/org-scope";
 
 export async function GET() {
   try {
     const auth = await requirePermission("promotion.manage");
-    const orgId = auth.orgId ?? (await defaultOrgId());
+    const orgId = requireOrgId(auth);
     return ok({ candidates: await getSlowMovers({ orgId }, 15) });
   } catch (err) {
     return apiError(err);

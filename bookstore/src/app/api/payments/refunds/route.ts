@@ -6,7 +6,7 @@
 //                                       the actual refund via bank/portal)
 //
 // Org boundary: order payments scope via Order → Store → Region → orgId
-// (withOrgViaStore). Legacy superuser (no orgId) sees the whole queue.
+// (withOrgViaStore, Q35 fail-closed: org-less gets 403).
 
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
@@ -82,9 +82,10 @@ export async function PATCH(req: NextRequest) {
     });
     if (!wp) fail(404, "NOT_FOUND", "Payment not found");
     if (wp.status !== "REFUND_REQUIRED") fail(400, "VALIDATION", "Payment is not in REFUND_REQUIRED state");
-    // Org boundary: the order's org must match the caller (legacy superuser bypasses).
+    // Org boundary Q35 fail-closed: org-less caller never matches.
     const ownerOrg = wp.order?.store?.region?.orgId;
-    if (auth.orgId && ownerOrg && ownerOrg !== auth.orgId)
+    if (!auth.orgId) fail(403, "FORBIDDEN", "Payment belongs to another organization");
+    if (ownerOrg && ownerOrg !== auth.orgId)
       fail(403, "FORBIDDEN", "Payment belongs to another organization");
 
     const claimed = await prisma.webPayment.updateMany({

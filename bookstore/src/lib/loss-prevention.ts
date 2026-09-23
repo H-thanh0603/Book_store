@@ -72,14 +72,39 @@ export async function scanLossPrevention() {
     LIMIT 200
   `);
 
+  const stockLossThreshold = -Number(maxStockLoss);
   const [returns, shifts, losses, cancelledPaid] = await Promise.all([
-    prisma.return.findMany({ where: { refundTotal: { gte: maxRefund }, createdAt: { gte: since } } }),
-    prisma.posShift.findMany({ where: { status: "CLOSED", closedAt: { gte: since }, variance: { not: null } } }),
-    prisma.inventoryMovement.findMany({
-      where: { type: { in: ["LOST", "STOCK_ADJUSTMENT"] }, quantity: { lt: 0 }, createdAt: { gte: since } },
-      include: { variant: { select: { sku: true } }, location: { select: { name: true } } },
+    // P2-1: all four scans were unbounded with JS-side thresholds — push
+    // predicates + LIMIT into the queries so a large ledger can't OOM the
+    // worker. Thresholds are per-org BigInts, safe to interpolate as params.
+    prisma.return.findMany({
+      where: { refundTotal: { gte: maxRefund }, createdAt: { gte: since } },
+      orderBy: { refundTotal: "desc" },
+      take: 200,
     }),
-    prisma.posTransaction.findMany({ where: { status: "CANCELLED", createdAt: { gte: since }, payments: { some: {} } }, include: { payments: true } }),
+    prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "PosShift"
+      WHERE status = 'CLOSED' AND "closedAt" >= ${since}
+        AND variance IS NOT NULL AND ABS(variance) >= ${maxCashVariance}
+      ORDER BY "closedAt" DESC LIMIT 200`,
+    prisma.inventoryMovement.findMany({
+      where: {
+        type: { in: ["LOST", "STOCK_ADJUSTMENT"] },
+        // quantity is negative here: abs loss >= threshold ⇔ quantity <= -threshold
+        quantity: { lte: stockLossThreshold },
+        createdAt: { gte: since },
+      },
+      include: { variant: { select: { sku: true } }, location: { select: { name: true } } },
+      orderBy: { quantity: "asc" },
+      take: 200,
+    }),
+    prisma.$queryRaw<{ id: string; number: string; paid: bigint }[]>`
+      SELECT t.id, t.number, COALESCE(SUM(p.amount), 0)::bigint AS paid
+      FROM "PosTransaction" t
+      JOIN "Payment" p ON p."txId" = t.id
+      WHERE t.status = 'CANCELLED' AND t."createdAt" >= ${since}
+      GROUP BY t.id, t.number
+      ORDER BY paid DESC LIMIT 200`,
   ]);
 
   const alerts: Promise<unknown>[] = [];
@@ -91,16 +116,19 @@ export async function scanLossPrevention() {
     rule: "EXCESSIVE_DISCOUNT", severity: "HIGH", entityType: "PosTransaction", entityId: row.id,
     message: `Transaction ${row.number} has ${row.percent}% discount`, evidence: { percent: row.percent, threshold: Number(maxDiscountPercent) },
   }));
-  const cashVarianceNum = Number(maxCashVariance);
-  const stockLossNum = Number(maxStockLoss);
-  for (const shift of shifts) {
+  // shifts arrive pre-filtered from SQL carrying ids only — re-read the rows
+  // for variance evidence (bounded ≤200, same cap as the scan).
+  const shiftRows = shifts.length > 0
+    ? await prisma.posShift.findMany({ where: { id: { in: shifts.map((s) => s.id) } } })
+    : [];
+  for (const shift of shiftRows) {
     const variance = Number(shift.variance ?? 0n);
-    if (Math.abs(variance) >= cashVarianceNum) alerts.push(recordAlert({
+    alerts.push(recordAlert({
       rule: "CASH_VARIANCE", severity: "HIGH", entityType: "PosShift", entityId: shift.id,
       message: "Closed shift has unusual cash variance", evidence: { variance, threshold: Number(maxCashVariance) },
     }));
   }
-  for (const loss of losses) if (Math.abs(loss.quantity) >= stockLossNum) alerts.push(recordAlert({
+  for (const loss of losses) alerts.push(recordAlert({
     rule: "STOCK_SHRINKAGE", severity: "MEDIUM", entityType: "InventoryMovement", entityId: loss.id,
     message: `${loss.variant.sku} lost ${Math.abs(loss.quantity)} units at ${loss.location.name}`,
     evidence: { quantity: loss.quantity, threshold: Number(maxStockLoss) },
@@ -108,7 +136,7 @@ export async function scanLossPrevention() {
   for (const transaction of cancelledPaid) alerts.push(recordAlert({
     rule: "CANCELLED_AFTER_PAYMENT", severity: "HIGH", entityType: "PosTransaction", entityId: transaction.id,
     message: `Paid transaction ${transaction.number} was cancelled`,
-    evidence: { paid: Number(transaction.payments.reduce((sum, payment) => sum + payment.amount, 0n)) },
+    evidence: { paid: Number(transaction.paid) },
   }));
 
   await Promise.all(alerts);

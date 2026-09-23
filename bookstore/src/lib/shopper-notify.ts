@@ -105,6 +105,113 @@ export async function scanAbandonedCarts() {
 }
 
 export async function runShopperNotify() {
-  const [stock, carts] = await Promise.all([scanBackInStock(), scanAbandonedCarts()]);
-  return { backInStock: stock, abandonedCarts: carts };
+  const [stock, carts, wishlist, birthday] = await Promise.all([
+    scanBackInStock(), scanAbandonedCarts(), scanWishlistPriceDrops(), scanBirthdayReminders(),
+  ]);
+  return { backInStock: stock, abandonedCarts: carts, wishlistPriceDrops: wishlist, birthday: birthday };
+}
+
+/**
+ * Wishlist price drops: a wished variant whose current online/retail price
+ * fell below its 30-day average. One ping per variant per 7 days (dedup via
+ * refId + kind + recent createdAt) so a long sale doesn't spam.
+ */
+export async function scanWishlistPriceDrops(): Promise<{ checked: number; notified: number }> {
+  const wishes = await prismaRead.wishlistItem.findMany({
+    include: {
+      customer: { select: { email: true, name: true } },
+      variant: {
+        select: {
+          id: true, orgId: true,
+          product: { select: { name: true } },
+          prices: {
+            where: { priceList: { kind: { in: ["online", "retail"] } } },
+            select: { amount: true, validFrom: true, priceList: { select: { kind: true } } },
+            orderBy: { validFrom: "desc" },
+            take: 10,
+          },
+        },
+      },
+    },
+    take: 500,
+  });
+  if (wishes.length === 0) return { checked: 0, notified: 0 };
+  let notified = 0;
+  const weekAgo = new Date(Date.now() - 7 * 86_400_000);
+  for (const w of wishes) {
+    const online = w.variant.prices.filter((p) => p.priceList.kind === "online");
+    const pool = online.length > 0 ? online : w.variant.prices;
+    if (pool.length < 2) continue;
+    const current = pool[0].amount;
+    const older = pool.slice(1);
+    const avg = older.reduce((s, p) => s + p.amount, 0n) / BigInt(older.length);
+    if (avg <= 0n || current >= avg) continue;
+    const recent = await prismaRead.shopperNotification.findFirst({
+      where: { kind: "wishlist_price_drop", refId: w.variantId, customerId: w.customerId, createdAt: { gte: weekAgo } },
+      select: { id: true },
+    });
+    if (recent) continue;
+    const name = w.variant.product.name;
+    const dropPct = Math.round(Number((avg - current) * 100n / avg));
+    await prisma.shopperNotification.create({
+      data: {
+        orgId: w.variant.orgId,
+        customerId: w.customerId,
+        ...(w.customer?.email ? { email: w.customer.email } : {}),
+        kind: "wishlist_price_drop",
+        title: "Sách yêu thích đang giảm giá!",
+        body: `"${name}" giảm còn ${Number(current).toLocaleString("vi-VN")}₫ (−${dropPct}%). Ghé /shop trước khi hết đợt nhé.`,
+        refId: w.variantId,
+      },
+    });
+    if (w.customer?.email) {
+      const body = `"${name}" trong wishlist của bạn giảm còn ${Number(current).toLocaleString("vi-VN")}₫ (−${dropPct}%).`;
+      await sendMail({ to: w.customer.email, subject: "Melio: sách yêu thích đang giảm giá", text: body, html: `<p>${body}</p>` }).catch(() => {});
+    }
+    notified++;
+  }
+  return { checked: wishes.length, notified };
+}
+
+/**
+ * Birthday reminders: customers whose birthday is today get an onsite ping
+ * pointing at the auto-issued BDAY voucher (issueBirthdayVouchers job).
+ * Dedup: one per customer per year via refId = BDAY code.
+ */
+export async function scanBirthdayReminders(): Promise<{ checked: number; notified: number }> {
+  const today = new Date();
+  const month = today.getMonth() + 1;
+  const day = today.getDate();
+  const year = today.getFullYear();
+  const customers = await prismaRead.$queryRaw<{ id: string; orgId: string; name: string; email: string | null }[]>`
+    SELECT id, "orgId", name, email FROM "Customer"
+    WHERE EXTRACT(MONTH FROM birthday) = ${month}
+      AND EXTRACT(DAY FROM birthday) = ${day}`;
+  if (customers.length === 0) return { checked: 0, notified: 0 };
+  let notified = 0;
+  for (const c of customers) {
+    const code = `BDAY-${year}-${c.id.slice(0, 8).toUpperCase()}`;
+    const recent = await prismaRead.shopperNotification.findFirst({
+      where: { kind: "birthday_voucher", refId: code, customerId: c.id },
+      select: { id: true },
+    });
+    if (recent) continue;
+    await prisma.shopperNotification.create({
+      data: {
+        orgId: c.orgId,
+        customerId: c.id,
+        ...(c.email ? { email: c.email } : {}),
+        kind: "birthday_voucher",
+        title: "Chúc mừng sinh nhật!",
+        body: `Melio tặng bạn mã ${code} — dùng khi thanh toán trong 30 ngày nhé.`,
+        refId: code,
+      },
+    });
+    if (c.email) {
+      const body = `Chúc mừng sinh nhật ${c.name}! Mã quà của bạn: ${code} (hiệu lực 30 ngày).`;
+      await sendMail({ to: c.email, subject: "Melio chúc mừng sinh nhật bạn!", text: body, html: `<p>${body}</p>` }).catch(() => {});
+    }
+    notified++;
+  }
+  return { checked: customers.length, notified };
 }

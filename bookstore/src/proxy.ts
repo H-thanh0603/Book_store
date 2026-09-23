@@ -10,7 +10,14 @@ const PUBLIC_PATHS = [
   "/api/storefront",
   "/api/concierge",
   "/api/health",
+  // Payment IPN/return callbacks come from gateway servers/browsers with no
+  // session cookie — every provider needs its prefix here, not just VNPay
+  // (audit PAY-002: MoMo/ZaloPay IPNs got 401 and orders never settled).
   "/api/payments/vnpay",
+  "/api/payments/momo",
+  "/api/payments/zalopay",
+  // Carrier status pushes authenticate via shared secret in the route itself.
+  "/api/carriers/webhook",
   "/api/integrations/webhook",
   "/api/mcp", // A3: agent discovery + tools are public (keyed quota inside)
 ];

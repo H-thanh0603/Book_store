@@ -39,7 +39,7 @@ export default function ReadingChallengePage() {
       <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 gradient-animated text-white px-4 py-2 text-xs font-bold shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-white text-emerald-800 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-white text-emerald-800 px-2.5 py-0.5 rounded-full text-[11px] uppercase font-black">
               GOODREADS &amp; MELIO
             </span>
             <span className="drop-shadow-xs">📚 Thử thách đọc sách 2026 · Nuôi dưỡng thói quen đọc mỗi ngày</span>
@@ -62,11 +62,11 @@ export default function ReadingChallengePage() {
                 <span className="font-serif font-black text-2xl text-slate-900 tracking-tight leading-none">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-500 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                <span className="text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-500 text-white px-2 py-0.5 rounded-full shadow-2xs">
                   Challenge
                 </span>
               </div>
-              <p className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">Câu Lạc Bộ Bạn Đọc</p>
+              <p className="text-[11px] text-emerald-700 font-bold uppercase tracking-wider">Câu Lạc Bộ Bạn Đọc</p>
             </div>
           </Link>
 
@@ -106,7 +106,7 @@ export default function ReadingChallengePage() {
             <div className="sm:col-span-4 flex justify-center">
               <div className="relative size-36 rounded-full bg-white/10 border-4 border-amber-400/40 flex flex-col items-center justify-center text-center shadow-2xl">
                 <span className="font-mono font-black text-4xl text-amber-300">{pct}%</span>
-                <span className="text-[10px] text-emerald-200 font-bold uppercase mt-0.5">Tiến độ năm</span>
+                <span className="text-[11px] text-emerald-200 font-bold uppercase mt-0.5">Tiến độ năm</span>
               </div>
             </div>
           </div>
@@ -115,7 +115,7 @@ export default function ReadingChallengePage() {
         {/* 4. LITERARY QUOTE SHARING CARD */}
         <section className="rounded-3xl bg-white p-6 sm:p-8 paper-card shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-6 border border-[#ede5d8]">
           <div className="space-y-2 flex-1">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#8c2d19] flex items-center gap-1">
+            <span className="text-[11px] font-black uppercase tracking-widest text-[#8c2d19] flex items-center gap-1">
               <Quote className="w-3.5 h-3.5" /> Trích Dẫn Truyền Cảm Hứng Hôm Nay
             </span>
             <blockquote className="font-serif italic text-base sm:text-lg text-slate-800 leading-relaxed">
@@ -148,7 +148,7 @@ export default function ReadingChallengePage() {
         <section className="rounded-3xl bg-white p-6 sm:p-8 paper-card shadow-xs space-y-6 border border-[#ede5d8]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#ede5d8] pb-4">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-800">
+              <span className="text-[11px] font-black uppercase tracking-widest text-emerald-800">
                 Tủ Sách Cá Nhân
               </span>
               <h2 className="text-2xl font-serif font-black text-slate-900 mt-0.5">
@@ -182,7 +182,7 @@ export default function ReadingChallengePage() {
             {mockUserBooks.map((b) => (
               <div key={b.id} className="p-4 rounded-2xl bg-[#faf8f5] border border-[#ede5d8] flex items-center justify-between gap-3">
                 <div>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${getStatusBadgeClass(b.status)}`}>
+                  <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${getStatusBadgeClass(b.status)}`}>
                     {b.status === "completed" ? "Đã xong" : b.status === "reading" ? "Đang đọc 65%" : "Muốn đọc"}
                   </span>
                   <h4 className="font-serif font-black text-sm text-slate-900 mt-1">{b.name}</h4>

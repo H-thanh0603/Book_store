@@ -20,6 +20,10 @@ describe('getProductRecommendations', () => {
   })
 
   it('returns co-purchased recommendations when available', async () => {
+    mockPrisma.productVariant.findUnique.mockResolvedValue({
+      id: 'v1', orgId: 'org-1',
+      product: { categoryId: 'cat-1', status: 'active' },
+    } as any)
     mockPrisma.$queryRaw
       .mockResolvedValueOnce([
         { id: 'v2', sku: 'SKU-002', name: 'Product B', score: 5 },
@@ -33,7 +37,7 @@ describe('getProductRecommendations', () => {
   it('falls back to same category when no co-purchase data', async () => {
     mockPrisma.$queryRaw.mockResolvedValue([])
     mockPrisma.productVariant.findUnique.mockResolvedValue({
-      id: 'v1',
+      id: 'v1', orgId: 'org-1',
       product: { categoryId: 'cat-1', status: 'active' },
     } as any)
     mockPrisma.productVariant.findMany.mockResolvedValue([

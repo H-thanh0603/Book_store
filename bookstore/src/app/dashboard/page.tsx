@@ -366,10 +366,10 @@ export default function DashboardPage() {
                               {r.name}
                             </p>
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="font-mono text-[10px] bg-white px-1.5 py-0.5 rounded border border-[#ede5d8] text-[#574431]">
+                              <span className="font-mono text-[11px] bg-white px-1.5 py-0.5 rounded border border-[#ede5d8] text-[#574431]">
                                 {r.sku}
                               </span>
-                              <span className="text-[10px] text-[#574431]">
+                              <span className="text-[11px] text-[#574431]">
                                 Kho: {r.loc}
                               </span>
                             </div>
@@ -385,7 +385,7 @@ export default function DashboardPage() {
                             >
                               {r.available}
                             </span>
-                            <span className="block text-[10px] text-[#574431] mt-0.5">
+                            <span className="block text-[11px] text-[#574431] mt-0.5">
                               {isOut ? "Hết hàng" : "Sắp hết"}
                             </span>
                           </div>

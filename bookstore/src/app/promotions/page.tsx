@@ -203,14 +203,14 @@ export default function PromotionsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50/60 pb-16">
+    <main className="min-h-screen bg-[#faf7f2] pb-16">
       <Nav />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
         {/* Header */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-[#1c1917] flex items-center gap-2">
                 <Tag className="w-6 h-6 text-indigo-600" />
                 Khuyến Mãi
               </h1>
@@ -232,10 +232,10 @@ export default function PromotionsPage() {
         )}
 
         {/* AI Slow-mover Drafts */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="bg-white rounded-2xl border border-[#ede5d8] shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-[#ede5d8] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+              <h2 className="font-bold text-[#1c1917] text-sm flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-rose-600" aria-hidden="true" />
                 Gợi Ý Xả Hàng Chậm
               </h2>
@@ -252,26 +252,26 @@ export default function PromotionsPage() {
               <button
                 onClick={scanSlowMovers}
                 disabled={scanning}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white hover:bg-slate-700 transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#8c2d19] text-white hover:bg-[#701f12] transition-colors disabled:opacity-50"
               >
                 {scanning ? "Đang quét…" : "Quét hàng chậm"}
               </button>
             </div>
           </div>
           {advice && (
-            <div className="px-4 py-3 border-b border-slate-100 bg-rose-50/40" role="status">
-              <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">{advice}</p>
+            <div className="px-4 py-3 border-b border-[#ede5d8] bg-rose-50/40" role="status">
+              <p className="text-xs text-[#574431] leading-relaxed whitespace-pre-line">{advice}</p>
             </div>
           )}
           {scanned && candidates.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-xs">Không có hàng chậm (tồn ≥ 10 mà 30 ngày không bán). Kho đang khỏe!</div>
           ) : scanned && (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-[#ede5d8]">
               {candidates.map((c) => (
                 <div key={c.variantId} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-900 truncate">{c.name}</p>
-                    <p className="text-[10px] text-slate-500 font-mono">{c.sku} · tồn {c.onHand}{c.price ? ` · ${c.price.toLocaleString("vi-VN")} ₫` : ""}</p>
+                    <p className="text-xs font-bold text-[#1c1917] truncate">{c.name}</p>
+                    <p className="text-[11px] text-slate-500 font-mono">{c.sku} · tồn {c.onHand}{c.price ? ` · ${c.price.toLocaleString("vi-VN")} ₫` : ""}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
@@ -296,10 +296,10 @@ export default function PromotionsPage() {
         </div>
 
         {/* Promo List */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+        <div className="bg-white rounded-2xl border border-[#ede5d8] shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
+              <thead className="bg-[#faf7f2]/80 border-b border-[#ede5d8] text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
                 <tr>
                   <th className="p-4">Tên</th>
                   <th className="p-4">Mã code</th>
@@ -311,12 +311,12 @@ export default function PromotionsPage() {
                   <th className="p-4 text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#ede5d8]">
                 {promotions.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50/60">
+                  <tr key={p.id} className="hover:bg-[#faf7f2]">
                     <td className="p-4">
-                      <p className="font-bold text-slate-900">{p.name}</p>
-                      {p.category && <p className="text-[10px] text-slate-500">{p.category.name}</p>}
+                      <p className="font-bold text-[#1c1917]">{p.name}</p>
+                      {p.category && <p className="text-[11px] text-slate-500">{p.category.name}</p>}
                     </td>
                     <td className="p-4 font-mono text-indigo-700 font-bold">{p.code || "—"}</td>
                     <td className="p-4">
@@ -327,17 +327,17 @@ export default function PromotionsPage() {
                         {p.type === "buy_x_get_y" ? `Mua ${p.buyQty} tặng ${p.getQty}` : p.type}
                       </span>
                     </td>
-                    <td className="p-4 font-bold text-slate-900">{formatValue(p.type, p.value)}</td>
-                    <td className="p-4"><span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">{p.channel}</span></td>
-                    <td className="p-4 text-slate-600">{p.usedCount}{p.usageLimit ? `/${p.usageLimit}` : ""}</td>
+                    <td className="p-4 font-bold text-[#1c1917]">{formatValue(p.type, p.value)}</td>
+                    <td className="p-4"><span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#faf4ea] text-[#574431]">{p.channel}</span></td>
+                    <td className="p-4 text-[#574431]">{p.usedCount}{p.usageLimit ? `/${p.usageLimit}` : ""}</td>
                     <td className="p-4">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${p.active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${p.active ? "bg-emerald-50 text-emerald-700" : "bg-[#faf4ea] text-[#574431]"}`}>
                         {p.active ? "Hoạt động" : "Tắt"}
                       </span>
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600">
+                        <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg bg-[#faf4ea] hover:bg-[#ede5d8] text-[#574431]">
                           <Edit2 className="w-3 h-3" />
                         </button>
                         {p.active && (
@@ -364,23 +364,23 @@ export default function PromotionsPage() {
         {showForm && (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl">
-              <div className="flex items-center justify-between p-4 border-b border-slate-200">
-                <h3 className="font-bold text-slate-900">{editPromo ? "Sửa khuyến mãi" : "Tạo khuyến mãi mới"}</h3>
-                <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600"><XCircle className="w-5 h-5" /></button>
+              <div className="flex items-center justify-between p-4 border-b border-[#ede5d8]">
+                <h3 className="font-bold text-[#1c1917]">{editPromo ? "Sửa khuyến mãi" : "Tạo khuyến mãi mới"}</h3>
+                <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-[#574431]"><XCircle className="w-5 h-5" /></button>
               </div>
               <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Tên khuyến mãi *</label>
-                  <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                  <label className="block text-xs font-semibold text-[#574431] mb-1">Tên khuyến mãi *</label>
+                  <input className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg px-3 py-2 text-xs" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Mã code (để trống = tự động)</label>
-                    <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono uppercase" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+                    <label className="block text-xs font-semibold text-[#574431] mb-1">Mã code (để trống = tự động)</label>
+                    <input className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg px-3 py-2 text-xs font-mono uppercase" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Loại</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+                    <label className="block text-xs font-semibold text-[#574431] mb-1">Loại</label>
+                    <select className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg px-3 py-2 text-xs" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
                       <option value="percentage">% Giảm giá</option>
                       <option value="fixed">Số tiền cố định</option>
                       <option value="buy_x_get_y">Mua X tặng Y</option>
@@ -390,31 +390,31 @@ export default function PromotionsPage() {
                 {form.type === "buy_x_get_y" ? (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Mua (SL)</label>
-                      <input type="number" min={1} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.buyQty} onChange={(e) => setForm({ ...form, buyQty: Number(e.target.value) || 1 })} />
+                      <label className="block text-xs font-semibold text-[#574431] mb-1">Mua (SL)</label>
+                      <input type="number" min={1} className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg px-3 py-2 text-xs" value={form.buyQty} onChange={(e) => setForm({ ...form, buyQty: Number(e.target.value) || 1 })} />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Tặng (SL)</label>
-                      <input type="number" min={1} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.getQty} onChange={(e) => setForm({ ...form, getQty: Number(e.target.value) || 1 })} />
+                      <label className="block text-xs font-semibold text-[#574431] mb-1">Tặng (SL)</label>
+                      <input type="number" min={1} className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg px-3 py-2 text-xs" value={form.getQty} onChange={(e) => setForm({ ...form, getQty: Number(e.target.value) || 1 })} />
                     </div>
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Giá trị {form.type === "percentage" ? "(%)" : "(₫)"}</label>
-                    <input type="number" min={0} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.value} onChange={(e) => setForm({ ...form, value: Number(e.target.value) || 0 })} />
+                    <label className="block text-xs font-semibold text-[#574431] mb-1">Giá trị {form.type === "percentage" ? "(%)" : "(₫)"}</label>
+                    <input type="number" min={0} className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg px-3 py-2 text-xs" value={form.value} onChange={(e) => setForm({ ...form, value: Number(e.target.value) || 0 })} />
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Danh mục</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
+                    <label className="block text-xs font-semibold text-[#574431] mb-1">Danh mục</label>
+                    <select className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg px-3 py-2 text-xs" value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
                       <option value="">Tất cả</option>
                       {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Kênh</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value })}>
+                    <label className="block text-xs font-semibold text-[#574431] mb-1">Kênh</label>
+                    <select className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg px-3 py-2 text-xs" value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value })}>
                       <option value="ALL">Tất cả</option>
                       <option value="POS">POS</option>
                       <option value="WEB">Web</option>
@@ -423,38 +423,38 @@ export default function PromotionsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">SL tối thiểu</label>
-                    <input type="number" min={0} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.minQty} onChange={(e) => setForm({ ...form, minQty: Number(e.target.value) || 0 })} />
+                    <label className="block text-xs font-semibold text-[#574431] mb-1">SL tối thiểu</label>
+                    <input type="number" min={0} className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg px-3 py-2 text-xs" value={form.minQty} onChange={(e) => setForm({ ...form, minQty: Number(e.target.value) || 0 })} />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Giới hạn sử dụng</label>
-                    <input type="number" min={0} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.usageLimit} onChange={(e) => setForm({ ...form, usageLimit: Number(e.target.value) || 0 })} />
+                    <label className="block text-xs font-semibold text-[#574431] mb-1">Giới hạn sử dụng</label>
+                    <input type="number" min={0} className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg px-3 py-2 text-xs" value={form.usageLimit} onChange={(e) => setForm({ ...form, usageLimit: Number(e.target.value) || 0 })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Ngày bắt đầu</label>
-                    <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} />
+                    <label className="block text-xs font-semibold text-[#574431] mb-1">Ngày bắt đầu</label>
+                    <input type="date" className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg px-3 py-2 text-xs" value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Ngày kết thúc</label>
-                    <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs" value={form.endAt} onChange={(e) => setForm({ ...form, endAt: e.target.value })} />
+                    <label className="block text-xs font-semibold text-[#574431] mb-1">Ngày kết thúc</label>
+                    <input type="date" className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg px-3 py-2 text-xs" value={form.endAt} onChange={(e) => setForm({ ...form, endAt: e.target.value })} />
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                    <input type="checkbox" checked={form.stackable} onChange={(e) => setForm({ ...form, stackable: e.target.checked })} className="rounded border-slate-300" />
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#574431]">
+                    <input type="checkbox" checked={form.stackable} onChange={(e) => setForm({ ...form, stackable: e.target.checked })} className="rounded border-[#e8dac5]" />
                     Gộp được
                   </label>
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                    <input type="checkbox" checked={form.memberOnly} onChange={(e) => setForm({ ...form, memberOnly: e.target.checked })} className="rounded border-slate-300" />
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#574431]">
+                    <input type="checkbox" checked={form.memberOnly} onChange={(e) => setForm({ ...form, memberOnly: e.target.checked })} className="rounded border-[#e8dac5]" />
                     Chỉ thành viên
                   </label>
                 </div>
               </div>
-              <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
-                <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold">Hủy</button>
-                <button onClick={savePromo} disabled={!form.name.trim()} className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-white/50 text-white text-xs font-semibold">
+              <div className="flex justify-end gap-2 p-4 border-t border-[#ede5d8]">
+                <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg bg-[#faf4ea] hover:bg-[#ede5d8] text-[#574431] text-xs font-semibold">Hủy</button>
+                <button onClick={savePromo} disabled={!form.name.trim()} className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-[#ede5d8] disabled:text-white/50 text-white text-xs font-semibold">
                   {editPromo ? "Cập nhật" : "Tạo mới"}
                 </button>
               </div>

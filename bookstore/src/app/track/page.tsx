@@ -57,7 +57,7 @@ export default function TrackPage() {
       <div className="bg-[#0369a1] text-white px-4 py-2 text-xs font-bold shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-amber-300 text-amber-950 px-2 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-amber-300 text-amber-950 px-2 py-0.5 rounded-full text-[11px] uppercase font-black">
               MELIO EXPRESS
             </span>
             <span>📦 Hệ thống tra cứu vận đơn &amp; hành trình giao hàng thời gian thực</span>
@@ -80,11 +80,11 @@ export default function TrackPage() {
                 <span className="font-black text-2xl text-slate-900 tracking-tight leading-none">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-[#0284c7] text-white px-1.5 py-0.5 rounded">
+                <span className="text-[11px] font-black uppercase tracking-wider bg-[#0284c7] text-white px-1.5 py-0.5 rounded">
                   Tracking
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Tra Cứu Hành Trình Đơn Hàng</p>
+              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Tra Cứu Hành Trình Đơn Hàng</p>
             </div>
           </Link>
 
@@ -150,7 +150,7 @@ export default function TrackPage() {
             {/* Header info */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full">
+                <span className="text-[11px] font-black uppercase tracking-wider text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full">
                   MÃ VẬN ĐƠN: {selectedOrder.number}
                 </span>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
@@ -189,7 +189,7 @@ export default function TrackPage() {
                       <b className={`block text-xs font-bold ${st.done ? "text-slate-900" : "text-slate-400"}`}>
                         {st.label}
                       </b>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">{st.time}</span>
+                      <span className="text-[11px] text-slate-400 block mt-0.5">{st.time}</span>
                       <p className="text-[11px] text-slate-500 mt-1 sm:line-clamp-2">{st.desc}</p>
                     </div>
                   </div>
@@ -207,7 +207,7 @@ export default function TrackPage() {
                   <div className="flex items-center gap-2">
                     <b className="text-sm font-black">Đơn Vị Vận Chuyển: Melio Express</b>
                     {selectedOrder.shipment && (
-                      <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">
+                      <span className="bg-emerald-500/20 text-emerald-300 text-[11px] font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">
                         {selectedOrder.shipment.status}
                       </span>
                     )}

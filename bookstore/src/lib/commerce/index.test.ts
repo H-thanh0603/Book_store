@@ -33,10 +33,10 @@ describe("StubStorefrontBackend", () => {
 describe("StubMerchantBackend", () => {
   const stub = new StubMerchantBackend();
   it("returns unavailable for all four reads", async () => {
-    expect(isUnavailable(await stub.getDigestStats())).toBe(true);
-    expect(isUnavailable(await stub.getTopSuggestions())).toBe(true);
-    expect(isUnavailable(await stub.getSlowMovers())).toBe(true);
-    expect(isUnavailable(await stub.getListingIssues())).toBe(true);
+    expect(isUnavailable(await stub.getDigestStats({ orgId: "t" }))).toBe(true);
+    expect(isUnavailable(await stub.getTopSuggestions({ orgId: "t" }))).toBe(true);
+    expect(isUnavailable(await stub.getSlowMovers({ orgId: "t" }))).toBe(true);
+    expect(isUnavailable(await stub.getListingIssues({ orgId: "t" }))).toBe(true);
   });
   it("refuses writes with a staged kind", async () => {
     const res = await stub.applyChange({ kind: "promotion.create", payload: {} });

@@ -191,7 +191,7 @@ export default function ToysPage() {
       <div className="bg-gradient-to-r from-[#8c2d19] via-[#a63a1f] to-[#d97706] text-white px-4 py-2 text-xs font-bold shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-white text-[#8c2d19] px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-white text-[#8c2d19] px-2.5 py-0.5 rounded-full text-[11px] uppercase font-black">
               VƯƠNG QUỐC ĐỒ CHƠI
             </span>
             <span className="drop-shadow-xs">🎪 Thế giới đồ chơi chính hãng 100% LEGO, Sanrio Hello Kitty, Board Game an toàn cho bé</span>
@@ -217,11 +217,11 @@ export default function ToysPage() {
                 <span className="font-black text-2xl text-slate-900 tracking-tight leading-none">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-[#1c1917] text-[#ffd56a] px-2 py-0.5 rounded-full shadow-2xs">
+                <span className="text-[11px] font-black uppercase tracking-wider bg-[#1c1917] text-[#ffd56a] px-2 py-0.5 rounded-full shadow-2xs">
                   Toys &amp; Play
                 </span>
               </div>
-              <p className="text-[10px] text-[#8c2d19] font-bold uppercase tracking-wider">Thế Giới Đồ Chơi Sáng Tạo</p>
+              <p className="text-[11px] text-[#8c2d19] font-bold uppercase tracking-wider">Thế Giới Đồ Chơi Sáng Tạo</p>
             </div>
           </Link>
 
@@ -258,7 +258,7 @@ export default function ToysPage() {
               <ShoppingBag className="w-4 h-4" />
               <span className="hidden sm:inline">Giỏ đồ chơi</span>
               {itemCount > 0 && (
-                <span className="size-5 rounded-full bg-[#ffd56a] text-[#6b2113] font-black text-[10px] flex items-center justify-center shadow-xs">
+                <span className="size-5 rounded-full bg-[#ffd56a] text-[#6b2113] font-black text-[11px] flex items-center justify-center shadow-xs">
                   {itemCount}
                 </span>
               )}
@@ -347,7 +347,7 @@ export default function ToysPage() {
         <section id="toy-grid" className="rounded-3xl bg-white p-6 sm:p-8 shadow-xs border border-amber-100 space-y-6">
           <div className="flex items-center justify-between border-b border-amber-100 pb-4">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">
+              <span className="text-[11px] font-black uppercase tracking-widest text-amber-600">
                 Kho Đồ Chơi Chính Hãng
               </span>
               <h2 className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
@@ -387,14 +387,14 @@ export default function ToysPage() {
                       <ToyBrick className="w-10 h-10" />
                     </div>
                     {product.brand?.name && (
-                      <span className="mt-3 px-2.5 py-0.5 rounded-full bg-slate-900 text-white text-[10px] font-black uppercase">
+                      <span className="mt-3 px-2.5 py-0.5 rounded-full bg-slate-900 text-white text-[11px] font-black uppercase">
                         {product.brand.name}
                       </span>
                     )}
                   </div>
 
                   <div className="mt-3 space-y-1.5">
-                    <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">
+                    <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">
                       {product.category.name}
                     </span>
                     <h3
