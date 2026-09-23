@@ -16,7 +16,7 @@
 
 import { prisma } from "./db";
 import { callLlm, llmConfigured, type LlmMessage } from "./llm";
-import { defaultOrgId } from "./org-scope";
+
 import { fenceToolResult, fenceUntrusted } from "./fencing";
 
 export type MerchantSkill = "digest" | "explain" | "inventory" | "promo" | "catalog";
@@ -78,15 +78,13 @@ export type DigestStats = {
 };
 
 /** Org scope every read tool executes under. Mandatory — no unscoped reads.
- *  orgId = null means the legacy org-less superuser: queries drop the org
- *  filter entirely (same semantics as withOrg), never "first org wins". */
-export type ToolScope = { orgId: string | null };
+ *  Always a concrete org id (audit Q35): org-less callers are rejected at
+ *  the route via requireOrgId, never silently scoped to a demo org. */
+export type ToolScope = { orgId: string };
 
-/** Prisma filter fragment for the scope: { orgId } when scoped, {} for the
- *  legacy superuser. orgId columns are NOT NULL, so a literal null filter
- *  would silently match zero rows — empty object is the correct "all". */
-function orgWhere(scope: ToolScope): { orgId: string } | Record<string, never> {
-  return scope.orgId ? { orgId: scope.orgId } : {};
+/** Prisma filter fragment for the scope — always { orgId }. */
+function orgWhere(scope: ToolScope): { orgId: string } {
+  return { orgId: scope.orgId };
 }
 
 export async function getDigestStats(scope: ToolScope, storeId?: string): Promise<DigestStats> {
@@ -353,7 +351,10 @@ export async function runMerchantTurn(
     scope: ToolScope;
   },
 ): Promise<{ text: string; usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number } }> {
-  const scope = opts?.scope ?? { orgId: await defaultOrgId() };
+  // Q35: no demo-org fallback — callers must pass an explicit scope.
+  if (!opts?.scope)
+    throw Object.assign(new Error("Forbidden: caller has no organization"), { status: 403 });
+  const scope = opts.scope;
   const allTools = SKILL_TOOLS[skill];
   const tools =
     opts?.allowPropose === false ? allTools.filter((t) => t.function.name !== "propose_change") : allTools;

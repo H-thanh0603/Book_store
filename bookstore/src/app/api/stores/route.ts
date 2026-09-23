@@ -3,17 +3,19 @@ import { NextRequest } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { requirePermission, requireAuth, resolveStoreScope } from "@/lib/auth";
+import { requireOrgId } from "@/lib/org-scope";
 import { assertWithinPlanLimits } from "@/lib/plan-limits";
 import { apiError, ok, fail, reqStr, optBool, requireRef } from "@/lib/api";
 
 export async function GET() {
   try {
     const auth = await requireAuth();
+    const orgId = requireOrgId(auth); // Q35 fail-closed
     const scope = resolveStoreScope(auth);
     const stores = await prisma.store.findMany({
       // Tenant isolation (#7): org-wide role must not list other orgs' stores.
       where: {
-        ...(auth.orgId ? { orgId: auth.orgId } : {}),
+        orgId,
         ...(scope ? { id: { in: scope } } : {}),
       },
       select: { id: true, name: true, code: true },
@@ -78,6 +80,8 @@ export async function PATCH(req: NextRequest) {
     const b = await req.json();
     if (!b.id) fail(400, "VALIDATION", "id required");
     const before = requireRef(await prisma.store.findUnique({ where: { id: b.id } }), "Store");
+    if ((before as { orgId?: string }).orgId !== requireOrgId(auth))
+      fail(404, "NOT_FOUND", "Store not found");
     const data: Record<string, unknown> = {};
     if ("name" in b) data.name = reqStr(b.name, "name");
     const active = optBool(b.active, "active");

@@ -14,7 +14,7 @@ function assertSupplierOrg(
   supplier: { orgId: string } | null | undefined,
   auth: { orgId: string | null },
 ) {
-  if (!auth.orgId) return; // legacy admin
+  if (!auth.orgId) fail(404, "NOT_FOUND", "Supplier not found"); // Q35 fail-closed
   if (!supplier || supplier.orgId !== auth.orgId)
     fail(404, "NOT_FOUND", "Supplier not found");
 }

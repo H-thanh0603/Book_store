@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma, prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
-import { withOrg, defaultOrgId } from "@/lib/org-scope";
+import { withOrg, requireOrgId } from "@/lib/org-scope";
 import { Prisma } from "@/generated/prisma/client";
 import { randomBytes } from "crypto";
 
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
   const giftCard = await prisma.giftCard.create({
     data: {
       code,
-      orgId: auth.orgId ?? (await defaultOrgId()),
+      orgId: requireOrgId(auth),
       initialValue: BigInt(Math.round(initialValue)),
       balance: BigInt(Math.round(initialValue)),
       expiresAt: expiresAt ? new Date(expiresAt) : null,

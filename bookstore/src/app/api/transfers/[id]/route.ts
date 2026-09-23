@@ -23,7 +23,7 @@ function assertOrgOnTransfer(
   },
   auth: { orgId: string | null }
 ) {
-  if (!auth.orgId) return; // legacy admin
+  if (!auth.orgId) fail(404, "NOT_FOUND", "Transfer not found"); // Q35 fail-closed: no org-less roam
   const orgOf = (loc: { store: { orgId?: string; region?: { orgId: string } | null } | null }) =>
     loc.store?.orgId ?? loc.store?.region?.orgId ?? null;
   const orgIds = [orgOf(transfer.fromLocation), orgOf(transfer.toLocation)];

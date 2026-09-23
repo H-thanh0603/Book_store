@@ -5,11 +5,12 @@ import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { scanAnomalies } from "@/lib/merchant-anomaly";
 import { getDigestStats } from "@/lib/merchant-agent";
+import { requireOrgId } from "@/lib/org-scope";
 
 export async function GET() {
   try {
     const auth = await requirePermission("reports.store.view");
-    const scope = { orgId: auth.orgId };
+    const scope = { orgId: requireOrgId(auth) };
     const [anomalies, digest] = await Promise.all([
       scanAnomalies(scope),
       getDigestStats(scope),
