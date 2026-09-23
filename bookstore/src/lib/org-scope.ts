@@ -15,7 +15,6 @@
 
 import type { Prisma } from "../generated/prisma/client";
 import type { AuthContext } from "./auth";
-import { prisma } from "./db";
 
 type OrgFilter = { orgId: string };
 
