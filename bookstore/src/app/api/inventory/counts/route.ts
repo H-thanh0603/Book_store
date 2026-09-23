@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
           data: {
             number: countNumber,
             locationId,
-            countedBy: "system", // Will be replaced with actual user
+            countedBy: auth.userId,
             items: {
               create: balances.map((b) => ({
                 variantId: b.variantId,

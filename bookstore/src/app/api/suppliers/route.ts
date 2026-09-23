@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma, prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok, nextBusinessNumber } from "@/lib/api";
-import { withOrg, defaultOrgId } from "@/lib/org-scope";
+import { withOrg, requireOrgId } from "@/lib/org-scope";
 import { Prisma } from "@/generated/prisma/client";
 
 // GET /api/suppliers — List suppliers
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   const supplier = await prisma.supplier.create({
     data: {
       code,
-      orgId: auth.orgId ?? (await defaultOrgId()),
+      orgId: requireOrgId(auth),
       name: name.trim(),
       taxCode: taxCode?.trim() || null,
       contactName: contactName?.trim() || null,

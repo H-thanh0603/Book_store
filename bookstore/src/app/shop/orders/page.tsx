@@ -11,6 +11,9 @@ import Link from "next/link";
 type Item = { id: string; name: string; quantity: number; price: string };
 type Order = {
   id: string; number: string; status: string; total: string;
+  fulfillment: "delivery" | "pickup" | "ship_from_store";
+  storeName: string | null;
+  reservationExpiresAt: string | null;
   createdAt: string; shipment: { status: string; trackingNumber: string | null } | null;
   items: Item[];
 };
@@ -44,7 +47,7 @@ export default function OrdersPage() {
         <div key={o.id} className="rounded-2xl border border-[#ede5d8] bg-white p-4 space-y-2">
           <div className="flex items-center justify-between">
             <div className="font-serif font-bold text-sm">{o.number}</div>
-            <span className="text-[10px] uppercase tracking-wider bg-[#faf7f2] text-slate-700 rounded-full px-2 py-0.5">{o.status}</span>
+            <span className="text-[11px] uppercase tracking-wider bg-[#faf7f2] text-slate-700 rounded-full px-2 py-0.5">{o.status}</span>
           </div>
           <ul className="text-xs text-slate-600 space-y-1">
             {o.items.map((it) => (
@@ -58,6 +61,12 @@ export default function OrdersPage() {
             <span className="text-slate-400">{new Date(o.createdAt).toLocaleString("vi-VN")}</span>
             <b className="text-[#1c1917]">{Number(o.total).toLocaleString("vi-VN")} ₫</b>
           </div>
+          {o.fulfillment === "pickup" ? (
+            <div className="rounded-xl bg-[#faf4ea] px-3 py-2 text-xs text-[#6b3928]">
+              <b>Đặt giữ tại {o.storeName ?? "cửa hàng"}</b>
+              {o.reservationExpiresAt ? <span> · nhận trước {new Date(o.reservationExpiresAt).toLocaleString("vi-VN")}</span> : null}
+            </div>
+          ) : null}
         </div>
       ))}
     </div>

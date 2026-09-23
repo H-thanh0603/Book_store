@@ -425,6 +425,19 @@ model CustomerSession {
   @@index([expiresAt])
 }
 
+// P4-2: server-backed wishlist — one row per customer×variant, promoted
+// from the localStorage drawer when the shopper logs in.
+model WishlistItem {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  variantId  String
+  variant    ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  @@unique([customerId, variantId])
+  @@index([customerId, createdAt])
+}
+
 // Shared abuse-control state. Keys contain only SHA-256 digests, never raw IP/email.
 model RateLimitBucket {
   key       String   @id
@@ -548,6 +561,7 @@ model ProductVariant {
   posItems  PosTransactionItem[]
   bundleItems BundleItem[] @relation("component")
   bundles   BundleItem[] @relation("bundle")
+  wishlistBy WishlistItem[]
   active    Boolean @default(true)
   createdAt DateTime @default(now())
 }
@@ -867,6 +881,7 @@ model Customer {
   returns   Return[]
   posTransactions PosTransaction[]
   sessions  CustomerSession[]
+  wishlist  WishlistItem[]
   supportConversations SupportConversation[]
   promoRedemptions PromotionRedemption[]
   reviews ProductReview[]

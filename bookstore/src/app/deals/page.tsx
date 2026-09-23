@@ -127,7 +127,7 @@ export default function DealsPage() {
       <div className="bg-[#1c1917] text-white px-4 py-2 text-xs font-bold shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-white text-[#8c2d19] px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black tracking-wider">
+            <span className="bg-white text-[#8c2d19] px-2.5 py-0.5 rounded-full text-[11px] uppercase font-black tracking-wider">
               GIỜ VÀNG HÀNG NGÀY
             </span>
             <span>Ưu đãi trình bày mỗi ngày cho Sách, VPP &amp; Đồ chơi — theo tồn kho thực tế</span>
@@ -150,11 +150,11 @@ export default function DealsPage() {
                 <span className="font-serif font-black text-2xl tracking-tight leading-none text-slate-900">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-[#1c1917] text-[#ffd56a] px-2 py-0.5 rounded-full">
+                <span className="text-[11px] font-black uppercase tracking-wider bg-[#1c1917] text-[#ffd56a] px-2 py-0.5 rounded-full">
                   Mega Deals
                 </span>
               </div>
-              <p className="text-[10px] text-[#8c2d19] font-bold uppercase tracking-wider">Đại Tiệc Ưu Đãi &amp; Giảm Giá</p>
+              <p className="text-[11px] text-[#8c2d19] font-bold uppercase tracking-wider">Đại Tiệc Ưu Đãi &amp; Giảm Giá</p>
             </div>
           </Link>
 
@@ -234,7 +234,7 @@ export default function DealsPage() {
                 <div className="flex items-center justify-between">
                   <TicketPercent className="w-4 h-4 text-[#d97706]" />
                   {v.flash && (
-                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#8c2d19] text-white">
+                    <span className="text-[11px] font-black uppercase px-2 py-0.5 rounded-full bg-[#8c2d19] text-white">
                       ⚡ Giờ vàng
                     </span>
                   )}

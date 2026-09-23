@@ -29,7 +29,11 @@ async function fuzzyAllowed(orgId: string): Promise<boolean> {
 // Cache layer: Redis (shared across instances) with in-process fallback.
 const CATALOG_TTL_SEC = 30;
 type CatalogResult = {
-  products: { id: string; name: string; description: string | null; createdAt: Date; variants: unknown[] }[];
+  products: {
+    id: string; name: string; description: string | null; createdAt: Date;
+    ratingAvg: number; ratingCount: number; variants: unknown[];
+  }[];
+  total: number;
   categories: { id: string; name: string }[];
   stores: { id: string; name: string; code: string }[];
   storeId: string;
@@ -124,7 +128,9 @@ async function listStorefrontProductsUncached(input: {
   const q = input.q?.trim().slice(0, 80) || undefined;
   // Per-word AND search: every word must appear in one of the searched fields,
   // so word order no longer matters ("potter hary" works).
-  const words = q ? q.split(/\s+/).slice(0, 6) : [];
+  // P2-2: single-char words are dropped from the AND — a 1-char `contains`
+  // matches a large share of the catalog and defeats the trigram index.
+  const words = q ? q.split(/\s+/).filter((w) => w.length >= 2).slice(0, 6) : [];
   const store = input.storeId
     ? await prismaRead.store.findFirst({ where: { id: input.storeId, active: true }, select: { id: true, orgId: true } })
     : await prismaRead.store.findFirst({ where: { active: true }, orderBy: { code: "asc" }, select: { id: true, orgId: true } });
@@ -139,6 +145,12 @@ async function listStorefrontProductsUncached(input: {
       category: { select: { id: true, name: true } },
       brand: { select: { name: true } },
       author: { select: { name: true } }, publisher: { select: { name: true } },
+      // Card social proof: approved-review count + average come with the
+      // catalog row so cards render stars without N+1 review fetches.
+      reviews: {
+        where: { status: "APPROVED" },
+        select: { rating: true },
+      },
       variants: {
         where: { active: true },
         select: {
@@ -180,7 +192,7 @@ async function listStorefrontProductsUncached(input: {
       where: { active: true, orgId }, select: { id: true, name: true, code: true }, orderBy: { code: "asc" },
     }),
   ]);
-  if (stockedIds.length === 0) return { products: [], categories, stores, storeId: store.id };
+  if (stockedIds.length === 0) return { products: [], total: 0, categories, stores, storeId: store.id };
   const exactRows = await prismaRead.product.findMany({
       where: {
         status: "active",
@@ -201,7 +213,10 @@ async function listStorefrontProductsUncached(input: {
         } : {}),
       },
       ...catalogSelect,
-      orderBy: { name: "asc" }, take: 100,
+      // No take here: price sort/filter run in memory below, so the working
+      // set must be complete. Pagination slices the sorted list at the end.
+      // Bounded by the stocked-id gate (in-stock variants at this store).
+      orderBy: { name: "asc" }, take: 2000,
     });
 
   let rows = exactRows;
@@ -257,19 +272,28 @@ async function listStorefrontProductsUncached(input: {
   // Gemini outage costs nothing on queries exact/trigram already answered.
   // Matches by meaning, not spelling ("sách về xây thói quen" → Atomic Habits).
   // Silent no-op without GEMINI_API_KEY; any error logs and keeps old behavior.
+  // P2-2: distance cutoff + own statement timeout — without a cutoff the
+  // top-100-nearest rows return even when nothing is semantically close,
+  // and without a timeout a big embedding table pins the pool slot.
   if (!rows.length && words.length && process.env.GEMINI_API_KEY) {
     try {
       const vec = await embedText(words.join(" "));
       if (vec) {
-        const hits = await prismaRead.$queryRaw<{ id: string }[]>`
-          SELECT e."productId" AS id
-          FROM "ProductEmbedding" e
-          JOIN "Product" p ON p.id = e."productId"
-          WHERE p.status = 'active' AND p."orgId" = ${orgId}
-            ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
-            ${input.brandId ? Prisma.sql`AND p."brandId" = ${input.brandId}` : Prisma.empty}
-          ORDER BY e.embedding <=> ${`[${vec.join(",")}]`}::vector
-          LIMIT 100`;
+        const SEMANTIC_DISTANCE_CUTOFF = Number(process.env.SEMANTIC_DISTANCE_CUTOFF ?? 0.6);
+        const SEMANTIC_TIMEOUT_MS = Math.max(50, Number(process.env.SEMANTIC_SEARCH_TIMEOUT_MS ?? 2000) || 2000);
+        const hits = await prismaRead.$transaction(async (tx) => {
+          await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${SEMANTIC_TIMEOUT_MS}`);
+          return tx.$queryRaw<{ id: string }[]>`
+            SELECT e."productId" AS id
+            FROM "ProductEmbedding" e
+            JOIN "Product" p ON p.id = e."productId"
+            WHERE p.status = 'active' AND p."orgId" = ${orgId}
+              ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
+              ${input.brandId ? Prisma.sql`AND p."brandId" = ${input.brandId}` : Prisma.empty}
+              AND e.embedding <=> ${`[${vec.join(",")}]`}::vector < ${SEMANTIC_DISTANCE_CUTOFF}
+            ORDER BY e.embedding <=> ${`[${vec.join(",")}]`}::vector
+            LIMIT 100`;
+        });
         if (hits.length)
           rows = await prismaRead.product.findMany({
             where: { id: { in: hits.map((h) => h.id) }, orgId },
@@ -291,7 +315,11 @@ async function listStorefrontProductsUncached(input: {
         ? [{ id: variant.id, name: variant.name, sku: variant.sku, price: Number(price.amount), available }]
         : [];
     });
-    return variants.length ? [{ ...product, image: product.imageUrl, variants }] : [];
+    if (!variants.length) return [];
+    const ratings = product.reviews.map((r) => r.rating);
+    const ratingCount = ratings.length;
+    const ratingAvg = ratingCount ? Math.round((ratings.reduce((s, r) => s + r, 0) / ratingCount) * 10) / 10 : 0;
+    return [{ ...product, reviews: undefined, image: product.imageUrl, variants, ratingAvg, ratingCount }];
   });
   // Price-range filter + sort run in memory over the in-stock set: variant
   // prices live in the related Price table (no single sortable column), and
@@ -311,7 +339,10 @@ async function listStorefrontProductsUncached(input: {
       default: return a.name.localeCompare(b.name, "vi");
     }
   });
-  return { products: sorted, categories, stores, storeId: store.id };
+  // L1: the old take:100 silently hid everything past row 100. Return the
+  // full sorted set with a total (capped at 2000 — spec catalog is 100–500);
+  // the client reveals it in batches via "Xem thêm".
+  return { products: sorted, total: sorted.length, categories, stores, storeId: store.id };
 }
 
 export type StorefrontCheckoutInput = {

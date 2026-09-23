@@ -22,6 +22,7 @@ import {
 import { unavailable, type Unavailable } from "./types";
 
 export type MerchantReadInput = {
+  orgId: string;
   storeId?: string;
   take?: number;
 };
@@ -40,10 +41,11 @@ export function refusedWrite(stagedKind: string, reason: string): RefusedWrite {
 export interface MerchantBackend {
   readonly kind: string;
   // ── Reads (a pilot implements these eight) ──
-  getDigestStats(input?: { storeId?: string }): Promise<DigestStats | Unavailable>;
-  getTopSuggestions(input?: MerchantReadInput): Promise<SuggestionRow[] | Unavailable>;
-  getSlowMovers(input?: MerchantReadInput): Promise<SlowMover[] | Unavailable>;
-  getListingIssues(input?: MerchantReadInput): Promise<ListingIssue[] | Unavailable>;
+  // Q35: orgId required — no unscoped reads.
+  getDigestStats(input: { orgId: string; storeId?: string }): Promise<DigestStats | Unavailable>;
+  getTopSuggestions(input: MerchantReadInput): Promise<SuggestionRow[] | Unavailable>;
+  getSlowMovers(input: MerchantReadInput): Promise<SlowMover[] | Unavailable>;
+  getListingIssues(input: MerchantReadInput): Promise<ListingIssue[] | Unavailable>;
   // ── Writes (refuse by default; approval surface applies them) ──
   applyChange(input: {
     kind: string;
@@ -55,24 +57,21 @@ export class PrismaMerchantBackend implements MerchantBackend {
   readonly kind = "prisma";
 
 
-  // Legacy single-org hosts pass orgId: null (unscoped, superuser semantics).
-  // A multi-tenant host constructs this backend per request with the caller's
-  // orgId — ToolScope makes that the only shape, so a silent global read
-  // cannot be reintroduced without a type change here.
-  async getDigestStats(input?: { storeId?: string }) {
-    return getDigestStats({ orgId: null }, input?.storeId);
+  // Q35: no unscoped reads — every call carries the caller's orgId.
+  async getDigestStats(input: { orgId: string; storeId?: string }) {
+    return getDigestStats({ orgId: input.orgId }, input.storeId);
   }
 
-  async getTopSuggestions(input?: MerchantReadInput) {
-    return getTopSuggestions({ orgId: null }, input?.storeId, input?.take ?? 8);
+  async getTopSuggestions(input: MerchantReadInput) {
+    return getTopSuggestions({ orgId: input.orgId }, input.storeId, input.take ?? 8);
   }
 
-  async getSlowMovers(input?: MerchantReadInput) {
-    return getSlowMovers({ orgId: null }, input?.take ?? 10);
+  async getSlowMovers(input: MerchantReadInput) {
+    return getSlowMovers({ orgId: input.orgId }, input.take ?? 10);
   }
 
-  async getListingIssues(input?: MerchantReadInput) {
-    return getListingIssues({ orgId: null }, input?.take ?? 50);
+  async getListingIssues(input: MerchantReadInput) {
+    return getListingIssues({ orgId: input.orgId }, input.take ?? 50);
   }
 
   async applyChange(input: { kind: string; payload: Record<string, unknown> }) {
@@ -91,19 +90,19 @@ const STUB_REASON =
 export class StubMerchantBackend implements MerchantBackend {
   readonly kind = "stub";
 
-  async getDigestStats(_input?: { storeId?: string }): Promise<DigestStats | Unavailable> {
+  async getDigestStats(_input: { orgId: string; storeId?: string }): Promise<DigestStats | Unavailable> {
     return unavailable(STUB_REASON);
   }
 
-  async getTopSuggestions(_input?: MerchantReadInput): Promise<SuggestionRow[] | Unavailable> {
+  async getTopSuggestions(_input: MerchantReadInput): Promise<SuggestionRow[] | Unavailable> {
     return unavailable(STUB_REASON);
   }
 
-  async getSlowMovers(_input?: MerchantReadInput): Promise<SlowMover[] | Unavailable> {
+  async getSlowMovers(_input: MerchantReadInput): Promise<SlowMover[] | Unavailable> {
     return unavailable(STUB_REASON);
   }
 
-  async getListingIssues(_input?: MerchantReadInput): Promise<ListingIssue[] | Unavailable> {
+  async getListingIssues(_input: MerchantReadInput): Promise<ListingIssue[] | Unavailable> {
     return unavailable(STUB_REASON);
   }
 

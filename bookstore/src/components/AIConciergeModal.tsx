@@ -19,8 +19,13 @@ type ProductSuggestion = {
   reason: string;
 };
 
+type ComparedRow = {
+  variantId: string; found: boolean; sku?: string; variantName?: string;
+  productName?: string; description?: string; price?: number | null;
+  available?: number; inStock?: boolean;
+};
+
 const quickPrompts = [
-  "🌸 Tìm sách chữa lành tâm hồn cho người đi làm",
   "🎁 Gợi ý quà sinh nhật cho bé trai 6 tuổi",
   "✏️ Combo trọn bộ dụng cụ học tập cấp 2",
   "💼 Tủ sách kinh tế & quản trị cho CEO",
@@ -51,7 +56,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
   // history lives in AgentChatTurn rows. Kept in state (per page-load chat).
   const [chatId, setChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<
-    { sender: "user" | "ai"; text: string; items?: ProductSuggestion[]; plan?: { title: string; status: string }[] }[]
+    { sender: "user" | "ai"; text: string; items?: ProductSuggestion[]; comparison?: ComparedRow[]; plan?: { title: string; status: string }[] }[]
   >([
     {
       sender: "ai",
@@ -93,9 +98,12 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
     })
       .then(async (res) => {
         if (!res.ok) throw Object.assign(new Error(String(res.status)), { status: res.status });
-        const data = (await res.json()) as { text: string; items: ProductSuggestion[]; chatId?: string; plan?: { title: string; status: string }[] };
+        const data = (await res.json()) as { text: string; items: ProductSuggestion[]; comparison?: ComparedRow[]; chatId?: string; plan?: { title: string; status: string }[]; cartUpdated?: boolean };
         if (typeof data.chatId === "string" && data.chatId) setChatId(data.chatId);
-        setMessages((prev) => [...prev, { sender: "ai", text: data.text, items: data.items, plan: data.plan }]);
+        setMessages((prev) => [...prev, { sender: "ai", text: data.text, items: data.items, comparison: data.comparison, plan: data.plan }]);
+        // Shared cart: the agent rewrote server lines — refresh the visible
+        // cart so the shopper sees the agent's hand without reloading.
+        if (data.cartUpdated) window.dispatchEvent(new Event("melio:cart-refresh"));
       })
       .catch((err: Error & { status?: number }) => {
         // 429 rate-limited / 5xx configured-but-broken: honest message, no
@@ -156,7 +164,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
                 </div>
                 <div>
                   <b className="block text-sm font-serif">Thủ Thư AI · Melio Concierge</b>
-                  <span className="text-[10px] text-amber-300 font-serif">Tư vấn sách &amp; Quà tặng cá nhân hóa 24/7</span>
+                  <span className="text-[11px] text-amber-300 font-serif">Tư vấn sách &amp; Quà tặng cá nhân hóa 24/7</span>
                 </div>
               </div>
               <button
@@ -222,7 +230,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
                             key={r}
                             onClick={() => sendFeedback(r, m.text)}
                             aria-label={r === "up" ? "Câu trả lời hữu ích" : "Câu trả lời chưa tốt"}
-                            className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold transition-colors ${
+                            className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold transition-colors ${
                               feedbackSent === r
                                 ? "bg-[#ede5d8] text-[#8c2d19]"
                                 : "text-slate-400 hover:text-[#8c2d19] hover:bg-[#faf4ea]"
@@ -265,6 +273,49 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
                         ))}
                       </div>
                     )}
+                    {/* Comparison table: side-by-side DB rows, not prose */}
+                    {m.comparison && m.comparison.length >= 2 && (
+                      <div className="mt-3 overflow-x-auto rounded-xl border border-[#e8dac5]">
+                        <table className="w-full text-[11px]">
+                          <thead>
+                            <tr className="bg-[#faf6ef] text-slate-500">
+                              <th className="text-left font-bold px-2.5 py-1.5">Món</th>
+                              <th className="text-right font-bold px-2.5 py-1.5">Giá</th>
+                              <th className="text-right font-bold px-2.5 py-1.5">Tồn</th>
+                              <th className="px-2.5 py-1.5" />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {m.comparison.map((c) => (
+                              <tr key={c.variantId} className="border-t border-[#ede5d8] bg-white">
+                                <td className="px-2.5 py-1.5">
+                                  <div className="font-bold text-slate-900">{c.productName}{c.variantName ? ` — ${c.variantName}` : ""}</div>
+                                  {c.sku ? <div className="text-[11px] text-slate-400">{c.sku}</div> : null}
+                                </td>
+                                <td className="px-2.5 py-1.5 text-right font-bold text-[#8c2d19] whitespace-nowrap">
+                                  {c.price != null ? `${c.price.toLocaleString("vi-VN")} ₫` : "—"}
+                                </td>
+                                <td className="px-2.5 py-1.5 text-right whitespace-nowrap">
+                                  {c.inStock ? <span className="text-[#14532d]">Còn {c.available}</span> : <span className="text-red-600">Hết</span>}
+                                </td>
+                                <td className="px-2.5 py-1.5">
+                                  {c.inStock && onAddToCart ? (
+                                    <button
+                                      onClick={() => {
+                                        onAddToCart({ id: c.variantId, productId: c.variantId, name: c.productName ?? "", price: c.price ?? 0, category: "", reason: "So sánh trong chat" });
+                                      }}
+                                      className="px-2 py-1 bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-[11px] rounded-lg whitespace-nowrap"
+                                    >
+                                      + Thêm
+                                    </button>
+                                  ) : null}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -276,7 +327,7 @@ export default function AIConciergeModal({ onAddToCart }: { onAddToCart?: (item:
                 <button
                   key={i}
                   onClick={() => handleSend(p)}
-                  className="px-2.5 py-1 rounded-full bg-[#faf7f2] hover:bg-[#ede5d8] text-[10px] font-serif text-slate-700 whitespace-nowrap border border-[#ede5d8]"
+                  className="px-2.5 py-1 rounded-full bg-[#faf7f2] hover:bg-[#ede5d8] text-[11px] font-serif text-slate-700 whitespace-nowrap border border-[#ede5d8]"
                 >
                   {p}
                 </button>

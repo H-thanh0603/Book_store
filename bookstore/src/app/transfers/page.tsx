@@ -252,7 +252,7 @@ export default function TransfersPage() {
                       <td className="p-4 font-bold text-slate-900">{t.number}</td>
                       <td className="p-4 text-slate-600">{t.fromLocation.name}</td>
                       <td className="p-4 text-slate-600">{t.toLocation.name}</td>
-                      <td className="p-4"><span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${st.color}`}>{st.label}</span></td>
+                      <td className="p-4"><span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${st.color}`}>{st.label}</span></td>
                       <td className="p-4 text-slate-600">{t.items.length} mặt hàng</td>
                       <td className="p-4 text-slate-500">{new Date(t.createdAt).toLocaleDateString("vi-VN")}</td>
                       <td className="p-4 text-right">

@@ -3,7 +3,6 @@ import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 import { settleMomoResponse } from "@/lib/momo";
 import { emit } from "@/lib/webhook-bus";
 import { prisma } from "@/lib/db";
-import { defaultOrgId } from "@/lib/org-scope";
 
 /**
  * MoMo IPN (server-to-server callback). Accepts GET (query params) and POST
@@ -33,15 +32,20 @@ async function handle(req: NextRequest) {
         select: { order: { select: { store: { select: { region: { select: { orgId: true } } } } } } },
       }).catch(() => null)
     : null;
-  const emitOrgId = org?.order?.store?.region?.orgId ?? (await defaultOrgId());
-  emit({
-    eventId: `momo:${completed ? "completed" : "failed"}:${txnRef}`,
-    eventType: completed ? "payment.completed" : "payment.failed",
-    orgId: emitOrgId,
-    payload: { provider: "momo", orderId: result.orderId ?? null, rspCode: result.rspCode, message: result.message },
-  }).catch((err) =>
-    console.error(JSON.stringify({ level: "error", event: "webhook_emit_failed", message: String(err) }))
-  );
+  // Q35 fail-closed: IPN has no auth session; the owning org comes from the
+  // WebPayment row. Unknown refs skip the fan-out (nothing to attribute to)
+  // rather than landing in another tenant's endpoints.
+  const emitOrgId = org?.order?.store?.region?.orgId ?? null;
+  if (emitOrgId) {
+    emit({
+      eventId: `momo:${completed ? "completed" : "failed"}:${txnRef}`,
+      eventType: completed ? "payment.completed" : "payment.failed",
+      orgId: emitOrgId,
+      payload: { provider: "momo", orderId: result.orderId ?? null, rspCode: result.rspCode, message: result.message },
+    }).catch((err) =>
+      console.error(JSON.stringify({ level: "error", event: "webhook_emit_failed", message: String(err) }))
+    );
+  }
   return NextResponse.json({ resultCode: result.ok ? 0 : 1, message: result.message });
 }
 
