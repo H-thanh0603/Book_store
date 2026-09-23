@@ -2,6 +2,7 @@
 import { AlertTriangle, RotateCw } from "lucide-react";
 import { trackError } from "@/lib/error-tracking";
 import { useEffect } from "react";
+import Link from "next/link";
 
 // Orders error boundary: recovery card instead of a blank page.
 export default function Error({
@@ -32,6 +33,14 @@ export default function Error({
         >
           <RotateCw className="w-4 h-4" /> Thử lại
         </button>
+        <div className="flex items-center justify-center gap-3 text-xs">
+          <Link href="/" className="text-slate-500 underline hover:text-rose-600">
+            Về trang chủ
+          </Link>
+          <Link href="/track" className="text-slate-500 underline hover:text-rose-600">
+            Theo dõi đơn
+          </Link>
+        </div>
       </div>
     </main>
   );
