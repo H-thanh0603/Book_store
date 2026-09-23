@@ -13,8 +13,8 @@
 import { createHmac } from "node:crypto";
 import { prisma } from "./db";
 import { fail } from "./api";
+import { vnpayHost } from "./vnpay";
 
-const PAY_HOST = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
 const SUSPEND_GRACE_DAYS = 3;
 
 function vnTime(d: Date) {
@@ -56,7 +56,7 @@ export function buildBillingVnpayUrl(txnRef: string, amount: bigint, orderInfo: 
     vnp_TxnRef: txnRef,
   };
   const { query, hmac } = hash(params);
-  return `${PAY_HOST}?${query}&vnp_SecureHash=${hmac}`;
+  return `${vnpayHost()}?${query}&vnp_SecureHash=${hmac}`;
 }
 
 export type IssueResult = { invoiceId: string; txnRef: string; url: string };

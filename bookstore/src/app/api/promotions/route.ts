@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma, prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok, fail } from "@/lib/api";
-import { withOrg, defaultOrgId } from "@/lib/org-scope";
+import { withOrg, requireOrgId } from "@/lib/org-scope";
 import { Prisma, PromoChannel } from "@/generated/prisma/client";
 
 const CHANNELS: PromoChannel[] = ["ALL", "POS", "WEB"];
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     promotion = await prisma.promotion.create({
       data: {
         name: name.trim(),
-        orgId: auth.orgId ?? (await defaultOrgId()),
+        orgId: requireOrgId(auth),
         code: code?.trim()?.toUpperCase() || null,
         type,
         value: nums.value ?? 0n,

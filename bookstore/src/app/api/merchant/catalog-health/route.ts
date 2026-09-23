@@ -5,12 +5,12 @@
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { getListingIssues } from "@/lib/merchant-agent";
-import { defaultOrgId } from "@/lib/org-scope";
+import { requireOrgId } from "@/lib/org-scope";
 
 export async function GET() {
   try {
     const auth = await requirePermission("product.view");
-    const orgId = auth.orgId ?? (await defaultOrgId());
+    const orgId = requireOrgId(auth);
     const issues = await getListingIssues({ orgId }, 100);
     const byKind: Record<string, number> = {};
     for (const i of issues) byKind[i.kind] = (byKind[i.kind] ?? 0) + 1;

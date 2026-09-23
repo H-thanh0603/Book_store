@@ -18,7 +18,7 @@ import {
   runMerchantTurn,
   type MerchantSkill,
 } from "@/lib/merchant-agent";
-import { defaultOrgId } from "@/lib/org-scope";
+import { requireOrgId } from "@/lib/org-scope";
 
 const SKILLS: MerchantSkill[] = ["digest", "explain", "inventory", "promo", "catalog"];
 const MERCHANT_DAILY_LIMIT = Number(process.env.MERCHANT_DAILY_LIMIT) || 500;
@@ -79,10 +79,8 @@ export async function POST(req: NextRequest) {
     const contextJson = rawContext === undefined ? undefined : redactPii(rawContext);
     // Approval-surface wiring: propose_change stages PENDING rows attributed
     // to this staff user; nothing the model says applies itself.
-    // defaultOrgId(): legacy org-less callers land on the seeded demo org —
-    // never "the oldest org", which silently crossed tenants once a second
-    // org existed (audit: cross-tenant leak via merchant agent).
-    const orgId = auth.orgId ?? (await defaultOrgId());
+    // Q35 fail-closed: org-less callers get 403, never the demo org's data.
+    const orgId = requireOrgId(auth);
     const permissions = auth.roles.flatMap((r) => r.permissions);
     const switches = merchantSwitches();
     const allowPropose =

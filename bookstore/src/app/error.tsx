@@ -2,6 +2,7 @@
 import { AlertTriangle, RotateCw } from "lucide-react";
 import { trackError } from "@/lib/error-tracking";
 import { useEffect } from "react";
+import Link from "next/link";
 
 // Root error boundary (WS2.3): a crashed route shows a recovery card — never
 // a blank page — and the error is shipped through the configured transports.
@@ -33,6 +34,14 @@ export default function Error({
         >
           <RotateCw className="w-4 h-4" /> Thử lại
         </button>
+        <div className="flex items-center justify-center gap-3 text-xs">
+          <Link href="/" className="text-slate-500 underline hover:text-[#8c2d19]">
+            Về trang chủ
+          </Link>
+          <Link href="/track" className="text-slate-500 underline hover:text-[#8c2d19]">
+            Theo dõi đơn
+          </Link>
+        </div>
       </div>
     </main>
   );

@@ -23,6 +23,7 @@ import { normalizePlan, renderPlanBlock, type PlanStep } from "@/lib/agent-plan"
 import { randomUUID } from "crypto";
 import { saveServerCart } from "@/lib/server-cart";
 import { callLlm, llmConfigured, llmModelId, type LlmMessage } from "@/lib/llm";
+import { checkoutGated, intentRouterModel, routeIntent, type IntentRoute } from "@/lib/intent-router";
 import { enforceRateLimit, clientIp } from "@/lib/rate-limit";
 import { agentRateLimit, finishAgentCall, type ResolvedAgentKey } from "@/lib/agent-auth";
 import { apiError } from "@/lib/api";
@@ -502,7 +503,9 @@ export async function POST(req: NextRequest) {
     // and prompt on every path — never a dead tool the model can call.
     // UPDATE_PLAN_TOOL is always offered: planning is intrinsic, not a
     // business system — but it only declares intent, never grants action.
-    const tools = [
+    // `let`: the Jev intent router below may drop PREPARE_CHECKOUT for the
+    // turn when the verdict says this turn must not check out.
+    let tools = [
       UPDATE_PLAN_TOOL,
       ...(switches.enableSearch ? [SEARCH_TOOL, COMPARE_TOOL, VOUCHER_TOOL] : []),
       ...(switches.enableMemory && subject ? [REMEMBER_TOOL] : []),
@@ -514,6 +517,64 @@ export async function POST(req: NextRequest) {
       hasSubject: subject !== null, toolCount: tools.length,
       memory: switches.enableMemory, checkout: switches.enableCheckout,
     }));
+
+    // ── Jev intent router (fail-open pre-LLM classification) ──
+    // One cheap Choice+Noul call on the latest user text. High-confidence
+    // deterministic intents skip the LLM entirely; checkout gating drops
+    // PREPARE_CHECKOUT for the turn unless the verdict allows it. Any
+    // router miss (null / low confidence / timeout) falls through to the
+    // full tool loop below — behavior unchanged from before the router.
+    const lastUserText = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
+    let intentRoute: IntentRoute | null = null;
+    try {
+      intentRoute = await routeIntent(lastUserText);
+    } catch {
+      intentRoute = null;
+    }
+    const gatedCheckout = checkoutGated(intentRoute);
+    if (intentRoute) {
+      console.info(JSON.stringify({
+        level: "info", event: "concierge_intent", model: intentRouterModel(),
+        intent: intentRoute.intent, confidence: intentRoute.confidence,
+        checkoutReady: intentRoute.checkoutReady, gatedCheckout,
+        ...(intentRoute.usage ? { usage: intentRoute.usage } : {}),
+      }));
+    }
+    async function fastReply(text: string): Promise<ReturnType<typeof NextResponse.json>> {
+      finish(200);
+      await finishAgentCall(req, "ask_concierge", agentKey, startedAt);
+      await persistTurn(text);
+      return NextResponse.json({
+        chatId,
+        ...(currentPlan ? { plan: currentPlan } : {}),
+        text,
+        items: [],
+        provenance: {
+          "@context": "https://www.w3.org/ns/prov#",
+          "prov:wasGeneratedBy": "melio-concierge-intent",
+          "prov:generatedAtTime": new Date().toISOString(),
+          humanVerified: false,
+        },
+      });
+    }
+    if (intentRoute && intentRoute.confidence >= 0.7) {
+      if (intentRoute.intent === "track_order") {
+        return fastReply("Bạn xem trạng thái đơn tại trang Theo dõi đơn hàng (/track) với mã đơn nhé. Cần hỗ trợ thêm thì cho mình mã đơn.");
+      }
+      if (intentRoute.intent === "return_policy") {
+        return fastReply("Chính sách chung: đổi trả theo quy định cửa hàng, hàng lỗi liên hệ hỗ trợ kèm ảnh/mã đơn. Hoàn tiền chỉ xác nhận qua kênh hỗ trợ, mình không hứa hoàn ngay trong chat.");
+      }
+      if (intentRoute.intent === "chitchat") {
+        return fastReply("Chào bạn! Mình là Thủ Thư AI của Melio. Bạn đang tìm sách, quà tặng hay đồ dùng học tập gì hôm nay?");
+      }
+    }
+    if (!gatedCheckout && intentRoute && intentRoute.intent !== "prepare_checkout" && intentRoute.confidence >= 0.7) {
+      // Confident non-checkout verdict: hide prepare_checkout so the model
+      // cannot jump to checkout on a browsing turn. Doubt (null / low
+      // confidence / prepare_checkout verdict) keeps full tools — the model
+      // still validates món + số lượng + chi nhánh via the tool contract.
+      tools = tools.filter((t) => t.function.name !== "prepare_checkout");
+    }
 
     // Up to 3 tool rounds: search → (refine) → answer. Some models search
     // twice before answering; 2 rounds dead-ended them into the fallback.

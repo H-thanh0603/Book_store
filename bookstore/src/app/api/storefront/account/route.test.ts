@@ -32,6 +32,7 @@ describe("GET /api/storefront/account", () => {
     expect(body).toEqual({
       member: {
         code: "CUS-001",
+        birthday: null,
         points: 125,
         tier: "Gold",
         transactions: [{ id: "tx-1", points: 20, balanceAfter: 125, type: "EARN", createdAt: "2026-09-19T08:00:00.000Z" }],

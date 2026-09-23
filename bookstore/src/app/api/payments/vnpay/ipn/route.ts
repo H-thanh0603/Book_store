@@ -4,7 +4,6 @@ import { settleVnpayResponse } from "@/lib/vnpay";
 import { emit } from "@/lib/webhook-bus";
 import { settleBillingPayment } from "@/lib/billing";
 import { prisma } from "@/lib/db";
-import { defaultOrgId } from "@/lib/org-scope";
 
 /**
  * VNPay IPN (server-to-server callback). Response shape is owned by the VNPay
@@ -35,9 +34,8 @@ export async function GET(req: NextRequest) {
   // PAY-003 (audit 2026-08-30): emit to the owning org, not a hardcoded
   // "default" — order payments scope via Order→Store→Region, billing-cycle
   // payments via their BillingInvoice.orgId. Unknown refs resolve via
-  // defaultOrgId (seeded demo org for the legacy superuser; throws when no
-  // org exists) so the event still lands somewhere auditable — and so a
-  // second tenant never silently claims another org's payment event.
+  // Q35 fail-closed: IPN has no auth session; unknown refs skip the fan-out
+  // rather than landing in another tenant's endpoints.
   const org = await prisma.webPayment.findUnique({
     where: { txnRef },
     select: {
@@ -45,23 +43,25 @@ export async function GET(req: NextRequest) {
       billingInvoice: { select: { orgId: true } },
     },
   }).catch(() => null);
-  const emitOrgId = org?.order?.store?.region?.orgId ?? org?.billingInvoice?.orgId
-    ?? (await defaultOrgId());
+  const emitOrgId = org?.order?.store?.region?.orgId ?? org?.billingInvoice?.orgId ?? null;
   // Fire-and-forget: the VNPay contract is owned by the response below.
   // emit() is itself idempotent on eventId, so a VNPay retry is safe.
-  emit({
-    eventId: `vnpay:${completed ? "completed" : "failed"}:${txnRef}`,
-    eventType: completed ? "payment.completed" : "payment.failed",
-    orgId: emitOrgId,
+  // Q35 fail-closed: unknown refs skip fan-out.
+  if (emitOrgId) {
+    emit({
+      eventId: `vnpay:${completed ? "completed" : "failed"}:${txnRef}`,
+      eventType: completed ? "payment.completed" : "payment.failed",
+      orgId: emitOrgId,
     payload: {
       provider: "vnpay",
       orderId: result.orderId ?? null,
       rspCode: result.rspCode,
       message: result.message,
     },
-  }).catch((err) =>
-    console.error(JSON.stringify({ level: "error", event: "webhook_emit_failed", message: err?.message }))
-  );
+    }).catch((err) =>
+      console.error(JSON.stringify({ level: "error", event: "webhook_emit_failed", message: String(err) }))
+    );
+  }
   return NextResponse.json(
     { RspCode: result.rspCode, Message: result.message },
     { status: result.ok ? 200 : 400 },

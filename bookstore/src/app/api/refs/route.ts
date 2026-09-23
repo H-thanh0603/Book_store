@@ -3,14 +3,16 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, resolveStoreScope } from "@/lib/auth";
+import { requireOrgId } from "@/lib/org-scope";
 import { apiError, ok } from "@/lib/api";
 
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth();
+    const orgId = requireOrgId(auth); // Q35 fail-closed: no org-less roam
     const kind = req.nextUrl.searchParams.get("kind");
     if (kind === "suppliers")
-      return ok({ suppliers: await prisma.supplier.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }) });
+      return ok({ suppliers: await prisma.supplier.findMany({ where: { orgId }, select: { id: true, name: true }, orderBy: { name: "asc" } }) });
     if (kind === "warehouses")
       return ok({ warehouses: await prisma.warehouse.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }) });
     if (kind === "locations") {
@@ -28,6 +30,7 @@ export async function GET(req: NextRequest) {
     if (kind === "variants")
       return ok({
         variants: await prisma.productVariant.findMany({
+          where: { orgId },
           select: { id: true, sku: true, product: { select: { name: true } } },
           take: 500,
           orderBy: { sku: "asc" },
