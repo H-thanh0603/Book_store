@@ -3,3 +3,19 @@ node_modules/
 
 # runtime-generated exports (MISA zips etc.)
 bookstore/var/
+
+# secrets & sensitive artifacts (audit Q9/Q10) — never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.sql
+*.dump
+credentials.json
+service-account*.json
+id_rsa*
+bookstore/backups/
+backups/
