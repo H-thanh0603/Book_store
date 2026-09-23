@@ -76,9 +76,16 @@ export async function PUT(
 
             const transfer = await tx.stockTransfer.findUnique({
               where: { id },
-              include: { items: true },
+              include: {
+                items: true,
+                fromLocation: { include: { store: { include: { region: true } } } },
+                toLocation: { include: { store: { include: { region: true } } } },
+              },
             });
             if (!transfer) fail(404, "NOT_FOUND", "Not found");
+            // Re-assert inside the tx (audit Q38): the boundary travels with
+            // the write, not just the pre-tx read.
+            assertOrgOnTransfer(transfer, auth);
 
             for (const item of transfer!.items) {
               // Source: onHand → inTransit. applyMovement locks the balance
@@ -121,9 +128,16 @@ export async function PUT(
 
             const transfer = await tx.stockTransfer.findUnique({
               where: { id },
-              include: { items: true },
+              include: {
+                items: true,
+                fromLocation: { include: { store: { include: { region: true } } } },
+                toLocation: { include: { store: { include: { region: true } } } },
+              },
             });
             if (!transfer) fail(404, "NOT_FOUND", "Not found");
+            // Re-assert inside the tx (audit Q38): the boundary travels with
+            // the write, not just the pre-tx read.
+            assertOrgOnTransfer(transfer, auth);
 
             for (const trfItem of transfer!.items) {
               const entry = receiveItems.find((i: { id?: string }) => i.id === trfItem.id);
