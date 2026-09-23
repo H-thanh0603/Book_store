@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { prisma, prismaRead } from "@/lib/db";
+import { prisma, prismaRead, TX_OPTIONS } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok, fail } from "@/lib/api";
 import { withOrg } from "@/lib/org-scope";
@@ -133,7 +133,7 @@ export async function PUT(
           stores: { include: { store: { select: { name: true } } } },
         },
       });
-    });
+    }, TX_OPTIONS);
   } catch (e: unknown) {
     if (typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "P2002")
       return apiError({ status: 409, code: "CONFLICT", message: "Promotion code already exists" });

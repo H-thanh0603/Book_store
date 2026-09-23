@@ -216,7 +216,7 @@ export default function RevenueReportPage() {
                     />
                     <span className="text-[9px] text-slate-400 mt-1 rotate-45 origin-left">{fmtDate(d.date)}</span>
                     {/* Tooltip */}
-                    <div className="absolute bottom-full mb-2 hidden group-hover:block bg-slate-900 text-white text-[10px] rounded-lg px-2 py-1 whitespace-nowrap z-10">
+                    <div className="absolute bottom-full mb-2 hidden group-hover:block bg-slate-900 text-white text-[11px] rounded-lg px-2 py-1 whitespace-nowrap z-10">
                       {fmt(d.revenue)} ₫ · {d.transactions} giao dịch
                     </div>
                   </div>
@@ -238,11 +238,11 @@ export default function RevenueReportPage() {
                     <div key={i} className="px-4 py-3 flex items-center justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold text-slate-900 truncate">{p.name}</p>
-                        <p className="text-[10px] text-slate-500 font-mono">{p.sku}</p>
+                        <p className="text-[11px] text-slate-500 font-mono">{p.sku}</p>
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-xs font-bold text-indigo-700">{fmt(p.revenue)} ₫</p>
-                        <p className="text-[10px] text-slate-500">{p.quantity} cuốn</p>
+                        <p className="text-[11px] text-slate-500">{p.quantity} cuốn</p>
                       </div>
                     </div>
                   ))}
@@ -263,11 +263,11 @@ export default function RevenueReportPage() {
                       <div key={i} className="px-4 py-3 flex items-center justify-between gap-3">
                         <div>
                           <p className="text-xs font-semibold text-slate-900">{s.name}</p>
-                          <p className="text-[10px] text-slate-500 font-mono">{s.code}</p>
+                          <p className="text-[11px] text-slate-500 font-mono">{s.code}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-xs font-bold text-indigo-700">{fmt(s.revenue)} ₫</p>
-                          <p className="text-[10px] text-slate-500">{s.transactions} giao dịch</p>
+                          <p className="text-[11px] text-slate-500">{s.transactions} giao dịch</p>
                         </div>
                       </div>
                     ))}

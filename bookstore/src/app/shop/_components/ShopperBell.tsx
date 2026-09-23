@@ -101,7 +101,7 @@ export default function ShopperBell() {
       >
         <Bell className="w-4 h-4 text-slate-600" />
         {unread.length > 0 && (
-          <span className="absolute -top-1 -right-1 inline-flex items-center justify-center size-5 rounded-full bg-[#8c2d19] text-white font-black text-[10px]">
+          <span className="absolute -top-1 -right-1 inline-flex items-center justify-center size-5 rounded-full bg-[#8c2d19] text-white font-black text-[11px]">
             {unread.length > 9 ? "9+" : unread.length}
           </span>
         )}
@@ -123,7 +123,7 @@ export default function ShopperBell() {
                     {n.title}
                   </b>
                   <p className="text-[11px] text-slate-600 mt-0.5">{n.body}</p>
-                  <span className="text-[10px] text-slate-400">{new Date(n.createdAt).toLocaleString("vi-VN")}</span>
+                  <span className="text-[11px] text-slate-400">{new Date(n.createdAt).toLocaleString("vi-VN")}</span>
                 </div>
               ))}
             </div>

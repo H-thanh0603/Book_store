@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, getSystemConfig } from "@/lib/api";
 
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
         },
       });
       return { promo, balanceAfter: after.points };
-    });
+    }, TX_OPTIONS);
     return NextResponse.json(
       { code: result.promo.code, value: Number(value), balanceAfter: result.balanceAfter },
       { status: 201 }

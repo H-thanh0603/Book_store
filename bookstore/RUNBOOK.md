@@ -68,6 +68,33 @@ offboarding, periodic policy):
 
 The old key is safe to discard only after step 4 passes.
 
+## Rotating other long-lived secrets
+
+Any secret that has left the machine (shared `.env`, screenshot, laptop loss)
+must be treated as burned and rotated the same day:
+
+- `GEMINI_API_KEY` / `LLM_API_KEY` — revoke in the provider console
+  (Google AI Studio / TokenRouter), mint a replacement, update the secret
+  store, `pm2 reload bookstore`. Concierge/merchant degrade to 503+canned
+  replies while unset — no data loss.
+- `AGENT_CART_SECRET` — set a new 32+ char random value in the secret store
+  and reload. In-flight handoff links signed with the old value stop working
+  (users re-add items); no other surface is affected.
+- `CARRIER_WEBHOOK_SECRET` / provider webhook secrets — update both sides;
+  verify with a signed test event before discarding the old value.
+- Staff/session compromise — `UPDATE "Session" SET "expiresAt" = now() WHERE
+  "expiresAt" > now();` (or truncate via ops) forces re-login everywhere.
+
+## Redis in production (multi-worker deployments)
+
+`ecosystem.config.js` runs `instances: "max"`. Without a shared store,
+per-process fallbacks apply: login/rate-limit buckets live per worker
+(limits multiplied by worker count) and the checkout semaphore over-admits
+slots under contention. For any multi-worker deployment set `REDIS_URL` in
+the secret store BEFORE go-live — the code falls back gracefully, but the
+safe limits are only guaranteed with Redis present. Single-worker boxes may
+omit it (document the choice in HANDOVER.md).
+
 ## Release changelog (template)
 
 Every production deploy records one entry in `docs/CHANGELOG.md` (create on

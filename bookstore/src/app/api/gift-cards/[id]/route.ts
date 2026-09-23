@@ -24,6 +24,11 @@ export async function PUT(
   const existing = await prismaRead.giftCard.findUnique({ where: withOrg(auth, { id }) });
   if (!existing) return apiError({ status: 404, code: "NOT_FOUND", message: "Gift card not found" });
 
+  // Defense in depth (audit Q34): the guard above 404s cross-tenant ids,
+  // but every write below re-asserts the org boundary so a dropped guard
+  // cannot become an IDOR.
+  const orgWhere = withOrg(auth, { id });
+
   if (action === "adjust") {
     if (typeof amount !== "number" || !Number.isInteger(amount) || amount === 0) return apiError({ status: 400, code: "VALIDATION", message: "Amount must be a non-zero integer" });
     if (!reason?.trim()) return apiError({ status: 400, code: "VALIDATION", message: "Reason is required for adjustment" });
@@ -33,8 +38,12 @@ export async function PUT(
     // value, then wrote the ledger separately — a POS redemption racing the
     // adjust re-credited money just spent.
     const adjusted = await prisma.$transaction(async (tx) => {
+      // Re-check org membership inside the tx (TOCTOU-safe): the update
+      // itself carries the boundary, not just the earlier read.
+      const scoped = await tx.giftCard.findUnique({ where: orgWhere, select: { id: true } });
+      if (!scoped) throw Object.assign(new Error("Gift card not found"), { status: 404 });
       const updated = await tx.giftCard.update({
-        where: { id },
+        where: orgWhere,
         data: { balance: { increment: BigInt(amount) } },
       });
       if (updated.balance < 0n) throw Object.assign(new Error("Insufficient balance"), { status: 400 });
@@ -53,13 +62,34 @@ export async function PUT(
   }
 
   if (action === "deactivate") {
-    await prisma.giftCard.update({ where: { id }, data: { active: false } });
+    await prisma.giftCard.update({ where: orgWhere, data: { active: false } });
     return ok({ message: "Gift card deactivated" });
   }
 
   if (action === "activate") {
-    await prisma.giftCard.update({ where: { id }, data: { active: true } });
+    await prisma.giftCard.update({ where: orgWhere, data: { active: true } });
     return ok({ message: "Gift card activated" });
+  }
+
+  // F2 lifecycle: void a card with remaining balance — zeroes it with a
+  // ledger row (audit trail preserved), then deactivates. Only a zero or
+  // positive balance can void; redemptions racing the void serialize on
+  // the balance row inside the transaction.
+  if (action === "void") {
+    if (!reason?.trim()) return apiError({ status: 400, code: "VALIDATION", message: "Reason is required to void" });
+    const voided = await prisma.$transaction(async (tx) => {
+      const card = await tx.giftCard.findUniqueOrThrow({ where: orgWhere });
+      if (!card.active) return apiError({ status: 409, code: "VALIDATION", message: "Card already inactive" }) as never;
+      if (card.balance > 0n)
+        await tx.giftCardTransaction.create({
+          data: {
+            giftCardId: id, amount: -card.balance, balanceAfter: 0n,
+            refType: "void", refId: reason.trim(),
+          },
+        });
+      return tx.giftCard.update({ where: orgWhere, data: { balance: 0n, active: false } });
+    });
+    return ok({ giftCard: voided });
   }
 
   return apiError({ status: 400, code: "VALIDATION", message: "Invalid action" });

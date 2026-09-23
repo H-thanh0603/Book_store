@@ -23,7 +23,7 @@ function assertOrgOnTransfer(
   },
   auth: { orgId: string | null }
 ) {
-  if (!auth.orgId) return; // legacy admin
+  if (!auth.orgId) fail(404, "NOT_FOUND", "Transfer not found"); // Q35 fail-closed: no org-less roam
   const orgOf = (loc: { store: { orgId?: string; region?: { orgId: string } | null } | null }) =>
     loc.store?.orgId ?? loc.store?.region?.orgId ?? null;
   const orgIds = [orgOf(transfer.fromLocation), orgOf(transfer.toLocation)];
@@ -76,9 +76,16 @@ export async function PUT(
 
             const transfer = await tx.stockTransfer.findUnique({
               where: { id },
-              include: { items: true },
+              include: {
+                items: true,
+                fromLocation: { include: { store: { include: { region: true } } } },
+                toLocation: { include: { store: { include: { region: true } } } },
+              },
             });
             if (!transfer) fail(404, "NOT_FOUND", "Not found");
+            // Re-assert inside the tx (audit Q38): the boundary travels with
+            // the write, not just the pre-tx read.
+            assertOrgOnTransfer(transfer, auth);
 
             for (const item of transfer!.items) {
               // Source: onHand → inTransit. applyMovement locks the balance
@@ -121,9 +128,16 @@ export async function PUT(
 
             const transfer = await tx.stockTransfer.findUnique({
               where: { id },
-              include: { items: true },
+              include: {
+                items: true,
+                fromLocation: { include: { store: { include: { region: true } } } },
+                toLocation: { include: { store: { include: { region: true } } } },
+              },
             });
             if (!transfer) fail(404, "NOT_FOUND", "Not found");
+            // Re-assert inside the tx (audit Q38): the boundary travels with
+            // the write, not just the pre-tx read.
+            assertOrgOnTransfer(transfer, auth);
 
             for (const trfItem of transfer!.items) {
               const entry = receiveItems.find((i: { id?: string }) => i.id === trfItem.id);

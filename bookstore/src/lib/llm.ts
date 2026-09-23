@@ -146,3 +146,74 @@ export async function callLlm(
   if (!message) throw new Error("empty response");
   return { message, usage: data.usage };
 }
+
+/**
+ * Streaming variant of one chat-completions round (SSE `stream: true`).
+ * Yields content deltas as they arrive; returns the assembled text plus
+ * usage when present. Tool calls are NOT supported here — streaming is
+ * used for the final narration round only (tool rounds stay non-streaming).
+ * Throws { status: 502 } like callLlm on transport/upstream failure.
+ */
+export async function* streamLlm(
+  messages: LlmMessage[],
+  opts: { maxTokens: number; temperature: number; timeoutMs?: number },
+): AsyncGenerator<string, { text: string; usage?: LlmUsage }> {
+  const cfg = llmConfig();
+  const res = await fetch(cfg.url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${cfg.apiKey}`,
+      ...providerHeaders(),
+    },
+    body: JSON.stringify({
+      model: cfg.model,
+      messages,
+      max_tokens: opts.maxTokens,
+      temperature: opts.temperature,
+      stream: true,
+    }),
+    signal: AbortSignal.timeout(opts.timeoutMs ?? 45_000),
+  });
+  if (!res.ok || !res.body) {
+    const errText = await res.text().catch(() => "");
+    console.error(JSON.stringify({
+      level: "error", event: "llm_upstream", model: cfg.model,
+      status: res.status, message: errText.slice(0, 300),
+    }));
+    throw Object.assign(new Error(`llm upstream ${res.status}`), { status: 502 });
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let text = "";
+  let usage: LlmUsage | undefined;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split("\n");
+    buf = lines.pop() ?? "";
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("data:")) continue;
+      const payload = trimmed.slice(5).trim();
+      if (payload === "[DONE]") continue;
+      try {
+        const chunk = JSON.parse(payload) as {
+          choices?: { delta?: { content?: string } }[];
+          usage?: LlmUsage;
+        };
+        const delta = chunk.choices?.[0]?.delta?.content ?? "";
+        if (delta) {
+          text += delta;
+          yield delta;
+        }
+        if (chunk.usage) usage = chunk.usage;
+      } catch {
+        // ignore malformed SSE frames
+      }
+    }
+  }
+  return { text, usage };
+}

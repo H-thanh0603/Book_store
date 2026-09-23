@@ -310,6 +310,14 @@ the first hop of `X-Forwarded-For` only when trusting proxies.
 Never set `true` on a directly-exposed server: attackers could rotate fake
 `X-Forwarded-For` values to bypass login/checkout rate limits entirely.
 
+### `APP_ORIGIN` (CSRF origin check)
+
+API mutations compare the request `Origin` against `APP_ORIGIN`'s host
+(`src/proxy.ts`). Set it to the exact public URL
+(`APP_ORIGIN=https://shop.example.com`); when unset it falls back to the
+incoming `Host`, which is fine for single-domain deploys but wrong behind a
+rewriting proxy. A mismatch fails closed with 403 `Invalid request origin`.
+
 ## SMTP mail / password reset
 
 Password reset (`POST /api/auth {action:"request_reset"|"reset_password"}`) emails a

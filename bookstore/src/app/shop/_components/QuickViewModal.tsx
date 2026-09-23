@@ -1,8 +1,10 @@
 // Section 16: QUICK VIEW PRODUCT MODAL
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, ShoppingBag, Check } from "lucide-react";
 import ProductReviews from "./ProductReviews";
 import type { Product } from "./types";
+
+type Reco = { id: string; sku: string; name: string; score: number; reason: string };
 
 export default function QuickViewModal({
   product,
@@ -25,6 +27,21 @@ export default function QuickViewModal({
 }) {
   const [added, setAdded] = useState(false);
   const variant = product.variants[0];
+  // P4-6: "frequently bought together" from co-purchase history, scoped to
+  // the variant's org server-side. Best-effort: hides on any failure.
+  const [recos, setRecos] = useState<Reco[] | null>(null);
+  useEffect(() => {
+    if (!variant?.id) return;
+    setRecos(null);
+    fetch(`/api/storefront/recommendations?variantId=${encodeURIComponent(variant.id)}&take=4`)
+      .then(async (r) => {
+        if (!r.ok) return;
+        const d = await r.json();
+        const list = (d.recommendations as Reco[]) ?? [];
+        if (list.length > 0) setRecos(list);
+      })
+      .catch(() => {});
+  }, [variant?.id]);
   return (
     <div
       className="fixed inset-0 z-50 bg-[#1c1917]/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
@@ -50,7 +67,7 @@ export default function QuickViewModal({
           <div className="sm:col-span-5">
             <div className="aspect-[4/5] rounded-2xl bg-gradient-to-tr from-[#1c1917] via-[#2d2521] to-[#171412] p-6 text-white flex flex-col justify-between shadow-xl border border-white/15 relative">
               <div className="bookmark-ribbon" />
-              <span className="text-[10px] font-serif uppercase tracking-widest text-amber-300 font-bold">
+              <span className="text-[11px] font-serif uppercase tracking-widest text-amber-300 font-bold">
                 {product.category.name}
               </span>
               <h3 className="font-serif font-black text-xl sm:text-2xl text-amber-100 leading-snug my-auto">
@@ -65,7 +82,7 @@ export default function QuickViewModal({
           {/* Details & Specs (7 cols) */}
           <div className="sm:col-span-7 space-y-4 font-serif">
             <div>
-              <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase tracking-widest bg-[#faf4ea] text-[#8c2d19] border border-[#e8dac5] font-bold">
+              <span className="inline-block px-3 py-1 rounded-full text-[11px] uppercase tracking-widest bg-[#faf4ea] text-[#8c2d19] border border-[#e8dac5] font-bold">
                 {product.category.name}
               </span>
               <h3 id="quickview-title" className="font-black text-2xl text-slate-900 leading-tight mt-2">
@@ -125,25 +142,102 @@ export default function QuickViewModal({
                   <Check className="w-4 h-4" />
                   Đã thêm ✓ — Xem giỏ hàng
                 </button>
-              ) : (
+              ) : variant?.available ? (
                 <button
                   onClick={() => {
                     onAddToCart(product);
                     setAdded(true);
                   }}
-                  disabled={!variant?.available}
-                  className="w-full py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                  className="w-full py-3.5 rounded-2xl bg-[#1c1917] hover:bg-[#8c2d19] text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
                 >
                   <ShoppingBag className="w-4 h-4" />
-                  {variant?.available ? "Thêm Vào Giỏ Hàng Ngay" : "Tạm Hết Hàng"}
+                  Thêm Vào Giỏ Hàng Ngay
                 </button>
+              ) : (
+                <StockAlertForm variantId={variant?.id} />
               )}
             </div>
           </div>
         </div>
 
         <ProductReviews productId={product.id} />
+
+        {recos && recos.length > 0 ? (
+          <div>
+            <h5 className="text-xs font-bold text-slate-900 mb-2">Thường mua cùng:</h5>
+            <ul className="space-y-1.5">
+              {recos.map((r) => (
+                <li key={r.id} className="text-xs text-slate-600 flex items-center justify-between gap-2 rounded-xl bg-white border border-[#ede5d8] px-3 py-2">
+                  <span className="truncate">{r.name}</span>
+                  <span className="shrink-0 text-[11px] text-slate-400">
+                    {r.reason === "frequently_bought_together" ? "mua cùng" : r.reason === "similar_content" ? "tương tự" : "cùng thể loại"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+/** Back-in-stock signup: phone → StockAlert, job pings on restock. */
+function StockAlertForm({ variantId }: { variantId?: string }) {
+  const [phone, setPhone] = useState("");
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  if (done)
+    return (
+      <p className="w-full py-3 rounded-2xl bg-[#dcfce7] text-[#14532d] font-bold text-xs sm:text-sm text-center">
+        ✓ Có hàng sẽ báo ngay qua SMS/thông báo!
+      </p>
+    );
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!variantId || busy) return;
+        setBusy(true);
+        setErr(null);
+        try {
+          const r = await fetch("/api/storefront/stock-alerts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ variantId, phone }),
+          });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(d.message ?? "Đăng ký thất bại");
+          setDone(true);
+        } catch (e) {
+          setErr(e instanceof Error ? e.message : "Đăng ký thất bại");
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <p className="text-xs font-bold text-slate-700">Tạm hết hàng — để lại SĐT, có hàng báo ngay:</p>
+      <div className="flex gap-2">
+        <input
+          type="tel"
+          required
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="09xxxxxxxx"
+          aria-label="Số điện thoại nhận tin có hàng"
+          className="flex-1 min-w-0 rounded-xl border border-[#ede5d8] bg-white px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#8c2d19]/30"
+        />
+        <button
+          type="submit"
+          disabled={busy}
+          className="shrink-0 px-4 py-2.5 rounded-xl bg-[#8c2d19] hover:bg-[#6f2314] disabled:opacity-60 text-white font-bold text-xs cursor-pointer"
+        >
+          {busy ? "…" : "Báo tôi"}
+        </button>
+      </div>
+      {err && <p className="text-[11px] text-red-600">{err}</p>}
+    </form>
   );
 }

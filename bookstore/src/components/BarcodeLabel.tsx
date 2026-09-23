@@ -21,15 +21,29 @@ export default function BarcodeLabel({
 
   useEffect(() => {
     if (svgRef.current) {
-      JsBarcode(svgRef.current, barcode, {
-        format: barcode.length === 13 ? "EAN13" : barcode.length === 12 ? "UPC" : "CODE128",
-        width,
-        height,
-        displayValue: true,
-        fontSize: 12,
-        margin: 4,
-        textMargin: 2,
-      });
+      try {
+        JsBarcode(svgRef.current, barcode, {
+          format: barcode.length === 13 ? "EAN13" : barcode.length === 12 ? "UPC" : "CODE128",
+          width,
+          height,
+          displayValue: true,
+          fontSize: 12,
+          margin: 4,
+          textMargin: 2,
+        });
+      } catch {
+        // Invalid payload for the guessed format (e.g. bad EAN-13 checksum):
+        // fall back to CODE128 so the label still scans instead of crashing.
+        JsBarcode(svgRef.current, barcode, {
+          format: "CODE128",
+          width,
+          height,
+          displayValue: true,
+          fontSize: 12,
+          margin: 4,
+          textMargin: 2,
+        });
+      }
     }
   }, [barcode, width, height]);
 
@@ -37,7 +51,7 @@ export default function BarcodeLabel({
     <div className="inline-flex flex-col items-center bg-white border border-slate-200 rounded-lg p-2">
       <svg ref={svgRef} />
       {name && (
-        <p className="text-[10px] text-slate-600 mt-1 text-center max-w-[160px] truncate">{name}</p>
+        <p className="text-[11px] text-slate-600 mt-1 text-center max-w-[160px] truncate">{name}</p>
       )}
       {price != null && price > 0 && (
         <p className="text-xs font-bold text-indigo-700">{price.toLocaleString("vi-VN")} ₫</p>
@@ -56,6 +70,12 @@ export type LabelData = {
 export function printLabels(labels: LabelData[], opts?: { copies?: number }) {
   const copies = opts?.copies ?? 1;
   const allLabels = labels.flatMap((l) => Array(copies).fill(l));
+
+  // Product names/SKUs are staff-entered data — escape before injecting
+  // into the print window's HTML to avoid breaking layout or scripting it.
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
   const html = `<!DOCTYPE html>
 <html>
@@ -94,10 +114,10 @@ ${allLabels
   .map(
     (l) => `
   <div class="label">
-    <svg class="barcode" data-code="${l.barcode}"></svg>
-    <div class="label-name">${l.name}</div>
-    <div class="label-price">${l.price.toLocaleString("vi-VN")} ₫</div>
-    <div class="label-sku">${l.sku}</div>
+    <svg class="barcode" data-code="${esc(l.barcode)}"></svg>
+    <div class="label-name">${esc(l.name)}</div>
+    <div class="label-price">${esc(l.price.toLocaleString("vi-VN"))} ₫</div>
+    <div class="label-sku">${esc(l.sku)}</div>
   </div>`
   )
   .join("\n")}
@@ -106,14 +126,20 @@ ${allLabels
   JsBarcode(".barcode").init();
   document.querySelectorAll('.barcode').forEach(function(el) {
     var code = el.getAttribute('data-code');
-    JsBarcode(el, code, {
-      format: code.length === 13 ? 'EAN13' : code.length === 12 ? 'UPC' : 'CODE128',
+    var opts = {
       width: 1.5,
       height: 60,
       displayValue: true,
       fontSize: 10,
       margin: 2
-    });
+    };
+    try {
+      JsBarcode(el, code, Object.assign({}, opts, {
+        format: code.length === 13 ? 'EAN13' : code.length === 12 ? 'UPC' : 'CODE128'
+      }));
+    } catch (e) {
+      JsBarcode(el, code, Object.assign({}, opts, { format: 'CODE128' }));
+    }
   });
   window.onload = function() { setTimeout(function() { window.print(); }, 500); };
 <\/script>

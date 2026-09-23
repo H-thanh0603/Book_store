@@ -218,7 +218,7 @@ export default function SuggestionsPage() {
                     <tr key={s.id} className="hover:bg-[#faf4ea]/50 transition-colors">
                       <td className="p-4">
                         <p className="font-bold text-[#1c1917]">{s.variant.product.name}</p>
-                        <p className="font-mono text-[10px] text-[#574431]">{s.variant.sku}</p>
+                        <p className="font-mono text-[11px] text-[#574431]">{s.variant.sku}</p>
                       </td>
                       <td className="p-4 text-[#574431]">{s.location.name}</td>
                       <td className="p-4 text-center font-bold text-[#1c1917]">{s.availableQty}</td>

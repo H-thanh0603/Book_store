@@ -19,7 +19,8 @@ export async function apiError(err: unknown) {
     trackError(e.stack ? `${e.message ?? "Unknown error"}` : e.message ?? "Unknown error", "error", {
       component: "api",
       action: "api_500",
-      metadata: { requestId, status, code: e.code },
+      requestId,
+      metadata: { status, code: e.code },
     });
   }
   // Never leak raw DB errors.

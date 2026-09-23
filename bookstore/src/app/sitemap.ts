@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
 import { blogArticles } from "@/app/shop/_components/data";
+import { prismaRead } from "@/lib/db";
 
-// Public storefront sitemap (WS2.2): static landing pages + blog articles.
+// Public storefront sitemap (WS2.2): static landing pages + blog articles +
+// active products (B growth: indexable /shop/p/[id] entries for Google).
 // Staff/admin routes stay out — robots.ts already disallows them.
 const STATIC_ROUTES = [
   "",
@@ -16,8 +18,14 @@ const STATIC_ROUTES = [
   "/track",
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+  const products = await prismaRead.product.findMany({
+    where: { status: "active" },
+    select: { id: true, updatedAt: true },
+    orderBy: { updatedAt: "desc" },
+    take: 5000,
+  }).catch(() => []);
   return [
     ...STATIC_ROUTES.map((path) => ({
       url: path || "/",
@@ -30,6 +38,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: "weekly" as const,
       priority: 0.6,
+    })),
+    ...products.map((p) => ({
+      url: `/shop/p/${p.id}`,
+      lastModified: p.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
     })),
   ];
 }

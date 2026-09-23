@@ -3,7 +3,6 @@ import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 import { settleZaloPayResponse } from "@/lib/zalopay";
 import { emit } from "@/lib/webhook-bus";
 import { prisma } from "@/lib/db";
-import { defaultOrgId } from "@/lib/org-scope";
 
 /**
  * ZaloPay IPN (JSON POST). The MAC covers the raw postData, so the raw text
@@ -26,14 +25,18 @@ export async function POST(req: NextRequest) {
         select: { order: { select: { store: { select: { region: { select: { orgId: true } } } } } } },
       }).catch(() => null)
     : null;
-  const emitOrgId = org?.order?.store?.region?.orgId ?? (await defaultOrgId());
-  emit({
-    eventId: `zalopay:${completed ? "completed" : "failed"}:${txnRef}`,
-    eventType: completed ? "payment.completed" : "payment.failed",
-    orgId: emitOrgId,
-    payload: { provider: "zalopay", txnRef, return_code: result.return_code },
-  }).catch((err) =>
-    console.error(JSON.stringify({ level: "error", event: "webhook_emit_failed", message: String(err) }))
-  );
+  // Q35 fail-closed: IPN has no auth session; unknown refs skip the fan-out
+  // rather than landing in another tenant's endpoints.
+  const emitOrgId = org?.order?.store?.region?.orgId ?? null;
+  if (emitOrgId) {
+    emit({
+      eventId: `zalopay:${completed ? "completed" : "failed"}:${txnRef}`,
+      eventType: completed ? "payment.completed" : "payment.failed",
+      orgId: emitOrgId,
+      payload: { provider: "zalopay", txnRef, return_code: result.return_code },
+    }).catch((err) =>
+      console.error(JSON.stringify({ level: "error", event: "webhook_emit_failed", message: String(err) }))
+    );
+  }
   return NextResponse.json({ return_code: result.return_code, return_message: result.return_message });
 }
