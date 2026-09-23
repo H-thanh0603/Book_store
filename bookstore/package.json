@@ -50,7 +50,7 @@
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
-    "@types/ioredis": "^4.28.10",
+    "@types/ioredis": "^5.0.0",
     "@types/node": "^26.6.2",
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19",
