@@ -39,7 +39,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       select: { id: true },
     });
     if (!owned) return NextResponse.json({ code: "NOT_FOUND", message: "Key not found" }, { status: 404 });
-    await prisma.agentKey.update({ where: { id }, data: { status: "REVOKED" } });
+    await prisma.agentKey.update({ where: withOrg(auth, { id }), data: { status: "REVOKED" } });
     return NextResponse.json({ id, status: "REVOKED" });
   } catch (e) {
     return apiError(e);

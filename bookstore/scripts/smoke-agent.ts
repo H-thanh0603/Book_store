@@ -47,7 +47,7 @@ async function main() {
   const merchStub = getMerchantBackend();
   check("stub search unavailable", isUnavailable(await storeStub.searchProducts({ q: "x" })));
   check("stub card unavailable", isUnavailable(await storeStub.prepareCheckout({ storeId: "s", items: [] })));
-  check("stub digest unavailable", isUnavailable(await merchStub.getDigestStats()));
+  check("stub digest unavailable", isUnavailable(await merchStub.getDigestStats({ orgId: "smoke" })));
   check("stub apply refuses", (await merchStub.applyChange({ kind: "promotion.create", payload: {} }) as { refused?: boolean }).refused === true);
   delete process.env.COMMERCE_BACKEND;
   resetCommerceBackends();

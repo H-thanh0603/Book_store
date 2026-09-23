@@ -8,7 +8,7 @@ export function AuthorSpotlightSection({ spotlight }: { spotlight: AuthorSpotlig
     <section className="rounded-3xl bg-gradient-to-br from-amber-50 via-white to-rose-50/60 p-8 sm:p-12 border border-amber-200/80 shadow-xs relative overflow-hidden">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
         <div className="lg:col-span-4 text-center sm:text-left space-y-3">
-          <span className="text-[10px] uppercase tracking-widest text-rose-700 bg-rose-100/80 px-3.5 py-1 rounded-full font-black inline-flex items-center gap-1">
+          <span className="text-[11px] uppercase tracking-widest text-rose-700 bg-rose-100/80 px-3.5 py-1 rounded-full font-black inline-flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-[#8c2d19]" /> TÁC GIẢ TIÊU ĐIỂM TUẦN
           </span>
           <h2 className="font-serif font-black text-2xl sm:text-4xl text-slate-900">{spotlight.name}</h2>
@@ -67,7 +67,7 @@ export function ComboBundlesSection({
     <section className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
         <div>
-          <span className="text-[10px] uppercase tracking-widest text-[#8c2d19] font-black">
+          <span className="text-[11px] uppercase tracking-widest text-[#8c2d19] font-black">
             COMBO SIÊU TIẾT KIỆM
           </span>
           <h2 className="font-serif font-black text-2xl sm:text-3xl text-slate-900 mt-0.5">
@@ -87,7 +87,7 @@ export function ComboBundlesSection({
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] font-black uppercase ${theme.tagBg} px-3 py-1 rounded-full shadow-2xs`}>
+                  <span className={`text-[11px] font-black uppercase ${theme.tagBg} px-3 py-1 rounded-full shadow-2xs`}>
                     {bundle.tag}
                   </span>
                   <Gift className="w-5 h-5 text-rose-500" />
@@ -113,7 +113,7 @@ export function ComboBundlesSection({
                     {money(bundle.originalPrice)}
                   </span>
                   <b className="text-xl font-black text-[#8c2d19]">{money(bundle.price)}</b>
-                  <span className="block text-[10px] text-slate-400 mt-0.5">Giá gói tham chiếu — tính theo từng món thêm vào giỏ</span>
+                  <span className="block text-[11px] text-slate-400 mt-0.5">Giá gói tham chiếu — tính theo từng món thêm vào giỏ</span>
                 </div>
                 <button
                   onClick={() => onAddCombo(bundle)}

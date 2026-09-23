@@ -317,7 +317,7 @@ export default function CustomersPage() {
                     <div className="absolute top-0 right-0 -mt-6 -mr-6 w-32 h-32 bg-indigo-500/20 rounded-full blur-xl" />
                     <div className="relative z-10 flex justify-between items-start mb-6">
                       <div>
-                        <span className="text-[10px] font-semibold tracking-wider uppercase text-indigo-300">
+                        <span className="text-[11px] font-semibold tracking-wider uppercase text-indigo-300">
                           Melio Member Card
                         </span>
                         <h4 className="text-lg font-bold text-white mt-0.5">{selected.name}</h4>
@@ -331,11 +331,11 @@ export default function CustomersPage() {
 
                     <div className="relative z-10 flex justify-between items-end pt-2 border-t border-white/10">
                       <div>
-                        <span className="text-[10px] text-slate-400">Mã thành viên</span>
+                        <span className="text-[11px] text-slate-400">Mã thành viên</span>
                         <p className="text-xs font-mono font-bold text-slate-200">{selected.code}</p>
                       </div>
                       <div className="text-right">
-                        <span className="text-[10px] text-indigo-300">Điểm khả dụng</span>
+                        <span className="text-[11px] text-indigo-300">Điểm khả dụng</span>
                         <p className="text-2xl font-black text-amber-300">{history.points} <span className="text-xs font-normal">điểm</span></p>
                       </div>
                     </div>
@@ -405,7 +405,7 @@ export default function CustomersPage() {
                           >
                             <div>
                               <span className="font-semibold text-slate-800 block">{t.type}</span>
-                              <span className="text-[10px] text-slate-400 font-mono">
+                              <span className="text-[11px] text-slate-400 font-mono">
                                 {new Date(t.createdAt).toLocaleString("vi-VN")}
                               </span>
                             </div>
@@ -418,7 +418,7 @@ export default function CustomersPage() {
                                 {isGain ? "+" : ""}
                                 {t.points} đ
                               </span>
-                              <span className="block text-[10px] text-slate-500">
+                              <span className="block text-[11px] text-slate-500">
                                 Dư: {t.balanceAfter}
                               </span>
                             </div>

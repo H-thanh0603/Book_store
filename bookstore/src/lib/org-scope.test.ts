@@ -22,9 +22,8 @@ describe("withOrg", () => {
     const out = withOrg(auth("org-1"));
     expect(out).toEqual({ orgId: "org-1" });
   });
-  it("passes through for legacy admin (orgId null)", () => {
-    const out = withOrg(auth(null), { foo: 1 } as Record<string, unknown>);
-    expect(out).toEqual({ foo: 1 });
+  it("throws for org-less caller (Q35 fail-closed)", () => {
+    expect(() => withOrg(auth(null), { foo: 1 } as Record<string, unknown>)).toThrowError(/no organization/);
   });
 });
 
@@ -33,8 +32,8 @@ describe("withOrgViaStore", () => {
     const out = withOrgViaStore(auth("org-1"));
     expect(out).toEqual({ store: { region: { orgId: "org-1" } } });
   });
-  it("returns empty for legacy admin", () => {
-    expect(withOrgViaStore(auth(null))).toEqual({});
+  it("throws for org-less caller (Q35 fail-closed)", () => {
+    expect(() => withOrgViaStore(auth(null))).toThrowError(/no organization/);
   });
 });
 
@@ -49,7 +48,7 @@ describe("assertSameOrg", () => {
     expect(() => assertSameOrg(auth("org-1"), null)).not.toThrow();
     expect(() => assertSameOrg(auth("org-1"), undefined)).not.toThrow();
   });
-  it("no-op for legacy admin (bypass)", () => {
-    expect(() => assertSameOrg(auth(null), "anything")).not.toThrow();
+  it("throws for org-less caller (Q35 fail-closed)", () => {
+    expect(() => assertSameOrg(auth(null), "anything")).toThrowError(/no organization/);
   });
 });

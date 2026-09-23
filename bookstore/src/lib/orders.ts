@@ -158,6 +158,33 @@ export async function createReservedOrder(
       if (claimed.count !== 1) fail(409, "VALIDATION", "Promotion usage limit reached");
       if (input.customerId) await claimRedemption(tx, promo.promoId, input.customerId, row.perCustomerLimit);
     }
+    // P1: web orders earn loyalty like POS (10.000 VND = 1 point, same
+    // SystemConfig rate). Ledger row per order so clawback on return/refund
+    // has a refType/refId to reverse. Guest orders without customerId skip.
+    const { getSystemConfig } = await import("./api");
+    const rate = BigInt(await getSystemConfig<number>("loyalty.vndPerPoint", 10_000));
+    const earned = rate > 0n ? (subtotal - discounts.total + shippingFee) / rate : 0n;
+    if (earned > 0n) {
+      const acct = await tx.loyaltyAccount.upsert({
+        where: { customerId: input.customerId },
+        create: { customerId: input.customerId },
+        update: {},
+      });
+      const updated = await tx.loyaltyAccount.update({
+        where: { id: acct.id },
+        data: { points: { increment: Number(earned) } },
+      });
+      await tx.loyaltyTransaction.create({
+        data: {
+          accountId: acct.id,
+          points: Number(earned),
+          balanceAfter: updated.points,
+          type: "EARN",
+          refType: "order",
+          refId: order.id,
+        },
+      });
+    }
     return order;
   };
   return client ? create(client) : withTxRetry(() => prisma.$transaction(create, TX_OPTIONS));

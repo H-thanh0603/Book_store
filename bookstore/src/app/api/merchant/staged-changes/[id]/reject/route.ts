@@ -4,7 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { observeRequest } from "@/lib/metrics";
 import { reviewStagedChange } from "@/lib/staged-changes";
-import { defaultOrgId } from "@/lib/org-scope";
+import { requireOrgId } from "@/lib/org-scope";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const startedAt = Date.now();
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { id } = await params;
     const auth = await requireAuth();
     // Scope the claim to the caller's org (never "the oldest org").
-    const orgId = auth.orgId ?? (await defaultOrgId());
+    const orgId = requireOrgId(auth);
     const body = (await req.json().catch(() => null)) as { note?: string } | null;
     const permissions = auth.roles.flatMap((r) => r.permissions);
     const res = await reviewStagedChange(id, "REJECT", {

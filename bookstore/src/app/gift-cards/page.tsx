@@ -138,7 +138,7 @@ export default function GiftCardsPage() {
               <div className="bg-gradient-to-r from-[#8c2d19] to-[#c83f49] p-4 text-white">
                 <div className="flex items-center justify-between mb-4">
                   <CreditCard className="w-6 h-6 opacity-80" />
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${card.active ? "bg-white/20" : "bg-red-500/50"}`}>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${card.active ? "bg-white/20" : "bg-red-500/50"}`}>
                     {card.active ? "Hoạt động" : "Đã khóa"}
                   </span>
                 </div>

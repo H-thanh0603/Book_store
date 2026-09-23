@@ -33,6 +33,25 @@ export type QuotePreview = {
 
 const defaultCustomer = { name: "", phone: "", email: "", address: "" };
 const FREE_SHIPPING_THRESHOLD = 250000;
+
+/** Fire-and-forget funnel batch (C retention): view/add/checkout/purchase
+ *  counts land in /api/metrics for conversion-rate math. Never awaits. */
+const funnelQueue: string[] = [];
+let funnelTimer: ReturnType<typeof setTimeout> | null = null;
+export function trackFunnel(event: "view_item" | "add_to_cart" | "begin_checkout" | "purchase") {
+  funnelQueue.push(event);
+  if (funnelTimer) return;
+  funnelTimer = setTimeout(() => {
+    funnelTimer = null;
+    const events = funnelQueue.splice(0, 20);
+    if (!events.length) return;
+    fetch("/api/storefront/funnel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ events }),
+    }).catch(() => {});
+  }, 2000);
+}
 /** Hero slides — kept in the hook so the rotation timer owns one source of truth. */
 const featuredCampaignCount = 4;
 
@@ -69,6 +88,7 @@ export function useStorefront() {
   const [couponInput, setCouponInput] = useState("");
   const [quote, setQuote] = useState<QuotePreview | null>(null);
   const [quoteChecking, setQuoteChecking] = useState(false);
+  const [shipEstimate, setShipEstimate] = useState<{ fee: number; freeShip: boolean; threshold: number } | null>(null);
   const [pendingStore, setPendingStore] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ number: string; total: number } | null>(null);
   const [fulfillment, setFulfillment] = useState<Fulfillment>("delivery");
@@ -138,6 +158,25 @@ export function useStorefront() {
     heroPausedRef.current = false;
     setHeroPaused(false);
   }
+
+  // Cart-drawer shipping estimate — subtotal only, no address needed.
+  // Debounced so quantity taps don't spam; quote at checkout stays authoritative.
+  useEffect(() => {
+    if (cart.length === 0) {
+      setShipEstimate(null);
+      return;
+    }
+    const subtotal = cart.reduce((s, l) => s + l.price * l.quantity, 0);
+    const timer = window.setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/storefront/shipping-estimate?subtotal=${subtotal}`);
+        if (r.ok) setShipEstimate(await r.json());
+      } catch {
+        // Best-effort — drawer still shows the subtotal without it.
+      }
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [cart]);
 
   // Debounced coupon/cart preview — mirrors the real promotion engine so the
   // displayed total always matches what checkout will charge.
@@ -344,6 +383,7 @@ export function useStorefront() {
       price: variant.price,
       available: variant.available,
     });
+    trackFunnel("add_to_cart");
     showToast(`✨ Đã thêm "${product.name}" vào giỏ hàng!`);
     setCartOpen(true);
   }
@@ -576,6 +616,7 @@ export function useStorefront() {
         return;
       }
       setSuccess({ number: data.number, total: data.total });
+      trackFunnel("purchase");
       clearCart();
       setCheckoutOpen(false);
     } catch {
@@ -602,7 +643,7 @@ export function useStorefront() {
     giftWrapping, setGiftWrapping, giftMessage, setGiftMessage,
     fulfillment, setFulfillment, customer, setCustomer,
     paymentMethod, setPaymentMethod,
-    couponInput, setCouponInput, quote, quoteChecking,
+    couponInput, setCouponInput, quote, quoteChecking, shipEstimate,
     pendingStore, confirmStoreChange, cancelStoreChange,
     // totals / derived
     itemCount, subtotal: cartSubtotal, discountTotal, wrappingFee, grandTotal,

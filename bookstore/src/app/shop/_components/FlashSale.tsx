@@ -38,7 +38,7 @@ export default function FlashSale({
               <h2 className="font-serif font-black text-2xl sm:text-3xl text-white tracking-tight">
                 Gợi Ý Giờ Vàng
               </h2>
-              <span className="bg-[#ffd56a] text-[#6b2113] text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+              <span className="bg-[#ffd56a] text-[#6b2113] text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full">
                 Đến Nửa Đêm
               </span>
             </div>

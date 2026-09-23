@@ -4,12 +4,13 @@
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { getListingIssues } from "@/lib/merchant-agent";
+import { requireOrgId } from "@/lib/org-scope";
 
 export async function GET() {
   try {
     const auth = await requirePermission("product.update");
     // Tenant isolation: listing issues never cross orgs.
-    const issues = await getListingIssues({ orgId: auth.orgId }, 100);
+    const issues = await getListingIssues({ orgId: requireOrgId(auth) }, 100);
     return ok({ issues });
   } catch (err) {
     return apiError(err);

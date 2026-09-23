@@ -24,6 +24,10 @@
 #           BACKUP_LOCAL_KEEP_DAYS days to keep local   (default: 3)
 #           HEALTHCHECK_URL  optional — GET-pinged on success
 #           HEALTHCHECK_URL_FAIL  optional — GET-pinged on failure
+#           BACKUP_ENCRYPT_KEY  optional — age recipient (age1...) or GPG key id.
+#                        When set, the dump is encrypted to $DUMP.age (or .gpg)
+#                        BEFORE upload (audit Q66: backups contain full PII).
+#                        Unset → plaintext upload with a loud warning.
 set -euo pipefail
 
 DATABASE_URL="${DATABASE_URL:-}"
@@ -64,8 +68,28 @@ echo "  dump: $DUMP ($SIZE bytes)"
 
 if [[ -n "$RCLONE_REMOTE" ]]; then
   command -v rclone >/dev/null || fail "RCLONE_REMOTE is set but rclone is not installed"
+  # (audit Q66) Encrypt before upload: remote copies hold full PII.
+  # age recipient (age1...) preferred; otherwise a GPG key id / email.
+  # Plaintext local mirror is kept (short-lived, pruned below); only the
+  # encrypted sidecar ($DUMP.age / $DUMP.gpg) leaves the box.
+  UPLOAD="$DUMP"
+  if [[ -n "${BACKUP_ENCRYPT_KEY:-}" ]]; then
+    if [[ "$BACKUP_ENCRYPT_KEY" == age1* ]] && command -v age >/dev/null; then
+      age -r "$BACKUP_ENCRYPT_KEY" -o "$DUMP.age" "$DUMP" || fail "age encryption failed"
+      UPLOAD="$DUMP.age"
+    elif command -v gpg >/dev/null; then
+      gpg --batch --yes --trust-model always -r "$BACKUP_ENCRYPT_KEY" -o "$DUMP.gpg" -e "$DUMP" \
+        || fail "gpg encryption failed (is BACKUP_ENCRYPT_KEY a valid recipient?)"
+      UPLOAD="$DUMP.gpg"
+    else
+      fail "BACKUP_ENCRYPT_KEY is set but neither age nor gpg is installed — refusing plaintext upload"
+    fi
+    echo "▶ encrypted: $UPLOAD"
+  else
+    echo "⚠ BACKUP_ENCRYPT_KEY unset — uploading PLAINTEXT dump (set an age/gpg recipient)"
+  fi
   echo "▶ uploading to $RCLONE_REMOTE"
-  rclone copy "$DUMP" "$RCLONE_REMOTE" --create-empty-src-dirs=false
+  rclone copy "$UPLOAD" "$RCLONE_REMOTE" --create-empty-src-dirs=false
   echo "▶ pruning remote copies older than ${RETENTION_DAYS}d"
   # --min-age pairs with -P to delete files, not try to prune the dir itself.
   rclone delete "$RCLONE_REMOTE" --min-age "${RETENTION_DAYS}d" || true
@@ -74,7 +98,7 @@ else
 fi
 
 echo "▶ pruning local mirror older than ${LOCAL_KEEP_DAYS}d"
-find "$LOCAL_DIR" -name 'bookstore-*.dump' -mtime +"$LOCAL_KEEP_DAYS" -delete
+find "$LOCAL_DIR" -name 'bookstore-*.dump*' -mtime +"$LOCAL_KEEP_DAYS" -delete
 
 if [[ -n "$HEALTHCHECK_URL" ]]; then
   curl -fsS -m 10 "$HEALTHCHECK_URL" >/dev/null 2>&1 \

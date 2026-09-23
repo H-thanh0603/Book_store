@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { requirePermission, audit } from "@/lib/auth";
 import { apiError, reqStr } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
         qty,
         reason,
       }, tx);
-    });
+    }, TX_OPTIONS);
     return NextResponse.json({ ok: true, qty, sku: variant.sku });
   } catch (e) {
     return apiError(e);

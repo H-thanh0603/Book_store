@@ -12,7 +12,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     if (!auth.orgId) return ok({ code: "VALIDATION", message: "caller has no org" }, 400);
     const conversation = await prisma.supportConversation.findFirst({ where: withOrg(auth, { id }) });
     if (!conversation) return ok({ code: "NOT_FOUND", message: "conversation not found" }, 404);
-    await prisma.supportConversation.update({ where: { id }, data: { status: "CLOSED" } });
+    await prisma.supportConversation.update({ where: withOrg(auth, { id }), data: { status: "CLOSED" } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return apiError(err);

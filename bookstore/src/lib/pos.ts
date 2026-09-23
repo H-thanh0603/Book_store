@@ -343,11 +343,16 @@ export async function quoteSale(input: Pick<CompleteSaleInput, "items" | "storeI
 }
 
 /**
- * Refund a completed POS transaction in full: restore stock, gift-card balances and
- * loyalty, then write a mirrored negative transaction. Whole-txn only — partial
- * refunds need a per-item refund ledger column, skipped to avoid a schema migration.
+ * Refund a completed POS transaction — whole or partial per-item.
+ * Cumulative guard: prior REFUND txs (mirrored negatives, refType pos_refund)
+ * are summed per variant, so two partials can never exceed the sold qty.
+ * Partial keeps orig COMPLETED (still refundable until fully returned);
+ * a whole refund flips it RETURNED. No migration — negatives are the ledger.
  */
-export async function refundSale(txNumber: string, shiftId: string, userId: string, opts: { storeId?: string; reason?: string } = {}) {
+export async function refundSale(
+  txNumber: string, shiftId: string, userId: string,
+  opts: { storeId?: string; reason?: string; items?: { variantId: string; quantity: number }[] } = {},
+) {
   return withTxRetry(() =>
     prisma.$transaction(async (tx) => {
     const orig = await tx.posTransaction.findUnique({
@@ -360,60 +365,133 @@ export async function refundSale(txNumber: string, shiftId: string, userId: stri
     const shift = await tx.posShift.findUnique({ where: { id: shiftId }, include: { terminal: true } });
     if (!shift || shift.status !== "OPEN") fail(400, "VALIDATION", "Refund shift not open");
     if (shift.terminal.storeId !== orig.storeId) fail(403, "FORBIDDEN", "Refund shift belongs to another store");
-    const claimed = await tx.posTransaction.updateMany({
-      where: { id: orig.id, status: "COMPLETED" }, data: { status: "RETURNED" },
+
+    // Partial selection: default = whole txn. Each requested qty must be a
+    // positive integer within the REMAINING (sold − already refunded) qty.
+    // Prior refunds resolve through the audit trail (pos.refund rows carry
+    // the original tx number) — refund txs themselves hold no orig FK, and a
+    // bare "negative items since orig" scan would mix in other sales' refunds
+    // of the same variant+price.
+    const priorAudits = await tx.auditLog.findMany({
+      where: { action: "pos.refund", entityId: { not: null } },
+      select: { entityId: true, after: true },
+      orderBy: { createdAt: "desc" },
+      take: 200,
     });
-    if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Transaction was already refunded");
+    const priorRefundTxIds = priorAudits
+      .filter((a) => (a.after as { refundedTx?: unknown } | null)?.refundedTx === txNumber)
+      .map((a) => a.entityId as string);
+    const priorItems = priorRefundTxIds.length
+      ? await tx.posTransactionItem.findMany({
+          where: { txId: { in: priorRefundTxIds } },
+          select: { variantId: true, quantity: true },
+        })
+      : [];
+    const refundedQty = new Map<string, number>();
+    for (const r of priorItems)
+      refundedQty.set(r.variantId, (refundedQty.get(r.variantId) ?? 0) + -r.quantity);
+    const targets = (opts.items?.length ? opts.items : orig.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })))
+      .map((req) => {
+        if (!Number.isInteger(req.quantity) || req.quantity <= 0)
+          fail(400, "VALIDATION", "each refund item needs a positive integer quantity");
+        const line = orig.items.find((i) => i.variantId === req.variantId);
+        const already = refundedQty.get(req.variantId) ?? 0;
+        if (!line || already + req.quantity > line.quantity)
+          fail(400, "VALIDATION", `Cannot refund ${req.quantity} of ${line?.quantity ?? 0} (already refunded ${already})`);
+        const share = req.quantity / line.quantity;
+        return {
+          variantId: line.variantId, quantity: req.quantity, unitPrice: line.unitPrice,
+          discount: BigInt(Math.round(Number(line.discount) * share)),
+        };
+      });
+    const isWhole = targets.length === orig.items.length &&
+      targets.every((t) => {
+        const line = orig.items.find((i) => i.variantId === t.variantId)!;
+        return t.quantity === line.quantity && (refundedQty.get(t.variantId) ?? 0) === 0;
+      });
+    // Whole refunds retire the original (single RETUNED claim); partials
+    // leave it COMPLETED so the remainder stays refundable. Both paths
+    // claim — concurrent doubles serialize here.
+    if (isWhole) {
+      const claimed = await tx.posTransaction.updateMany({
+        where: { id: orig.id, status: "COMPLETED" }, data: { status: "RETURNED" },
+      });
+      if (claimed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Transaction was already refunded");
+    } else {
+      await tx.$queryRaw`SELECT id FROM "PosTransaction" WHERE id = ${orig.id} FOR UPDATE`;
+      const fresh = await tx.posTransaction.findUniqueOrThrow({ where: { id: orig.id }, select: { status: true } });
+      if (fresh.status !== "COMPLETED") fail(409, "INVALID_STATUS_TRANSITION", "Transaction was already refunded");
+    }
 
     const location = await tx.stockLocation.findFirst({
       where: { storeId: orig.storeId, type: "STORE_STOCKROOM" },
     });
     if (!location) fail(400, "VALIDATION", `No stockroom for store ${orig.storeId}`);
-    for (const item of orig.items)
+    for (const t of targets)
       await applyMovement(tx, {
-        variantId: item.variantId, locationId: location.id, type: MovementType.RETURN,
-        quantityDelta: item.quantity, refType: "pos_refund", refId: orig.id, userId,
+        variantId: t.variantId, locationId: location.id, type: MovementType.RETURN,
+        quantityDelta: t.quantity, refType: "pos_refund", refId: orig.id, userId,
       });
 
-    for (const p of orig.payments) {
-      if (p.method !== "GIFT_CARD" || !p.giftCardId || p.amount <= 0n) continue;
-      const card = await tx.giftCard.update({ where: { id: p.giftCardId }, data: { balance: { increment: p.amount } } });
-      await tx.giftCardTransaction.create({
-        data: { giftCardId: card.id, amount: p.amount, balanceAfter: card.balance, refType: "pos_refund", refId: orig.id },
-      });
-    }
-
-    // Reverse loyalty: claw back earned, restore redeemed. Fail if points were already spent.
-    if (orig.customerId && (orig.loyaltyEarned > 0 || orig.loyaltyRedeemed > 0)) {
-      const acct = await tx.loyaltyAccount.upsert({
-        where: { customerId: orig.customerId },
-        create: { customerId: orig.customerId },
-        update: {},
-      });
-      const net = orig.loyaltyRedeemed - orig.loyaltyEarned;
-      const adjusted = await tx.loyaltyAccount.updateMany({
-        where: { id: acct.id, ...(net < 0 ? { points: { gte: -net } } : {}) },
-        data: { points: { increment: net } },
-      });
-      if (adjusted.count !== 1) fail(400, "VALIDATION", "Customer no longer has enough points to revoke");
-      const updated = await tx.loyaltyAccount.findUniqueOrThrow({ where: { id: acct.id } });
-      if (net !== 0)
-        await tx.loyaltyTransaction.create({
-          data: {
-            accountId: acct.id, points: net, balanceAfter: updated.points,
-            type: net > 0 ? "EARN" : "REDEEM", refType: "pos_refund", refId: orig.id,
-          },
+    // Gift-card + loyalty reverse only on whole refunds: a partial would
+    // need pro-rata splits of card restores and point claws across shared
+    // payments — whole keeps the money math exact, partial covers stock+cash.
+    if (isWhole) {
+      for (const p of orig.payments) {
+        if (p.method !== "GIFT_CARD" || !p.giftCardId || p.amount <= 0n) continue;
+        const card = await tx.giftCard.update({ where: { id: p.giftCardId }, data: { balance: { increment: p.amount } } });
+        await tx.giftCardTransaction.create({
+          data: { giftCardId: card.id, amount: p.amount, balanceAfter: card.balance, refType: "pos_refund", refId: orig.id },
         });
+      }
+
+      // Reverse loyalty: claw back earned, restore redeemed. Fail if points were already spent.
+      if (orig.customerId && (orig.loyaltyEarned > 0 || orig.loyaltyRedeemed > 0)) {
+        const acct = await tx.loyaltyAccount.upsert({
+          where: { customerId: orig.customerId },
+          create: { customerId: orig.customerId },
+          update: {},
+        });
+        const net = orig.loyaltyRedeemed - orig.loyaltyEarned;
+        const adjusted = await tx.loyaltyAccount.updateMany({
+          where: { id: acct.id, ...(net < 0 ? { points: { gte: -net } } : {}) },
+          data: { points: { increment: net } },
+        });
+        if (adjusted.count !== 1) fail(400, "VALIDATION", "Customer no longer has enough points to revoke");
+        const updated = await tx.loyaltyAccount.findUniqueOrThrow({ where: { id: acct.id } });
+        if (net !== 0)
+          await tx.loyaltyTransaction.create({
+            data: {
+              accountId: acct.id, points: net, balanceAfter: updated.points,
+              type: net > 0 ? "EARN" : "REDEEM", refType: "pos_refund", refId: orig.id,
+            },
+          });
+      }
+    } else if (orig.payments.some((p) => p.method === "GIFT_CARD" && p.giftCardId)) {
+      fail(400, "VALIDATION", "Partial refund unavailable on gift-card sales — refund the whole transaction");
     }
 
     const number = await nextBusinessNumber("REF");
+    const subtotal = targets.reduce((s, t) => s + t.unitPrice * BigInt(t.quantity), 0n);
+    const discountTotal = targets.reduce((s, t) => s + t.discount, 0n);
     const refund = await tx.posTransaction.create({
       data: {
         number, shiftId, storeId: orig.storeId, customerId: orig.customerId, status: "COMPLETED",
-        subtotal: -orig.subtotal, discountTotal: -orig.discountTotal, total: -orig.total,
-        loyaltyEarned: -orig.loyaltyEarned, loyaltyRedeemed: -orig.loyaltyRedeemed,
-        items: { create: orig.items.map((i) => ({ variantId: i.variantId, quantity: -i.quantity, unitPrice: i.unitPrice, discount: -i.discount })) },
-        payments: { create: orig.payments.map((p) => ({ method: p.method, amount: -p.amount })) },
+        subtotal: -subtotal, discountTotal: -discountTotal, total: -(subtotal - discountTotal),
+        loyaltyEarned: isWhole ? -orig.loyaltyEarned : 0,
+        loyaltyRedeemed: isWhole ? -orig.loyaltyRedeemed : 0,
+        items: {
+          create: targets.map((t) => ({
+            variantId: t.variantId, quantity: -t.quantity, unitPrice: t.unitPrice, discount: -t.discount,
+          })),
+        },
+        // Cash out only: card/gift splits stay on the original — the drawer
+        // hands back subtotal-discount in cash. Whole keeps the old mirror.
+        payments: {
+          create: isWhole
+            ? orig.payments.map((p) => ({ method: p.method, amount: -p.amount }))
+            : [{ method: "CASH" as const, amount: -(subtotal - discountTotal) }],
+        },
       },
     });
     void opts.reason; // recorded in the audit log by the route

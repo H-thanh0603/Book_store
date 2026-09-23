@@ -137,7 +137,7 @@ export default function AuditLogsPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-1.5 font-semibold text-slate-800">
-                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] text-slate-600 font-bold">
+                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[11px] text-slate-600 font-bold">
                           {l.actor?.email?.charAt(0).toUpperCase() ?? "?"}
                         </div>
                         <span>{l.actor?.email ?? "Hệ thống tự động"}</span>
@@ -149,12 +149,12 @@ export default function AuditLogsPage() {
                       </span>
                     </td>
                     <td className="p-4 font-semibold text-slate-700">{l.entity}</td>
-                    <td className="p-4 font-mono text-[10px] text-slate-400">
+                    <td className="p-4 font-mono text-[11px] text-slate-400">
                       {l.entityId ? l.entityId.slice(0, 8) + "..." : "—"}
                     </td>
                     <td className="p-4 max-w-md">
                       {l.before || l.after ? (
-                        <div className="bg-slate-900 text-slate-200 p-2.5 rounded-xl font-mono text-[10px] overflow-x-auto max-h-24 leading-relaxed">
+                        <div className="bg-slate-900 text-slate-200 p-2.5 rounded-xl font-mono text-[11px] overflow-x-auto max-h-24 leading-relaxed">
                           {JSON.stringify(
                             {
                               ...(l.before ? { before: l.before } : {}),
