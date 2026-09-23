@@ -3,11 +3,35 @@ import { scanLossPrevention, getRuleThreshold } from './loss-prevention'
 import { prisma } from './db'
 import { getSystemConfig } from './api'
 
+const hoisted = vi.hoisted(() => {
+  // SQL results per scan, set by each test. P2-1: shifts + cancelledPaid
+  // scans are raw SQL now — route by a marker unique to each query.
+  const sqlResults: Record<string, any[]> = {};
+  const queryRaw = vi.fn(async (_tag: TemplateStringsArray, ..._rest: any[]) => {
+    const sql = String(_tag);
+    if (sql.includes('FROM "PosShift"')) return sqlResults.shifts ?? [];
+    if (sql.includes('FROM "PosTransaction" t')) return sqlResults.cancelledPaid ?? [];
+    return sqlResults.discountOffenders ?? [];
+  });
+  return { sqlResults, queryRaw };
+});
+
 vi.mock('./db', () => ({
   prisma: {
-    $queryRaw: vi.fn().mockResolvedValue([]),
+    $queryRaw: hoisted.queryRaw,
     return: { findMany: vi.fn().mockResolvedValue([]) },
-    posShift: { findMany: vi.fn().mockResolvedValue([]) },
+    posShift: {
+      findMany: vi.fn().mockImplementation((args: unknown) => {
+        // Evidence re-read after the SQL scan (id IN [...])
+        const where = (args as { where?: { id?: { in?: string[] } } })?.where;
+        if (where?.id?.in) {
+          return Promise.resolve(
+            where.id.in.map((id: string) => ({ id, variance: 150000n })),
+          );
+        }
+        return Promise.resolve([]);
+      }),
+    },
     inventoryMovement: { findMany: vi.fn().mockResolvedValue([]) },
     posTransaction: { findMany: vi.fn().mockResolvedValue([]) },
     lossAlert: {
@@ -33,7 +57,8 @@ vi.mock('./api', () => ({
 
 describe('scanLossPrevention', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.clearAllMocks();
+    Object.keys(hoisted.sqlResults).forEach((k) => delete hoisted.sqlResults[k]);
   })
 
   it('runs without errors on empty data', async () => {
@@ -51,23 +76,22 @@ describe('scanLossPrevention', () => {
   })
 
   it('detects cash variance exceeding threshold', async () => {
-    vi.mocked(prisma.posShift.findMany).mockResolvedValue([
-      { id: 'shift-1', variance: 150000n },
-    ] as any)
+    // P2-1: the SQL scan returns ids; evidence re-read supplies variance.
+    hoisted.sqlResults.shifts = [{ id: 'shift-1' }];
 
     await scanLossPrevention()
-    expect(prisma.lossAlert.upsert).toHaveBeenCalled()
+    const calls = vi.mocked(prisma.lossAlert.upsert).mock.calls
+    const cashVarianceCalls = calls.filter(c => (c[0] as any).where?.rule_entityType_entityId?.rule === 'CASH_VARIANCE')
+    expect(cashVarianceCalls.length).toBe(1)
   })
 
-  it('ignores small cash variance', async () => {
-    vi.mocked(prisma.posShift.findMany).mockResolvedValue([
-      { id: 'shift-1', variance: 50000n },
-    ] as any)
+  it('ignores shifts below threshold (SQL filters them out)', async () => {
+    hoisted.sqlResults.shifts = [];
 
     await scanLossPrevention()
     // Should only be called for stock shrinkage (if any), not cash variance
     const calls = vi.mocked(prisma.lossAlert.upsert).mock.calls
-    const cashVarianceCalls = calls.filter(c => c[0].where?.rule === 'CASH_VARIANCE')
+    const cashVarianceCalls = calls.filter(c => (c[0] as any).where?.rule_entityType_entityId?.rule === 'CASH_VARIANCE')
     expect(cashVarianceCalls.length).toBe(0)
   })
 })

@@ -28,6 +28,16 @@ type Balance = {
   damaged: number;
 };
 
+type Suggestion = {
+  id: string;
+  recommendedQty: number;
+  availableQty: number;
+  safetyStock: number;
+  status: string;
+  variant: { sku: string; product: { name: string } };
+  location: { name: string };
+};
+
 export default function InventoryPage() {
   const [balances, setBalances] = useState<Balance[]>([]);
   const [page, setPage] = useState(1);
@@ -70,8 +80,85 @@ export default function InventoryPage() {
       setErr(d.message);
     }
   }
-  const [poCreated, setPoCreated] = useState(false);
-  const [poCode, setPoCode] = useState("");
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [sugLoading, setSugLoading] = useState(false);
+  const [sugErr, setSugErr] = useState<string | null>(null);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [createdDocs, setCreatedDocs] = useState<{ suggestionId: string; number: string }[]>([]);
+
+  // Real replenishment flow: suggestions come from the server engine
+  // (GET /api/replenishment) and each accept materializes a real draft
+  // transfer or pending-approval PO (POST /api/replenishment).
+  async function loadSuggestions() {
+    setSugLoading(true);
+    setSugErr(null);
+    try {
+      const r = await fetch("/api/replenishment");
+      const d = await r.json();
+      if (r.ok) {
+        setSuggestions(d.suggestions ?? []);
+      } else {
+        setSugErr(d.message ?? "Không tải được đề xuất nhập hàng");
+      }
+    } catch {
+      setSugErr("Lỗi kết nối máy chủ");
+    } finally {
+      setSugLoading(false);
+    }
+  }
+
+  async function regenerateSuggestions() {
+    setSugLoading(true);
+    setSugErr(null);
+    try {
+      const r = await fetch("/api/replenishment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
+        body: JSON.stringify({ action: "generate" }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setSugErr(d.message ?? "Không tính được đề xuất mới");
+        return;
+      }
+      await loadSuggestions();
+    } catch {
+      setSugErr("Lỗi kết nối máy chủ");
+    } finally {
+      setSugLoading(false);
+    }
+  }
+
+  async function acceptSuggestion(id: string) {
+    setAcceptingId(id);
+    setSugErr(null);
+    try {
+      const r = await fetch("/api/replenishment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await csrfHeaders()) },
+        body: JSON.stringify({ suggestionId: id, status: "ACCEPTED" }),
+      });
+      const d = await r.json();
+      if (r.ok) {
+        const number = d.created?.number ? String(d.created.number) : "đã ghi nhận";
+        setCreatedDocs((prev) => [...prev, { suggestionId: id, number }]);
+        setSuggestions((prev) => prev.filter((s) => s.id !== id));
+        loadData(page);
+      } else {
+        setSugErr(d.message ?? "Duyệt đề xuất thất bại");
+      }
+    } catch {
+      setSugErr("Lỗi kết nối máy chủ");
+    } finally {
+      setAcceptingId(null);
+    }
+  }
+
+  function openAutoPO() {
+    setAutoPOModalOpen(true);
+    setCreatedDocs([]);
+    void loadSuggestions();
+  }
 
   async function loadData(p = 1) {
     setLoading(true);
@@ -102,29 +189,24 @@ export default function InventoryPage() {
     (b.sku + b.product + b.location).toLowerCase().includes(q.toLowerCase())
   );
 
-  const lowStockItems = balances.filter((b) => b.available <= 15);
+  const lowStockCount = balances.filter((b) => b.available <= 15).length;
   const totalOnHand = balances.reduce((s, b) => s + b.onHand, 0);
   const totalAvailable = balances.reduce((s, b) => s + b.available, 0);
 
-  function createAutoPO() {
-    setPoCode(`PO-AUTO-${Date.now().toString().slice(-6)}`);
-    setPoCreated(true);
-    setTimeout(() => {
-      setAutoPOModalOpen(false);
-      setPoCreated(false);
-    }, 2500);
-  }
+  // NOTE: previously this modal generated a fake client-side PO code
+  // (PO-AUTO-*) without calling any API. It now lists real server
+  // replenishment suggestions and materializes real POs/transfers.
 
   return (
-    <main className="min-h-screen bg-slate-50/60 pb-16">
+    <main className="min-h-screen bg-[#faf7f2] pb-16">
       <Nav />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
         {/* Header bar */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              <h1 className="text-2xl font-bold text-[#1c1917] tracking-tight">
                 Quản Lý Tồn Kho Toàn Hệ Thống
               </h1>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
@@ -146,17 +228,17 @@ export default function InventoryPage() {
               Phiếu hủy hàng
             </button>
             <button
-              onClick={() => setAutoPOModalOpen(true)}
+              onClick={openAutoPO}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-[#1c1917] font-bold text-xs rounded-xl shadow-xs transition-colors"
             >
-              <Zap className="w-4 h-4 fill-slate-950" />
-              Đề Xuất Nhập Hàng Tự Động ({lowStockItems.length})
+              <Zap className="w-4 h-4 fill-[#1c1917]" />
+              Đề Xuất Nhập Hàng Tự Động ({lowStockCount})
             </button>
 
             <button
               onClick={() => loadData(page)}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-[#faf4ea] hover:bg-[#ede5d8] text-[#574431] transition-colors"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
               Làm mới
@@ -176,14 +258,14 @@ export default function InventoryPage() {
         )}
 
         {/* Low stock alert banner */}
-        {lowStockItems.length > 0 && (
+        {lowStockCount > 0 && (
           <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-900 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Phát hiện <b>{lowStockItems.length} mặt hàng</b> sắp hết tại kệ (Tồn khả dụng &le; 15 cuốn). Khuyến nghị bổ sung ngay.</span>
+              <span>Phát hiện <b>{lowStockCount} mặt hàng</b> sắp hết tại kệ (Tồn khả dụng &le; 15 cuốn). Khuyến nghị bổ sung ngay.</span>
             </div>
             <button
-              onClick={() => setAutoPOModalOpen(true)}
+              onClick={openAutoPO}
               className="px-3 py-1 bg-amber-600 text-white rounded-lg text-[11px] font-bold hover:bg-amber-700 shrink-0"
             >
               Tạo PO Ngay
@@ -193,41 +275,41 @@ export default function InventoryPage() {
 
         {/* 5 Stock Status Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-xs">
             <span className="text-[11px] font-semibold text-slate-500">Tồn thực tế (On Hand)</span>
-            <div className="text-2xl font-bold text-slate-900 font-mono mt-1">{totalOnHand.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-[#1c1917] font-mono mt-1">{totalOnHand.toLocaleString()}</div>
           </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-xs">
             <span className="text-[11px] font-semibold text-emerald-600">Khả dụng bán (Available)</span>
             <div className="text-2xl font-bold text-emerald-700 font-mono mt-1">{totalAvailable.toLocaleString()}</div>
           </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-xs">
             <span className="text-[11px] font-semibold text-amber-600">Cảnh báo sắp hết</span>
-            <div className="text-2xl font-bold text-amber-700 font-mono mt-1">{lowStockItems.length} SKUs</div>
+            <div className="text-2xl font-bold text-amber-700 font-mono mt-1">{lowStockCount} SKUs</div>
           </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-xs">
             <span className="text-[11px] font-semibold text-[#d97706]">Đang luân chuyển</span>
             <div className="text-2xl font-bold text-[#b45309] font-mono mt-1">Hoạt động</div>
           </div>
         </div>
 
         {/* Balances table */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="bg-white rounded-2xl border border-[#ede5d8] shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-[#ede5d8] flex items-center justify-between">
             <div className="relative w-72">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Lọc theo SKU, tên sách, vị trí..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-900 focus:outline-none"
+                className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl pl-9 pr-3 py-1.5 text-xs text-[#1c1917] focus:outline-none"
               />
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 uppercase font-semibold text-[11px]">
+              <thead className="bg-[#faf7f2] text-slate-500 border-b border-[#ede5d8] uppercase font-semibold text-[11px]">
                 <tr>
                   <th className="p-4">Sản Phẩm &amp; SKU</th>
                   <th className="p-4">Vị Trí Kho / Kệ</th>
@@ -236,15 +318,15 @@ export default function InventoryPage() {
                   <th className="p-4 text-center">Trạng Thái</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-mono">
+              <tbody className="divide-y divide-[#ede5d8] font-mono">
                 {filtered.map((b, i) => (
-                  <tr key={i} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="p-4 font-sans font-bold text-slate-900">
+                  <tr key={i} className="hover:bg-[#faf7f2] transition-colors">
+                    <td className="p-4 font-sans font-bold text-[#1c1917]">
                       <div>{b.product}</div>
                       <div className="text-[11px] font-mono text-slate-400">{b.sku}</div>
                     </td>
                     <td className="p-4 font-sans">
-                      <div className="flex items-center gap-1.5 text-slate-700">
+                      <div className="flex items-center gap-1.5 text-[#574431]">
                         <MapPin className="w-3.5 h-3.5 text-slate-400" />
                         {b.location}
                       </div>
@@ -253,11 +335,11 @@ export default function InventoryPage() {
                     <td className="p-4 text-center font-bold text-emerald-600">{b.available}</td>
                     <td className="p-4 text-center font-sans">
                       {b.available <= 15 ? (
-                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800">
                           Sắp hết
                         </span>
                       ) : (
-                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
                           Đủ hàng
                         </span>
                       )}
@@ -267,7 +349,7 @@ export default function InventoryPage() {
               </tbody>
             </table>
           </div>
-          <div className="border-t border-slate-100">
+          <div className="border-t border-[#ede5d8]">
             <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={(p) => loadData(p)} />
           </div>
         </div>
@@ -278,8 +360,8 @@ export default function InventoryPage() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg text-slate-900">Phiếu hủy hàng hỏng</h3>
-              <button onClick={() => setDmgOpen(false)} className="p-2 rounded-full hover:bg-slate-100" aria-label="Đóng">
+              <h3 className="font-bold text-lg text-[#1c1917]">Phiếu hủy hàng hỏng</h3>
+              <button onClick={() => setDmgOpen(false)} className="p-2 rounded-full hover:bg-[#faf4ea]" aria-label="Đóng">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -288,12 +370,12 @@ export default function InventoryPage() {
               value={dmgSku}
               onChange={(e) => setDmgSku(e.target.value)}
               placeholder="SKU (VD: BK-DEmen-01)"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono"
+              className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-2 text-xs font-mono"
             />
             <select
               value={dmgLoc}
               onChange={(e) => setDmgLoc(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+              className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-2 text-xs"
             >
               <option value="">— Chọn vị trí —</option>
               {[...new Set(balances.filter((b) => !dmgSku.trim() || b.sku === dmgSku.trim()).map((b) => b.location))].map((loc) => (
@@ -305,14 +387,14 @@ export default function InventoryPage() {
               value={dmgQty}
               onChange={(e) => setDmgQty(Number(e.target.value))}
               placeholder="Số lượng"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+              className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-2 text-xs"
             />
             <textarea
               value={dmgReason}
               onChange={(e) => setDmgReason(e.target.value)}
               placeholder="Lý do hủy (VD: ướt mưa, rách bìa, hết hạn...)"
               rows={2}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+              className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-2 text-xs"
             />
             <button
               onClick={submitDamage}
@@ -334,48 +416,75 @@ export default function InventoryPage() {
                   <Zap className="w-5 h-5 fill-amber-700" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-slate-900">Đề Xuất Nhập Hàng Tự Động (AI PO)</h3>
-                  <p className="text-xs text-slate-500">Tự động tổng hợp các sản phẩm dưới định mức an toàn</p>
+                  <h3 className="font-bold text-lg text-[#1c1917]">Đề Xuất Nhập Hàng Tự Động</h3>
+                  <p className="text-xs text-slate-500">Duyệt từng đề xuất để tạo PO / điều chuyển hàng thật</p>
                 </div>
               </div>
             </div>
 
-            {poCreated ? (
-              <div className="p-6 text-center space-y-2 bg-emerald-50 rounded-2xl border border-emerald-200">
-                <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
-                <h4 className="font-bold text-base text-emerald-900">Đã Tạo Đơn Mua Hàng Thành Công!</h4>
-                <p className="text-xs text-emerald-700">Mã PO: <b>{poCode}</b> đã gửi tới nhà cung cấp.</p>
+            {sugErr && (
+              <div className="p-3 text-xs text-red-700 bg-red-50 rounded-xl border border-red-200">
+                {sugErr}
+              </div>
+            )}
+
+            {createdDocs.length > 0 && (
+              <div className="p-4 space-y-1.5 bg-emerald-50 rounded-2xl border border-emerald-200">
+                <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  Đã tạo {createdDocs.length} chứng từ thật
+                </div>
+                {createdDocs.map((c) => (
+                  <p key={c.suggestionId} className="text-xs text-emerald-700">
+                    Mã chứng từ: <b className="font-mono">{c.number}</b>
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {sugLoading ? (
+              <div className="p-6 text-center text-xs text-slate-500">Đang tải đề xuất từ hệ thống…</div>
+            ) : suggestions.length === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-500">
+                Không có đề xuất nào đang mở. Nhấn “Tính lại đề xuất” để chạy engine bổ sung hàng.
               </div>
             ) : (
-              <>
-                <div className="max-h-60 overflow-y-auto space-y-2 text-xs">
-                  {lowStockItems.map((item, i) => (
-                    <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                      <div>
-                        <b className="block text-slate-900">{item.product}</b>
-                        <span className="text-slate-500">Tồn hiện tại: {item.available} | Đề xuất nhập: +50</span>
-                      </div>
-                      <span className="font-mono font-bold text-amber-700">+50 cuốn</span>
+              <div className="max-h-60 overflow-y-auto space-y-2 text-xs">
+                {suggestions.map((s) => (
+                  <div key={s.id} className="p-3 rounded-xl bg-[#faf7f2] border border-[#ede5d8] flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <b className="block text-[#1c1917] truncate">{s.variant.product.name}</b>
+                      <span className="text-slate-500">
+                        {s.variant.sku} · {s.location.name} · Khả dụng: {s.availableQty} · An toàn: {s.safetyStock}
+                      </span>
                     </div>
-                  ))}
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={() => setAutoPOModalOpen(false)}
-                    className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
-                  >
-                    Hủy Bỏ
-                  </button>
-                  <button
-                    onClick={createAutoPO}
-                    className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-[#1c1917] font-bold text-xs shadow-md"
-                  >
-                    Xác Nhận Tạo Đơn Nhập
-                  </button>
-                </div>
-              </>
+                    <button
+                      onClick={() => acceptSuggestion(s.id)}
+                      disabled={acceptingId === s.id}
+                      className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-[#1c1917] font-bold text-[11px]"
+                    >
+                      {acceptingId === s.id ? "Đang tạo…" : `Duyệt +${s.recommendedQty}`}
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setAutoPOModalOpen(false)}
+                className="flex-1 py-3 rounded-xl bg-[#faf4ea] hover:bg-[#ede5d8] text-[#574431] font-bold text-xs"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={regenerateSuggestions}
+                disabled={sugLoading}
+                className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-[#1c1917] font-bold text-xs shadow-md"
+              >
+                {sugLoading ? "Đang tính…" : "Tính lại đề xuất"}
+              </button>
+            </div>
           </div>
         </div>
       )}

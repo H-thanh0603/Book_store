@@ -33,7 +33,7 @@ export default function ShelfFinderModal({
               <MapPin className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-[#c83f49]">
+              <span className="text-[11px] font-black uppercase tracking-wider text-[#c83f49]">
                 SƠ ĐỒ VỊ TRÍ TẠI CỬA HÀNG
               </span>
               <h3 className="font-bold text-lg text-slate-900 leading-tight">
@@ -61,7 +61,7 @@ export default function ShelfFinderModal({
             <span className="text-amber-300 font-bold flex items-center gap-1">
               <Compass className="w-4 h-4" /> {floorName}
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">MAP-V1</span>
+            <span className="text-[11px] text-slate-400 font-mono">MAP-V1</span>
           </div>
 
           <div className="grid grid-cols-4 gap-2 py-2">
@@ -70,7 +70,7 @@ export default function ShelfFinderModal({
               return (
                 <div
                   key={i}
-                  className={`p-2.5 rounded-xl text-center text-[10px] font-bold border transition-all ${
+                  className={`p-2.5 rounded-xl text-center text-[11px] font-bold border transition-all ${
                     isTarget
                       ? "bg-[#c83f49] text-white border-amber-300 shadow-lg scale-105 animate-pulse"
                       : "bg-white/10 text-slate-300 border-white/10"

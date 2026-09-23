@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* U1 dark mode: inherit the heritage paper world — deep charcoal surfaces,
+   paper text, same crimson/gold accents. Follows the OS switch. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1c1917;
+    --foreground: #f5efe6;
+    --card: #292524;
+    --card-foreground: #f5efe6;
+    --primary: #d97706;
+    --primary-foreground: #1c1917;
+    --muted: #292524;
+    --muted-foreground: #d6c9b8;
+    --border: #44403c;
+  }
+}
+
 :root {
   /* Melio Editorial Heritage Design System (DESIGN.md §2) */
   --background: #faf7f2;

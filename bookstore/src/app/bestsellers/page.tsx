@@ -73,7 +73,7 @@ export default function BestsellersPage() {
       <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 gradient-animated text-white px-4 py-2 text-xs font-bold shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-white text-amber-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-white text-amber-950 px-2.5 py-0.5 rounded-full text-[11px] uppercase font-black">
               MELIO CHARTS 2026
             </span>
             <span className="drop-shadow-xs">🏆 Bảng xếp hạng 100 tác phẩm &amp; ấn phẩm bán chạy nhất được cập nhật mỗi thứ Hai</span>
@@ -96,11 +96,11 @@ export default function BestsellersPage() {
                 <span className="font-serif font-black text-2xl text-slate-900 tracking-tight leading-none">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 px-2 py-0.5 rounded-full shadow-2xs">
+                <span className="text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 px-2 py-0.5 rounded-full shadow-2xs">
                   Bestsellers
                 </span>
               </div>
-              <p className="text-[10px] text-amber-700 font-bold uppercase tracking-wider">Top 100 Sách Bán Chạy</p>
+              <p className="text-[11px] text-amber-700 font-bold uppercase tracking-wider">Top 100 Sách Bán Chạy</p>
             </div>
           </Link>
 
@@ -222,11 +222,11 @@ export default function BestsellersPage() {
 
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full">
                         {product.category.name}
                       </span>
                       {rank <= 3 && (
-                        <span className="text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full">
+                        <span className="text-[11px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full">
                           HOT TRENDING
                         </span>
                       )}

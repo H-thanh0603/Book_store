@@ -5,6 +5,11 @@ import { prisma } from "./db";
 const CO_PURCHASE_WINDOW_DAYS = 90;
 
 export async function getProductRecommendations(variantId: string, take = 5) {
+  const source = await prisma.productVariant.findUnique({ where: { id: variantId }, include: { product: true } });
+  if (!source) return [];
+  // P4-6: scope every tier to the source variant's org — co-purchase pairs
+  // and embeddings otherwise leak cross-tenant products.
+  const orgId = source.orgId;
   const coPurchased = await prisma.$queryRaw<{ id: string; sku: string; name: string; score: number }[]>`
     SELECT v.id, v.sku, p.name, COUNT(DISTINCT source."txId")::int AS score
     FROM "PosTransactionItem" source
@@ -12,15 +17,12 @@ export async function getProductRecommendations(variantId: string, take = 5) {
     JOIN "PosTransaction" tx ON tx.id = source."txId"
     JOIN "ProductVariant" v ON v.id = other."variantId"
     JOIN "Product" p ON p.id = v."productId"
-    WHERE source."variantId" = ${variantId} AND v.active = true
+    WHERE source."variantId" = ${variantId} AND v.active = true AND v."orgId" = ${orgId}
       AND tx.status = 'COMPLETED' AND tx."createdAt" > now() - ${`${CO_PURCHASE_WINDOW_DAYS} days`}::interval
     GROUP BY v.id, v.sku, p.name
     ORDER BY score DESC, p.name ASC
     LIMIT ${take}`;
   if (coPurchased.length) return coPurchased.map((item) => ({ ...item, reason: "frequently_bought_together" }));
-
-  const source = await prisma.productVariant.findUnique({ where: { id: variantId }, include: { product: true } });
-  if (!source) return [];
   // Content-similar fallback (pgvector): nearest neighbors of the source
   // product's Gemini embedding. Stored-vs-stored — no API call at query time;
   // products without an embedding row simply don't match here and the
@@ -36,7 +38,7 @@ export async function getProductRecommendations(variantId: string, take = 5) {
       JOIN "ProductVariant" sv ON sv."productId" = sp.id AND sv.id = ${variantId}
       JOIN "ProductEmbedding" se ON se."productId" <> ce."productId"
       JOIN "Product" p ON p.id = se."productId" AND p.status = 'active'
-      JOIN "ProductVariant" v ON v."productId" = p.id AND v.active = true AND v.id <> ${variantId}
+      JOIN "ProductVariant" v ON v."productId" = p.id AND v.active = true AND v.id <> ${variantId} AND v."orgId" = ${orgId}
       WHERE se.model = ce.model
       ORDER BY se.embedding <=> ce.embedding
       LIMIT ${take}`;
@@ -48,7 +50,7 @@ export async function getProductRecommendations(variantId: string, take = 5) {
     return similar.map((item) => ({ ...item, reason: "similar_content" }));
 
   const related = await prisma.productVariant.findMany({
-    where: { id: { not: variantId }, active: true, product: { categoryId: source.product.categoryId, status: "active" } },
+    where: { id: { not: variantId }, active: true, orgId, product: { categoryId: source.product.categoryId, status: "active" } },
     include: { product: true }, take, orderBy: { createdAt: "desc" },
   });
   return related.map((item) => ({ id: item.id, sku: item.sku, name: item.product.name, score: 0, reason: "same_category" }));

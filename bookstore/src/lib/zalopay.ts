@@ -10,7 +10,19 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "./db";
 import { fail } from "./api";
 
-const CREATE_URL = "https://sb-openapi.zalopay.vn/v2/create";
+// Gateway create-URL is env-selectable: ZALOPAY_CREATE_URL unset →
+// sandbox default (dev-safe); production sets the live URL
+// https://openapi.zalopay.vn/v2/create.
+export const ZALOPAY_SANDBOX_URL = "https://sb-openapi.zalopay.vn/v2/create";
+export const ZALOPAY_LIVE_URL = "https://openapi.zalopay.vn/v2/create";
+
+export function zaloPayCreateUrl(): string {
+  return process.env.ZALOPAY_CREATE_URL || ZALOPAY_SANDBOX_URL;
+}
+
+export function zaloPayLive(): boolean {
+  return zaloPayCreateUrl() === ZALOPAY_LIVE_URL;
+}
 
 export function zaloPayConfigured() {
   return Boolean(
@@ -67,7 +79,7 @@ export async function buildZaloPayUrl(order: { id: string; number: string; total
     description: `Thanh toan ${order.number}`,
     bank_code: "zalopayapp",
   };
-  const res = await fetch(CREATE_URL, {
+  const res = await fetch(zaloPayCreateUrl(), {
     method: "POST",
     // PERF-001: bound a hung ZaloPay endpoint (no undici default timeout).
     signal: AbortSignal.timeout(10_000),

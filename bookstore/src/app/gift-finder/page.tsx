@@ -75,7 +75,7 @@ export default function GiftFinderPage() {
       <div className="bg-[#c83f49] text-white px-4 py-2 text-xs font-bold shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-white text-[#c83f49] px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-white text-[#c83f49] px-2.5 py-0.5 rounded-full text-[11px] uppercase font-black">
               GIFT CONCIERGE
             </span>
             <span>🎁 Trắc nghiệm tìm quà tặng thông minh chuẩn gu người nhận trong 3 bước</span>
@@ -98,11 +98,11 @@ export default function GiftFinderPage() {
                 <span className="font-serif font-black text-2xl text-slate-900 tracking-tight leading-none">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white px-1.5 py-0.5 rounded">
+                <span className="text-[11px] font-black uppercase tracking-wider bg-rose-600 text-white px-1.5 py-0.5 rounded">
                   Gift Wizard
                 </span>
               </div>
-              <p className="text-[10px] text-rose-600 font-bold uppercase tracking-wider">Trợ Lý Tìm Quà Tặng</p>
+              <p className="text-[11px] text-rose-600 font-bold uppercase tracking-wider">Trợ Lý Tìm Quà Tặng</p>
             </div>
           </Link>
 
@@ -135,7 +135,7 @@ export default function GiftFinderPage() {
         {step === 1 && (
           <div className="rounded-3xl bg-white p-6 sm:p-10 shadow-md border border-[#ede5d8] space-y-6 animate-in fade-in duration-200">
             <div className="text-center space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-rose-600">BƯỚC 1 / 3</span>
+              <span className="text-[11px] font-black uppercase tracking-widest text-rose-600">BƯỚC 1 / 3</span>
               <h2 className="font-serif font-black text-2xl sm:text-3xl text-slate-900">
                 Bạn Đang Muốn Tặng Quà Cho Ai?
               </h2>
@@ -182,7 +182,7 @@ export default function GiftFinderPage() {
         {step === 2 && (
           <div className="rounded-3xl bg-white p-6 sm:p-10 shadow-md border border-[#ede5d8] space-y-6 animate-in fade-in duration-200">
             <div className="text-center space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-rose-600">BƯỚC 2 / 3</span>
+              <span className="text-[11px] font-black uppercase tracking-widest text-rose-600">BƯỚC 2 / 3</span>
               <h2 className="font-serif font-black text-2xl sm:text-3xl text-slate-900">
                 Sở Thích Chính Của Người Nhận?
               </h2>
@@ -234,7 +234,7 @@ export default function GiftFinderPage() {
         {step === 3 && (
           <div className="rounded-3xl bg-white p-6 sm:p-10 shadow-md border border-[#ede5d8] space-y-6 animate-in fade-in duration-200">
             <div className="text-center space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-rose-600">BƯỚC 3 / 3</span>
+              <span className="text-[11px] font-black uppercase tracking-widest text-rose-600">BƯỚC 3 / 3</span>
               <h2 className="font-serif font-black text-2xl sm:text-3xl text-slate-900">
                 Mức Ngân Sách Dự Kiến?
               </h2>
@@ -283,7 +283,7 @@ export default function GiftFinderPage() {
         {step === 4 && (
           <div className="rounded-3xl bg-white p-6 sm:p-10 shadow-xl border border-[#ede5d8] space-y-6 animate-in zoom-in-95 duration-200">
             <div className="text-center space-y-2">
-              <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 px-3 py-1 rounded-full">
+              <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 px-3 py-1 rounded-full">
                 <Sparkles className="w-3.5 h-3.5 text-amber-600" /> HỘP QUÀ ĐƯỢC TUYỂN CHỌN DÀNH RIÊNG CHO BẠN
               </span>
               <h2 className="font-serif font-black text-2xl sm:text-3xl text-slate-900">

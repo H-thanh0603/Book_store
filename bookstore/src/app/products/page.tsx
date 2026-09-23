@@ -97,15 +97,15 @@ export default function ProductsPage() {
   const selectedProducts = products.filter((p) => selectedIds.includes(p.id));
 
   return (
-    <main className="min-h-screen bg-slate-50/60 pb-16">
+    <main className="min-h-screen bg-[#faf7f2] pb-16">
       <Nav />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
         {/* Header bar */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Danh Mục Sản Phẩm &amp; Bảng Giá</h1>
+              <h1 className="text-2xl font-bold text-[#1c1917] tracking-tight">Danh Mục Sản Phẩm &amp; Bảng Giá</h1>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
                 <Sparkles className="w-3 h-3" />
                 {total} sản phẩm
@@ -119,7 +119,7 @@ export default function ProductsPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/products/barcodes"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:border-emerald-500 hover:text-emerald-700 text-slate-700 rounded-xl text-xs font-bold shadow-xs transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-[#ede5d8] hover:border-emerald-500 hover:text-emerald-700 text-[#574431] rounded-xl text-xs font-bold shadow-xs transition-colors"
             >
               <Barcode className="w-4 h-4" />
               Phòng in tem
@@ -145,7 +145,7 @@ export default function ProductsPage() {
               <div className="relative flex-1 sm:w-80">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl pl-10 pr-3 py-2 text-xs text-[#1c1917] placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   placeholder="Tìm tên sách, SKU, mã vạch, tác giả..."
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
@@ -169,13 +169,13 @@ export default function ProductsPage() {
         )}
 
         {/* Product Table with Checkbox */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+        <div className="bg-white rounded-2xl border border-[#ede5d8] shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 uppercase font-semibold text-[11px] tracking-wider">
+              <thead className="bg-[#faf7f2] text-slate-500 border-b border-[#ede5d8] uppercase font-semibold text-[11px] tracking-wider">
                 <tr>
                   <th className="p-4 w-10">
-                    <button onClick={selectAll} className="text-slate-600 hover:text-indigo-600">
+                    <button onClick={selectAll} className="text-[#574431] hover:text-indigo-600">
                       {selectedIds.length === products.length && products.length > 0 ? (
                         <CheckSquare className="w-4 h-4 text-indigo-600" />
                       ) : (
@@ -189,7 +189,7 @@ export default function ProductsPage() {
                   <th className="p-4 text-right">Giá Bán Lẻ (VND)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#ede5d8]">
                 {products.map((p) => {
                   const variant = p.variants[0];
                   const price = variant?.prices[0] ? Number(variant.prices[0].amount) : 0;
@@ -197,9 +197,9 @@ export default function ProductsPage() {
                   const isChecked = selectedIds.includes(p.id);
 
                   return (
-                    <tr key={p.id} className={`hover:bg-slate-50/60 transition-colors ${isChecked ? "bg-indigo-50/30" : ""}`}>
+                    <tr key={p.id} className={`hover:bg-[#faf7f2] transition-colors ${isChecked ? "bg-indigo-50/30" : ""}`}>
                       <td className="p-4">
-                        <button onClick={() => toggleSelect(p.id)} className="text-slate-600 hover:text-indigo-600">
+                        <button onClick={() => toggleSelect(p.id)} className="text-[#574431] hover:text-indigo-600">
                           {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-600" /> : <Square className="w-4 h-4 text-slate-300" />}
                         </button>
                       </td>
@@ -210,25 +210,27 @@ export default function ProductsPage() {
                             <img
                               src={p.imageUrl}
                               alt={p.name}
-                              className="w-10 h-14 object-cover rounded border border-slate-200 shrink-0 bg-white"
+                              width={40}
+                              height={56}
+                              className="w-10 h-14 object-cover rounded border border-[#ede5d8] shrink-0 bg-white"
                               loading="lazy"
                             />
                           ) : (
-                            <div className="w-10 h-14 rounded border border-slate-200 shrink-0 bg-slate-50 flex items-center justify-center">
+                            <div className="w-10 h-14 rounded border border-[#ede5d8] shrink-0 bg-[#faf7f2] flex items-center justify-center">
                               <BookOpen className="w-4 h-4 text-slate-300" />
                             </div>
                           )}
                           <div>
-                            <div className="font-bold text-slate-900">{p.name}</div>
+                            <div className="font-bold text-[#1c1917]">{p.name}</div>
                             {p.author && <div className="text-[11px] text-slate-400 italic">✍️ {p.author.name}</div>}
                           </div>
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#faf4ea] text-[#574431]">
                           {p.category?.name ?? "Chưa phân loại"}
                         </span>
-                        {p.brand && <span className="ml-1 text-[10px] text-indigo-600 font-bold">({p.brand.name})</span>}
+                        {p.brand && <span className="ml-1 text-[11px] text-indigo-600 font-bold">({p.brand.name})</span>}
                       </td>
                       <td className="p-4 font-mono text-[11px]">
                         <div>SKU: {variant?.sku ?? "N/A"}</div>
@@ -236,7 +238,7 @@ export default function ProductsPage() {
                           <Barcode className="w-3.5 h-3.5" /> {barcode}
                         </div>
                       </td>
-                      <td className="p-4 text-right font-bold text-slate-900 font-mono">
+                      <td className="p-4 text-right font-bold text-[#1c1917] font-mono">
                         {price > 0 ? vnd(price) : "Liên hệ"}
                       </td>
                     </tr>
@@ -247,20 +249,20 @@ export default function ProductsPage() {
           </div>
 
           {/* Pagination */}
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <div className="p-4 border-t border-[#ede5d8] flex items-center justify-between text-xs text-slate-500">
             <span>Trang {page} / {totalPages} ({total} sản phẩm)</span>
             <div className="flex items-center gap-1">
               <button
                 disabled={page <= 1}
                 onClick={() => load(page - 1, q)}
-                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-30"
+                className="p-1.5 rounded-lg border border-[#ede5d8] hover:bg-[#faf7f2] disabled:opacity-30"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 disabled={page >= totalPages}
                 onClick={() => load(page + 1, q)}
-                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-30"
+                className="p-1.5 rounded-lg border border-[#ede5d8] hover:bg-[#faf7f2] disabled:opacity-30"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -275,8 +277,8 @@ export default function ProductsPage() {
 
           {/* Review moderation queue (N3c) */}
           {modOpen && (
-            <div className="p-4 border-t border-slate-100 space-y-2">
-              <h3 className="text-xs font-bold text-slate-900">Đánh giá chờ duyệt ({pending.length})</h3>
+            <div className="p-4 border-t border-[#ede5d8] space-y-2">
+              <h3 className="text-xs font-bold text-[#1c1917]">Đánh giá chờ duyệt ({pending.length})</h3>
               {pending.length === 0 && <p className="text-xs text-slate-400">Không có đánh giá nào chờ.</p>}
               {pending.map((r) => (
                 <div key={r.id} className="p-3 rounded-xl bg-amber-50/50 border border-amber-100 text-xs space-y-1">
@@ -285,10 +287,10 @@ export default function ProductsPage() {
                     <span className="text-slate-400 shrink-0">{new Date(r.createdAt).toLocaleDateString("vi-VN")}</span>
                   </div>
                   {r.title && <p className="font-bold">{r.title}</p>}
-                  <p className="text-slate-600">{r.body}</p>
+                  <p className="text-[#574431]">{r.body}</p>
                   <div className="flex gap-1.5 pt-1">
                     <button onClick={() => moderate(r.id, "approve")} className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">Duyệt</button>
-                    <button onClick={() => moderate(r.id, "reject")} className="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold">Từ chối</button>
+                    <button onClick={() => moderate(r.id, "reject")} className="px-3 py-1 rounded-lg bg-[#ede5d8] hover:bg-[#e8dac5] text-[#574431] text-xs font-bold">Từ chối</button>
                   </div>
                 </div>
               ))}
@@ -303,7 +305,7 @@ export default function ProductsPage() {
           <div className="w-full max-w-4xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 my-8 print:shadow-none print:border-none print:m-0">
             <div className="flex items-center justify-between border-b pb-4 print:hidden">
               <div>
-                <h3 className="font-bold text-xl text-slate-900">Xem Trước Tem Nhãn Mã Vạch</h3>
+                <h3 className="font-bold text-xl text-[#1c1917]">Xem Trước Tem Nhãn Mã Vạch</h3>
                 <p className="text-xs text-slate-500">Chuẩn in tem dán decal 35x22mm hoặc tờ A4 (3x8 = 24 tem)</p>
               </div>
               <div className="flex items-center gap-2">
@@ -313,7 +315,7 @@ export default function ProductsPage() {
                 >
                   <Printer className="w-4 h-4" /> Bắt Đầu In Ngay
                 </button>
-                <button onClick={() => setPrintModalOpen(false)} className="p-2 rounded-full hover:bg-slate-100">
+                <button onClick={() => setPrintModalOpen(false)} className="p-2 rounded-full hover:bg-[#faf4ea]">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -329,11 +331,11 @@ export default function ProductsPage() {
                 return (
                   <div
                     key={p.id}
-                    className="p-3 rounded-xl border border-slate-300 bg-white text-center flex flex-col justify-between h-36 print:border-black print:h-32"
+                    className="p-3 rounded-xl border border-[#e8dac5] bg-white text-center flex flex-col justify-between h-36 print:border-black print:h-32"
                   >
                     <div>
                       <span className="text-[9px] font-black uppercase text-slate-500 block">MELIO BOOKSTORE</span>
-                      <b className="text-[11px] text-slate-900 line-clamp-1 block mt-0.5">{p.name}</b>
+                      <b className="text-[11px] text-[#1c1917] line-clamp-1 block mt-0.5">{p.name}</b>
                     </div>
 
                     <div className="my-auto py-1">
@@ -346,14 +348,14 @@ export default function ProductsPage() {
                           />
                         ))}
                       </div>
-                      <span className="font-mono text-[9px] text-slate-600 block mt-0.5 tracking-wider font-bold">
+                      <span className="font-mono text-[9px] text-[#574431] block mt-0.5 tracking-wider font-bold">
                         {barcode}
                       </span>
                     </div>
 
-                    <div className="border-t border-dashed border-slate-300 pt-1 flex items-center justify-between text-[10px]">
+                    <div className="border-t border-dashed border-[#e8dac5] pt-1 flex items-center justify-between text-[11px]">
                       <span className="text-slate-500 font-mono">SKU: {variant?.sku?.slice(-6)}</span>
-                      <b className="text-slate-900 font-bold">{vnd(price)}</b>
+                      <b className="text-[#1c1917] font-bold">{vnd(price)}</b>
                     </div>
                   </div>
                 );
