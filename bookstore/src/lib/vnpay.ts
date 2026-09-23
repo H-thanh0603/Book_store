@@ -1,4 +1,4 @@
-// VNPay sandbox checkout: build the redirect URL and settle IPN/return
+// VNPay checkout: build the redirect URL and settle IPN/return
 // callbacks. Spec v2.1.0 — params sorted A→Z, RFC1738-encoded, HMAC-SHA512
 // over everything except vnp_SecureHash/vnp_SecureHashType. All money math is
 // BigInt đồng; vnp_Amount carries đồng×100 (VNPay's integer-cents convention).
@@ -6,7 +6,20 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "./db";
 import { fail } from "./api";
 
-const PAY_HOST = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+// Gateway host is env-selectable: VNP_PAY_HOST unset → sandbox default
+// (dev-safe: never touches real money by accident); production sets the
+// live host https://www.vnpayment.vn/paymentv2/vpcpay.html. The configured
+// host is returned by vnpayHost() so ops/tests can assert which one is live.
+export const VNP_SANDBOX_HOST = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+export const VNP_LIVE_HOST = "https://www.vnpayment.vn/paymentv2/vpcpay.html";
+
+export function vnpayHost(): string {
+  return (process.env.VNP_PAY_HOST || VNP_SANDBOX_HOST).replace(/\/$/, "");
+}
+
+export function vnpayLive(): boolean {
+  return vnpayHost() === VNP_LIVE_HOST;
+}
 
 export function vnpayConfigured() {
   return Boolean(process.env.VNP_TMN_CODE && process.env.VNP_HASH_SECRET && process.env.VNP_RETURN_URL);
@@ -59,7 +72,7 @@ export async function buildVnpayUrl(order: {
     vnp_TxnRef: order.id,
   };
   const { query, hmac } = hash(params);
-  return `${PAY_HOST}?${query}&vnp_SecureHash=${hmac}`;
+  return `${vnpayHost()}?${query}&vnp_SecureHash=${hmac}`;
 }
 
 export type SettleResult = {
