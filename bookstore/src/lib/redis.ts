@@ -60,8 +60,13 @@ export async function cacheFlush(pattern: string): Promise<void> {
   const redis = getRedis()
   if (!redis) return
   try {
-    const keys = await redis.keys(pattern)
-    if (keys.length > 0) await redis.del(...keys)
+    // SCAN, not KEYS: KEYS blocks the single-threaded server on O(N) keys.
+    let cursor = "0"
+    do {
+      const [next, keys] = (await redis.scan(cursor, "MATCH", pattern, "COUNT", 200)) as [string, string[]]
+      cursor = next
+      if (keys.length > 0) await redis.del(...keys)
+    } while (cursor !== "0")
   } catch {
     // Silently fail
   }

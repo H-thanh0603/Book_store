@@ -434,7 +434,9 @@ async function main() {
   // Customers — spec baseline §2361: at least 100
   for (let i = 1; i <= 100; i++) {
     const code = `CUS-${String(i).padStart(6, "0")}`;
-    let c = await prisma.customer.findUnique({ where: { code } });
+    // Org-scoped lookup: a global findUnique would see another tenant's
+    // seed row and skip, leaving this org with zero customers.
+    let c = await prisma.customer.findFirst({ where: { code, orgId: org.id } });
     if (!c) {
       c = await prisma.customer.create({
         data: {

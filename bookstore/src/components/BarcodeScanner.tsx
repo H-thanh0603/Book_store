@@ -52,8 +52,16 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
         };
         decodeFromVideo();
       } catch (err) {
+        // U1: raw err.message is a cryptic DOMException ("The request is not
+        // allowed by the user agent..."). Classify so staff know what to do.
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Không thể truy cập camera");
+          const name = err instanceof DOMException ? err.name : err instanceof Error ? err.name : "";
+          if (name === "NotAllowedError")
+            setError("Camera bị từ chối — bấm biểu tượng 🔒 trên thanh địa chỉ để cho phép, hoặc nhập mã tay bên dưới.");
+          else if (name === "NotFoundError" || name === "OverconstrainedError")
+            setError("Không tìm thấy camera sau — kiểm tra thiết bị, hoặc nhập mã tay bên dưới.");
+          else
+            setError("Không thể truy cập camera — kiểm tra quyền trình duyệt, hoặc nhập mã tay bên dưới.");
         }
       }
     }

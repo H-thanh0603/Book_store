@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { requirePermission, audit } from "@/lib/auth";
 import { apiError, ok, fail, nextBusinessNumber, toMoney, optDate } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
@@ -14,7 +14,7 @@ function assertSupplierOrg(
   supplier: { orgId: string } | null | undefined,
   auth: { orgId: string | null },
 ) {
-  if (!auth.orgId) return; // legacy admin
+  if (!auth.orgId) fail(404, "NOT_FOUND", "Supplier not found"); // Q35 fail-closed
   if (!supplier || supplier.orgId !== auth.orgId)
     fail(404, "NOT_FOUND", "Supplier not found");
 }
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
         });
         await audit(auth.userId, "purchase_order.create", "PurchaseOrder", created.id, { number }, tx);
         return created;
-      });
+      }, TX_OPTIONS);
       return ok({ id: po.id, number: po.number, status: po.status }, 201);
     }
 
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
         const updated = await tx.purchaseOrder.findUniqueOrThrow({ where: { id: current.id } });
         await audit(auth.userId, "purchase_order.submit", "PurchaseOrder", current.id, { number: current.number }, tx);
         return updated;
-      });
+      }, TX_OPTIONS);
       return ok({ number: po.number, status: po.status });
     }
 
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
         const updated = await tx.purchaseOrder.findUniqueOrThrow({ where: { id: current.id } });
         await audit(auth.userId, "purchase_order.approve", "PurchaseOrder", current.id, { number: current.number }, tx);
         return updated;
-      });
+      }, TX_OPTIONS);
       return ok({ number: po.number, status: po.status });
     }
 
@@ -217,7 +217,7 @@ export async function POST(req: NextRequest) {
 
         await audit(auth.userId, "purchase.receive", "GoodsReceipt", receipt.id, { number, poId: po.id }, tx);
         return receipt;
-      });
+      }, TX_OPTIONS);
       return ok({ number: result.number }, 201);
     }
 

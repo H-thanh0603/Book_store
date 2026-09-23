@@ -3,46 +3,22 @@ import { prismaRead } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { apiError, ok } from "@/lib/api";
 import { sendMail } from "@/lib/mail";
+import { Prisma } from "@/generated/prisma/client";
 
 // POST /api/inventory/alerts — Check for low stock items and send email alerts
-// Called by cron job or manually triggered. Items with onHand <= threshold
+// Called by cron job or manually triggered. Items with available <= threshold
 // receive email notifications to the store manager.
 export async function POST(req: NextRequest) {
   try {
-    await requirePermission("inventory.manage");
-  } catch (e: unknown) {
-    const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
-    return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
-  }
+    const auth = await requirePermission("inventory.manage");
 
-  const body = await req.json().catch(() => ({}));
-  const threshold = typeof body.threshold === "number" ? body.threshold : 5;
-  const managerEmail = typeof body.email === "string" ? body.email.trim() : null;
+    const body = await req.json().catch(() => ({}));
+    const threshold = typeof body.threshold === "number" ? body.threshold : 5;
+    const managerEmail = typeof body.email === "string" ? body.email.trim() : null;
 
-  if (!managerEmail) return apiError({ status: 400, code: "VALIDATION", message: "Manager email is required" });
+    if (!managerEmail) return apiError({ status: 400, code: "VALIDATION", message: "Manager email is required" });
 
-  // Find all variants with low stock across all locations
-  const lowStockItems = await prismaRead.inventoryBalance.findMany({
-    where: {
-      onHand: { lte: threshold },
-      location: { active: true },
-      variant: { active: true },
-    },
-    include: {
-      variant: {
-        include: {
-          product: { select: { name: true } },
-          barcodes: { select: { barcode: true }, take: 1 },
-        },
-      },
-      location: {
-        include: {
-          store: { select: { name: true } },
-        },
-      },
-    },
-    orderBy: { onHand: "asc" },
-  });
+    const lowStockItems = await lowStockBalances(auth, threshold, 500);
 
   if (lowStockItems.length === 0) {
     return ok({ message: "No low stock items found", alertsSent: 0 });
@@ -53,17 +29,17 @@ export async function POST(req: NextRequest) {
     .map(
       (item) => `
       <tr>
-        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px">${item.variant.product.name}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:12px;font-family:monospace">${item.variant.sku}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:14px;font-weight:700;color:${item.onHand === 0 ? "#dc2626" : "#d97706"};text-align:center">${item.onHand}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:12px">${item.location.name}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:12px">${item.location.store?.name ?? "—"}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px">${item.productName}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:12px;font-family:monospace">${item.sku}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:14px;font-weight:700;color:${item.available === 0 ? "#dc2626" : "#d97706"};text-align:center">${item.available}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:12px">${item.locationName}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:12px">${item.storeName ?? "—"}</td>
       </tr>`
     )
     .join("");
 
   const subject = `⚠️ ${lowStockItems.length} sản phẩm tồn kho thấp — Melio Bookstore`;
-  const text = `Cảnh báo tồn kho thấp!\n\n${lowStockItems.map((item) => `- ${item.variant.product.name} (${item.variant.sku}): còn ${item.onHand} tại ${item.location.name}`).join("\n")}\n\nVui lòng kiểm tra và nhập hàng bổ sung.\n\n— Melio Bookstore Inventory System`;
+  const text = `Cảnh báo tồn kho thấp!\n\n${lowStockItems.map((item) => `- ${item.productName} (${item.sku}): còn ${item.available} tại ${item.locationName}`).join("\n")}\n\nVui lòng kiểm tra và nhập hàng bổ sung.\n\n— Melio Bookstore Inventory System`;
   const html = `
 <!DOCTYPE html>
 <html>
@@ -103,48 +79,64 @@ export async function POST(req: NextRequest) {
     message: `Low stock alert email sent`,
     alertsSent: lowStockItems.length,
     items: lowStockItems.map((item) => ({
-      name: item.variant.product.name,
-      sku: item.variant.sku,
-      onHand: item.onHand,
-      location: item.location.name,
-      store: item.location.store?.name,
+      name: item.productName,
+      sku: item.sku,
+      onHand: item.available,
+      location: item.locationName,
+      store: item.storeName,
     })),
   });
+  } catch (err) {
+    return apiError(err);
+  }
 }
 
 // GET /api/inventory/alerts — List low stock items (no email sent)
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission("inventory.view");
-  } catch (e: unknown) {
-    const status = (e && typeof e === "object" && "status" in e) ? (e as { status: number }).status : 401;
-    return apiError({ status, code: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message: (e as Error).message });
+    const auth = await requirePermission("inventory.view");
+
+    const url = new URL(req.url);
+    const threshold = Number(url.searchParams.get("threshold") ?? 5);
+
+    const lowStockItems = await lowStockBalances(auth, threshold, 200);
+
+    return ok({ items: lowStockItems, threshold });
+  } catch (err) {
+    return apiError(err);
   }
+}
 
-  const url = new URL(req.url);
-  const threshold = Number(url.searchParams.get("threshold") ?? 5);
-
-  const lowStockItems = await prismaRead.inventoryBalance.findMany({
-    where: {
-      onHand: { lte: threshold },
-      location: { active: true },
-      variant: { active: true },
-    },
-    include: {
-      variant: {
-        include: {
-          product: { select: { name: true } },
-          barcodes: { select: { barcode: true }, take: 1 },
-        },
-      },
-      location: {
-        include: {
-          store: { select: { name: true } },
-        },
-      },
-    },
-    orderBy: { onHand: "asc" },
-  });
-
-  return ok({ items: lowStockItems, threshold });
+// Shared low-stock scan: org + store scoped, available-based (onHand -
+// reserved, not onHand alone), bounded. Balance has no direct orgId —
+// scope through the variant's org and the location's store.
+async function lowStockBalances(
+  auth: { orgId: string | null; roles: { permissions: string[]; storeId: string | null }[] },
+  threshold: number,
+  take: number,
+) {
+  const storeIds = auth.roles
+    .filter((r) => r.permissions.includes("inventory.view") && r.storeId)
+    .map((r) => r.storeId as string);
+  const hasGlobalScope = auth.roles.some(
+    (r) => r.permissions.includes("inventory.view") && r.storeId === null,
+  );
+  const storeFilter = hasGlobalScope ? Prisma.empty : Prisma.sql`AND l."storeId" IN (${Prisma.join(storeIds)})`;
+  const orgFilter = auth.orgId ? Prisma.sql`AND v."orgId" = ${auth.orgId}` : Prisma.empty;
+  return prismaRead.$queryRaw<{
+    id: string; onHand: number; reserved: number; available: number;
+    sku: string; productName: string; locationName: string; storeName: string | null;
+  }[]>`
+    SELECT b.id, b."onHand", b.reserved, (b."onHand" - b.reserved)::int AS available,
+           v.sku, pr.name AS "productName", l.name AS "locationName", s.name AS "storeName"
+    FROM "InventoryBalance" b
+    JOIN "ProductVariant" v ON v.id = b."variantId"
+    JOIN "Product" pr ON pr.id = v."productId"
+    JOIN "StockLocation" l ON l.id = b."locationId"
+    LEFT JOIN "Store" s ON s.id = l."storeId"
+    WHERE l.active AND v.active
+      AND (b."onHand" - b.reserved) <= ${threshold}
+      ${storeFilter} ${orgFilter}
+    ORDER BY (b."onHand" - b.reserved) ASC
+    LIMIT ${take}`;
 }

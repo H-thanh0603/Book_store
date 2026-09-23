@@ -110,7 +110,7 @@ export default function ProductReviews({ productId }: { productId: string }) {
               </div>
               {r.title && <p className="font-bold text-slate-800">{r.title}</p>}
               <p className="text-slate-600 leading-relaxed">{r.body}</p>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-[11px] text-slate-400">
                 {new Date(r.createdAt).toLocaleDateString("vi-VN")}
               </span>
             </div>

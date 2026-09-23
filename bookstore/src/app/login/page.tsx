@@ -276,9 +276,9 @@ export default function LoginPage() {
                     >
                       <div>
                         <p className="font-bold">{acc.label}</p>
-                        <p className="text-[10px] text-slate-500">{acc.role}</p>
+                        <p className="text-[11px] text-slate-500">{acc.role}</p>
                       </div>
-                      <span className="text-[10px] font-mono text-slate-400">{acc.email}</span>
+                      <span className="text-[11px] font-mono text-slate-400">{acc.email}</span>
                     </button>
                   ))}
                 </div>

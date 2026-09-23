@@ -39,6 +39,8 @@ type Line = {
   name: string;
   quantity: number;
   unitPrice: number;
+  /** Manager-approved manual price (pos.override_price): sent as unitPrice. */
+  overridden?: boolean;
 };
 type Customer = {
   id: string;
@@ -58,10 +60,13 @@ export default function PosPage() {
   const [storeId, setStoreId] = useState<string>("");
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
   const [customerId, setCustomerId] = useState<string>("");
+  // P2-4: the customer dropdown used to list only the first API page —
+  // searching by name/phone/code hits the server so any customer is found.
+  const [customerQ, setCustomerQ] = useState("");
   const [refundNumber, setRefundNumber] = useState("");
   const [confirmCloseShift, setConfirmCloseShift] = useState(false);
   const [confirmRefund, setConfirmRefund] = useState(false);
-  const [lastTx, setLastTx] = useState<{ number: string; total: number; method: string; items: typeof lines; date: string } | null>(null);
+  const [lastTx, setLastTx] = useState<{ number: string; subtotal: number; discountTotal: number; total: number; method: string; items: typeof lines; date: string } | null>(null);
   const [coupon, setCoupon] = useState("");
   // Held bills (N1): park the current cart in localStorage slots when the
   // customer walks away — survives reload, per terminal. Split moves checked
@@ -133,6 +138,10 @@ export default function PosPage() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [pendingSync, setPendingSync] = useState(0);
+  // P1: client-side double-submit guard — server idempotency is the real
+  // safety net, but disabling the buttons during flight stops accidental
+  // double-taps from queuing two identical sales.
+  const [paying, setPaying] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const paymentAttemptRef = useRef<{ signature: string; key: string } | null>(null);
 
@@ -217,6 +226,23 @@ export default function PosPage() {
     setLines((ls) => ls.filter((x) => x.variantId !== variantId));
   };
 
+  // F1 price override: prompt a new unit price + reason. The server honors
+  // client prices only for pos.override_price holders and audits the count —
+  // this UI just collects the intent; permission stays server-side.
+  const overridePrice = (variantId: string) => {
+    const line = lines.find((l) => l.variantId === variantId);
+    if (!line) return;
+    const raw = prompt(`Giá mới cho "${line.name}" (giá gốc ${line.unitPrice.toLocaleString("vi-VN")} ₫):`, String(line.unitPrice));
+    if (raw === null) return;
+    const price = Math.floor(Number(raw.replace(/[^\d]/g, "")));
+    if (!Number.isFinite(price) || price < 0 || price > 1_000_000_000) {
+      setMsg({ text: "Giá không hợp lệ", type: "error" });
+      return;
+    }
+    setLines((ls) => ls.map((x) => (x.variantId === variantId ? { ...x, unitPrice: price, overridden: true } : x)));
+    setMsg({ text: `Đã sửa giá "${line.name}" → ${price.toLocaleString("vi-VN")} ₫ (cần quyền quản lý khi thanh toán)`, type: "info" });
+  };
+
   async function openShift() {
     const res = await fetch("/api/terminals?storeId=" + storeId);
     const term = res.ok ? (await res.json()).terminals?.[0] : null;
@@ -262,7 +288,13 @@ export default function PosPage() {
 
   function addLine(p: Product) {
     const v = p.variants[0];
-    if (!v || !shiftId) return;
+    if (!v) return;
+    // L3: the old silent return when no shift is open swallowed scans —
+    // cashiers thought the barcode was broken. Say it out loud instead.
+    if (!shiftId) {
+      setMsg({ text: "Chưa mở ca — hãy mở ca trước khi quét/bán hàng", type: "error" });
+      return;
+    }
     setLines((ls) => {
       const ex = ls.find((l) => l.variantId === v.id);
       if (ex) return ls.map((l) => (l.variantId === v.id ? { ...l, quantity: l.quantity + 1 } : l));
@@ -314,11 +346,18 @@ export default function PosPage() {
   }
 
   async function pay(method: string) {
+    if (paying) return;
+    setPaying(true);
     const chargeTotal = quote ? quote.total : total;
     const requestBody = {
       action: "sale", shiftId, storeId, customerId: customerId || undefined,
       couponCode: coupon.trim() ? coupon.trim().toUpperCase() : undefined,
-      items: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
+      // Overridden lines carry their manager price; the server honors it
+      // only for pos.override_price holders (else server retail wins).
+      items: lines.map((l) => ({
+        variantId: l.variantId, quantity: l.quantity,
+        ...(l.overridden ? { unitPrice: l.unitPrice } : {}),
+      })),
       payments: [{ method, amount: chargeTotal }],
     };
     const signature = JSON.stringify(requestBody);
@@ -361,15 +400,18 @@ export default function PosPage() {
       setCustomerId("");
       setCoupon("");
       searchRef.current?.focus();
+      setPaying(false);
       return;
     }
 
-    const d = await r.json();
+    const d = await r.json().catch(() => ({}));
     if (r.ok) {
       paymentAttemptRef.current = null;
       setLastTx({
         number: d.number,
         total: d.total,
+        discountTotal: d.discountTotal ?? quote?.discountTotal ?? 0,
+        subtotal: d.subtotal ?? total,
         method,
         items: [...lines],
         date: new Date().toLocaleString("vi-VN"),
@@ -385,6 +427,7 @@ export default function PosPage() {
     } else {
       setMsg({ text: d.message, type: "error" });
     }
+    setPaying(false);
   }
 
   async function refund() {
@@ -449,8 +492,8 @@ export default function PosPage() {
         unitPrice: l.unitPrice,
         total: l.quantity * l.unitPrice,
       })),
-      subtotal: lastTx.total,
-      discountTotal: 0,
+      subtotal: lastTx.subtotal,
+      discountTotal: lastTx.discountTotal,
       total: lastTx.total,
       paymentMethod: lastTx.method === "CASH" ? "Tiền mặt" : "QR Code",
     };
@@ -478,11 +521,11 @@ export default function PosPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100/70 pb-12 flex flex-col">
+    <main className="min-h-screen bg-[#faf4ea] pb-12 flex flex-col">
       <Nav />
 
       {/* Top Bar */}
-      <div className="bg-white border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-3 shadow-2xs">
+      <div className="bg-white border-b border-[#ede5d8] px-4 sm:px-6 lg:px-8 py-3 shadow-2xs">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
@@ -490,18 +533,18 @@ export default function PosPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-900 text-sm sm:text-base">POS</span>
+                <span className="font-bold text-[#1c1917] text-sm sm:text-base">POS</span>
                 {shiftId ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     MỞ CA
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#faf4ea] text-[#574431]">
                     CHƯA MỞ CA
                   </span>
                 )}
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
                   isOnline 
                     ? "bg-emerald-50 text-emerald-700 border border-emerald-200" 
                     : "bg-amber-50 text-amber-700 border border-amber-200"
@@ -551,14 +594,14 @@ export default function PosPage() {
               {msg.type === "error" && <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />}
               <span>{msg.text}</span>
             </div>
-            <button onClick={() => setMsg(null)} className="text-slate-400 hover:text-slate-600 px-1">
+            <button onClick={() => setMsg(null)} className="text-slate-400 hover:text-[#574431] px-1">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
           {lastTx && msg?.type === "success" && (
             <button
               onClick={handlePrintReceipt}
-              className="mt-2 w-full py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-colors"
+              className="mt-2 w-full py-2 rounded-xl bg-white border border-[#ede5d8] hover:bg-[#faf7f2] text-[#574431] text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-colors"
             >
               <Printer className="w-3.5 h-3.5" />
               In hóa đơn
@@ -571,13 +614,13 @@ export default function PosPage() {
         {!shiftId ? (
           /* ── SHIFT OPEN ── */
           <div className="max-w-md mx-auto my-8 space-y-4">
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-md space-y-5">
+            <div className="bg-white rounded-2xl p-6 border border-[#ede5d8] shadow-md space-y-5">
               <div className="text-center space-y-1">
                 <Store className="w-10 h-10 text-indigo-600 mx-auto" />
-                <h2 className="text-xl font-bold text-slate-900">Mở Ca</h2>
+                <h2 className="text-xl font-bold text-[#1c1917]">Mở Ca</h2>
               </div>
               <select
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 value={storeId}
                 onChange={(e) => setStoreId(e.target.value)}
               >
@@ -594,14 +637,14 @@ export default function PosPage() {
             </div>
 
             {/* Quick Refund */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-2">
-              <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
+            <div className="bg-white rounded-2xl p-4 border border-[#ede5d8] shadow-xs space-y-2">
+              <div className="flex items-center gap-2 text-sm font-bold text-[#1c1917]">
                 <RotateCcw className="w-4 h-4 text-orange-500" />
                 Hoàn tiền nhanh
               </div>
               <div className="flex gap-2">
                 <input
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="flex-1 bg-[#faf7f2] border border-[#ede5d8] rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   placeholder="Mã giao dịch (TXN-...)"
                   value={refundNumber}
                   onChange={(e) => setRefundNumber(e.target.value)}
@@ -610,7 +653,7 @@ export default function PosPage() {
                   disabled={!refundNumber.trim()}
                   onClick={() => setConfirmRefund(true)}
                   aria-label={`Hoàn tiền giao dịch ${refundNumber.trim()}`}
-                  className="px-3 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-white/50 text-white rounded-lg text-xs font-semibold transition-colors"
+                  className="px-3 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-[#ede5d8] disabled:text-white/50 text-white rounded-lg text-xs font-semibold transition-colors"
                 >
                   Hoàn tiền
                 </button>
@@ -629,7 +672,7 @@ export default function PosPage() {
                   <input
                     ref={searchRef}
                     autoFocus
-                    className="w-full bg-white border-2 border-[#e8dac5] rounded-2xl pl-12 pr-4 py-3.5 text-base text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:border-[#8c2d19] focus:ring-4 focus:ring-[#8c2d19]/10"
+                    className="w-full bg-white border-2 border-[#e8dac5] rounded-2xl pl-12 pr-4 py-3.5 text-base text-[#1c1917] placeholder:text-slate-400 shadow-sm focus:outline-none focus:border-[#8c2d19] focus:ring-4 focus:ring-[#8c2d19]/10"
                     placeholder="Quét mã barcode hoặc gõ tên sách..."
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
@@ -637,7 +680,7 @@ export default function PosPage() {
                   {q && (
                     <button
                       onClick={() => { setQ(""); searchRef.current?.focus(); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-[#574431]"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -660,12 +703,12 @@ export default function PosPage() {
                     <button
                       key={p.id}
                       onClick={() => addLine(p)}
-                      className="group bg-white rounded-xl p-3 text-left border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all"
+                      className="group bg-white rounded-xl p-3 text-left border border-[#ede5d8] hover:border-indigo-300 hover:shadow-md transition-all"
                     >
-                      <div className="w-full h-16 rounded-lg bg-gradient-to-br from-indigo-50 to-slate-50 flex items-center justify-center text-indigo-300 mb-2 group-hover:text-indigo-500">
+                      <div className="w-full h-16 rounded-lg bg-gradient-to-br from-indigo-50 to-[#faf7f2] flex items-center justify-center text-indigo-300 mb-2 group-hover:text-indigo-500">
                         <Boxes className="w-6 h-6" />
                       </div>
-                      <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-tight min-h-[2.5rem]">
+                      <h4 className="text-xs font-bold text-[#1c1917] line-clamp-2 leading-tight min-h-[2.5rem]">
                         {p.name}
                       </h4>
                       <div className="mt-2 flex items-center justify-between">
@@ -682,22 +725,47 @@ export default function PosPage() {
               </div>
 
               {q && filtered.length === 0 && (
-                <div className="bg-white rounded-2xl p-8 text-center border border-slate-200 text-slate-400">
+                <div className="bg-white rounded-2xl p-8 text-center border border-[#ede5d8] text-slate-400">
                   <Search className="w-6 h-6 mx-auto mb-2 opacity-40" />
-                  <p className="text-xs font-medium text-slate-600">Không tìm thấy</p>
+                  <p className="text-xs font-medium text-[#574431]">Không tìm thấy</p>
                 </div>
               )}
             </div>
 
             {/* RIGHT: Cart + Pay */}
             <div className="lg:col-span-5 xl:col-span-4">
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-md sticky top-4">
+              <div className="bg-white rounded-2xl border border-[#ede5d8] shadow-md sticky top-4 flex flex-col max-h-[calc(100vh-2rem)]">
                 {/* Customer */}
-                <div className="p-3 border-b border-slate-100">
+                <div className="p-3 border-b border-[#ede5d8] space-y-2 shrink-0">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg pl-8 pr-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      placeholder="Tìm KH theo tên / SĐT / mã…"
+                      value={customerQ}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setCustomerQ(v);
+                        const query = v.trim();
+                        if (query.length < 2) return;
+                        fetch(`/api/customers?q=${encodeURIComponent(query)}&pageSize=25`).then(async (r) => {
+                          if (!r.ok) return;
+                          const d = await r.json();
+                          const found = (d.customers as Customer[]) ?? [];
+                          // Merge server hits into the dropdown without
+                          // dropping the initially loaded page.
+                          setCustomers((prev) => {
+                            const ids = new Set(prev.map((c) => c.id));
+                            return [...prev, ...found.filter((c) => !ids.has(c.id))];
+                          });
+                        }).catch(() => {});
+                      }}
+                    />
+                  </div>
                   <div className="relative">
                     <User className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <select
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-lg pl-8 pr-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                       value={customerId}
                       onChange={(e) => setCustomerId(e.target.value)}
                     >
@@ -711,16 +779,16 @@ export default function PosPage() {
                   </div>
                 </div>
 
-                {/* Cart Items */}
-                <div className="p-3">
+                {/* Cart Items — scrolls internally so the payment footer below stays visible */}
+                <div className="p-3 min-h-0 flex-1 overflow-y-auto">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-700">GIỎ HÀNG</span>
+                    <span className="text-xs font-bold text-[#574431]">GIỎ HÀNG</span>
                     <div className="flex items-center gap-1">
                       <button
                         onClick={holdBill}
                         disabled={!lines.length}
                         title="Tạm giữ đơn (khách đi lấy thêm đồ)"
-                        className="text-[10px] font-bold px-2 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 disabled:opacity-40"
+                        className="text-[11px] font-bold px-2 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 disabled:opacity-40"
                       >
                         Tạm giữ{held.length > 0 ? ` (${held.length})` : ""}
                       </button>
@@ -728,11 +796,11 @@ export default function PosPage() {
                         onClick={() => { setSplitMode(!splitMode); setSplitSel(new Set()); }}
                         disabled={!lines.length}
                         title="Chọn món để tách thành hóa đơn riêng"
-                        className={`text-[10px] font-bold px-2 py-1 rounded border disabled:opacity-40 ${splitMode ? "bg-[#8c2d19] text-white border-[#8c2d19]" : "bg-slate-50 text-slate-600 border-slate-200"}`}
+                        className={`text-[11px] font-bold px-2 py-1 rounded border disabled:opacity-40 ${splitMode ? "bg-[#8c2d19] text-white border-[#8c2d19]" : "bg-[#faf7f2] text-[#574431] border-[#ede5d8]"}`}
                       >
                         Tách đơn
                       </button>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#8c2d19]/10 text-[#8c2d19]">
+                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-[#8c2d19]/10 text-[#8c2d19]">
                         {itemCount} món
                       </span>
                     </div>
@@ -751,7 +819,7 @@ export default function PosPage() {
                     <div className="mb-2 space-y-1 max-h-32 overflow-y-auto">
                       {held.map((h) => (
                         <div key={h.id} className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-50/60 border border-amber-100 text-[11px]">
-                          <span className="flex-1 font-semibold text-slate-700 truncate">{h.label} · {h.lines.length} món</span>
+                          <span className="flex-1 font-semibold text-[#574431] truncate">{h.label} · {h.lines.length} món</span>
                           <button onClick={() => resumeBill(h.id, false)} className="font-bold text-indigo-600 hover:underline">Mở</button>
                           <button onClick={() => resumeBill(h.id, true)} className="font-bold text-emerald-600 hover:underline">Gộp</button>
                           <button onClick={() => persistHeld(held.filter((x) => x.id !== h.id))} className="font-bold text-slate-400 hover:text-red-500">✕</button>
@@ -760,7 +828,7 @@ export default function PosPage() {
                     </div>
                   )}
 
-                  <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                  <div className="divide-y divide-[#ede5d8]">
                     {lines.length === 0 ? (
                       <div className="py-8 text-center text-slate-300 text-xs">
                         Chưa có sản phẩm
@@ -783,30 +851,40 @@ export default function PosPage() {
                             />
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold text-slate-900 truncate">{l.name}</p>
-                            <p className="text-[10px] text-slate-500 font-mono">
+                            <p className="text-xs font-semibold text-[#1c1917] truncate">{l.name}</p>
+                            <p className="text-[11px] text-slate-500 font-mono">
                               {l.unitPrice.toLocaleString("vi-VN")} ₫ × {l.quantity}
+                              {l.overridden && <span className="ml-1 font-bold text-amber-700">(giá sửa)</span>}
                             </p>
                           </div>
+
+                          <button
+                            onClick={() => overridePrice(l.variantId)}
+                            title={`Sửa giá ${l.name} (cần quyền quản lý)`}
+                            aria-label={`Sửa giá ${l.name}`}
+                            className="w-8 h-8 rounded-lg bg-[#faf4ea] hover:bg-amber-100 flex items-center justify-center text-slate-500 hover:text-amber-700 shrink-0"
+                          >
+                            ✏️
+                          </button>
 
                           <div className="flex items-center gap-1 shrink-0">
                             <button
                               onClick={() => decreaseQty(l.variantId)}
-                              className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
+                              className="w-8 h-8 rounded-lg bg-[#faf4ea] hover:bg-[#ede5d8] flex items-center justify-center"
                             >
                               <Minus className="w-4 h-4" />
                             </button>
                             <span className="w-6 text-center text-xs font-bold">{l.quantity}</span>
                             <button
                               onClick={() => increaseQty(l.variantId)}
-                              className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
+                              className="w-8 h-8 rounded-lg bg-[#faf4ea] hover:bg-[#ede5d8] flex items-center justify-center"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
                           </div>
 
                           <div className="text-right shrink-0 w-20">
-                            <span className="text-xs font-bold text-slate-900">
+                            <span className="text-xs font-bold text-[#1c1917]">
                               {(l.quantity * l.unitPrice).toLocaleString("vi-VN")}
                             </span>
                           </div>
@@ -823,14 +901,14 @@ export default function PosPage() {
                   </div>
                 </div>
 
-                {/* Total + Payment */}
-                <div className="p-3 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+                {/* Total + Payment — pinned at the card bottom via the flex column */}
+                <div className="p-3 border-t border-[#ede5d8] bg-[#faf7f2] rounded-b-2xl shrink-0">
                   <div className="flex items-center gap-1.5 mb-2">
                     <input
                       value={coupon}
                       onChange={(e) => setCoupon(e.target.value.toUpperCase())}
                       placeholder="Mã voucher (VD: MELIOVIP)"
-                      className="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold uppercase placeholder:font-sans placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      className="flex-1 min-w-0 bg-white border border-[#ede5d8] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold uppercase placeholder:font-sans placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                     />
                     <button
                       onClick={applyCoupon}
@@ -850,7 +928,7 @@ export default function PosPage() {
                   )}
                   <div className="flex items-baseline justify-between mb-3">
                     <span className="text-xs font-semibold text-slate-500">Tổng{quote && quote.discountTotal > 0 ? " (sau voucher)" : ""}:</span>
-                    <span className="text-2xl font-black text-slate-900">
+                    <span className="text-2xl font-black text-[#1c1917]">
                       {payable.toLocaleString("vi-VN")} ₫
                     </span>
                   </div>
@@ -860,13 +938,13 @@ export default function PosPage() {
                     {[100000, 200000, 500000, 1000000].map((amt) => (
                       <button
                         key={amt}
-                        disabled={!lines.length || amt < payable}
+                        disabled={!lines.length || amt < payable || paying}
                         onClick={() => {
                           // Quick cash: pay with this amount, no change calculation needed server-side
                           // Just use CASH method with the actual total
                           pay("CASH");
                         }}
-                        className="py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 disabled:opacity-40 text-[10px] font-bold text-slate-700 transition-colors"
+                        className="py-1.5 rounded-lg bg-white border border-[#ede5d8] hover:bg-emerald-50 hover:border-emerald-300 disabled:opacity-40 text-[11px] font-bold text-[#574431] transition-colors"
                       >
                         {(amt / 1000).toFixed(0)}k
                       </button>
@@ -875,20 +953,20 @@ export default function PosPage() {
 
                   <div className="grid grid-cols-2 gap-2">
                     <button
-                      disabled={!lines.length}
+                      disabled={!lines.length || paying}
                       onClick={() => pay("CASH")}
-                      className="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-white/50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                      className="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-[#ede5d8] disabled:text-white/50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
                     >
                       <Banknote className="w-4 h-4" />
-                      Tiền mặt
+                      {paying ? "Đang xử lý…" : "Tiền mặt"}
                     </button>
                     <button
-                      disabled={!lines.length}
+                      disabled={!lines.length || paying}
                       onClick={() => pay("QR")}
-                      className="py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-white/50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                      className="py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-[#ede5d8] disabled:text-white/50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
                     >
                       <QrCode className="w-4 h-4" />
-                      QR
+                      {paying ? "Đang xử lý…" : "QR"}
                     </button>
                   </div>
                 </div>

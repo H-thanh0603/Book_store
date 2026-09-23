@@ -79,7 +79,7 @@ export default function LuckyWheelModal({ onRewardWon }: { onRewardWon?: (reward
             </button>
 
             <div>
-              <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 px-2.5 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 px-2.5 py-0.5 rounded-full">
                 <PartyPopper className="w-3.5 h-3.5" /> VÒNG QUAY TRI THỨC
               </span>
               <h3 className="text-2xl font-black text-slate-900 mt-1">
@@ -102,7 +102,7 @@ export default function LuckyWheelModal({ onRewardWon }: { onRewardWon?: (reward
                   return (
                     <div
                       key={i}
-                      className="absolute inset-0 flex items-start justify-center pt-3 text-[10px] font-black text-white"
+                      className="absolute inset-0 flex items-start justify-center pt-3 text-[11px] font-black text-white"
                       style={{
                         transform: `rotate(${deg}deg)`,
                         transformOrigin: "center center",
@@ -145,7 +145,7 @@ export default function LuckyWheelModal({ onRewardWon }: { onRewardWon?: (reward
                 {checkedDays.map((checked, idx) => (
                   <div
                     key={idx}
-                    className={`py-1.5 rounded-xl text-center text-[10px] font-bold ${
+                    className={`py-1.5 rounded-xl text-center text-[11px] font-bold ${
                       checked
                         ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                         : "bg-slate-50 text-slate-400 border border-slate-200"

@@ -18,6 +18,7 @@ const mockPrisma = vi.hoisted(() => ({
 
 vi.mock('./db', () => ({
   prisma: mockPrisma,
+  TX_OPTIONS: { timeout: 15_000, maxWait: 5_000 },
 }))
 
 vi.mock('./api', () => ({

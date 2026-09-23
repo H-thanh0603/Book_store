@@ -65,7 +65,7 @@ export default function StoresPage() {
       <div className="bg-[#18253f] text-white px-4 py-2 text-xs font-bold shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-amber-400 text-amber-950 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-amber-400 text-amber-950 px-2.5 py-0.5 rounded-full text-[11px] uppercase font-black">
               HỆ THỐNG SIÊU THỊ
             </span>
             <span>🏛️ Chuỗi không gian văn hóa đọc &amp; Workshop giao lưu tác giả cuối tuần</span>
@@ -88,11 +88,11 @@ export default function StoresPage() {
                 <span className="font-serif font-black text-2xl text-slate-900 tracking-tight leading-none">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-[#18253f] text-white px-1.5 py-0.5 rounded">
+                <span className="text-[11px] font-black uppercase tracking-wider bg-[#18253f] text-white px-1.5 py-0.5 rounded">
                   Locations
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Hệ Thống Chi Nhánh &amp; Sự Kiện</p>
+              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Hệ Thống Chi Nhánh &amp; Sự Kiện</p>
             </div>
           </Link>
 
@@ -131,7 +131,7 @@ export default function StoresPage() {
         <section className="space-y-4">
           <div className="flex items-center justify-between border-b border-[#ede5d8] pb-3">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#c83f49]">
+              <span className="text-[11px] font-black uppercase tracking-widest text-[#c83f49]">
                 SỰ KIỆN SẮP DIỄN RA
               </span>
               <h2 className="font-serif font-black text-2xl text-slate-900 mt-0.5">
@@ -148,7 +148,7 @@ export default function StoresPage() {
                 className="p-6 rounded-3xl bg-white border border-[#ede5d8] shadow-xs space-y-4 flex flex-col justify-between"
               >
                 <div className="space-y-2">
-                  <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full">
+                  <span className="text-[11px] font-mono font-bold bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full">
                     CÒN {ev.seatsLeft} CHỖ TRỐNG
                   </span>
                   <h3 className="font-serif font-black text-lg text-slate-900 leading-snug">{ev.title}</h3>
@@ -178,7 +178,7 @@ export default function StoresPage() {
         <section className="space-y-4">
           <div className="flex items-center justify-between border-b border-[#ede5d8] pb-3">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#18253f]">
+              <span className="text-[11px] font-black uppercase tracking-widest text-[#18253f]">
                 HỆ THỐNG NHÀ SÁCH
               </span>
               <h2 className="font-serif font-black text-2xl text-slate-900 mt-0.5">
@@ -196,7 +196,7 @@ export default function StoresPage() {
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] font-black bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
+                    <span className="font-mono text-[11px] font-black bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
                       MÃ: {st.code}
                     </span>
                     <span className="text-xs text-slate-500 font-mono">📞 {st.phone}</span>
@@ -209,7 +209,7 @@ export default function StoresPage() {
                   {/* Amenities */}
                   <div className="flex flex-wrap gap-1.5 pt-2">
                     {st.amenities.map((am, i) => (
-                      <span key={i} className="text-[10px] font-bold bg-[#faf7f2] border border-[#ede5d8] text-slate-700 px-2 py-0.5 rounded-md">
+                      <span key={i} className="text-[11px] font-bold bg-[#faf7f2] border border-[#ede5d8] text-slate-700 px-2 py-0.5 rounded-md">
                         ✓ {am}
                       </span>
                     ))}

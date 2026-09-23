@@ -1,11 +1,11 @@
 // Agent 2: Inventory operations — movement history, adjustment approval workflow,
 // low-stock report, aging report.
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { assertStoreAccess, requirePermission, resolveStoreScope } from "@/lib/auth";
 import { apiError, ok, fail, nextBusinessNumber } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
-import { MovementType } from "@/generated/prisma/client";
+import { MovementType, Prisma } from "@/generated/prisma/client";
 
 // GET /api/inventory/operations?view=movements|low-stock|aging&locationId=&variantId=&days=
 export async function GET(req: NextRequest) {
@@ -30,60 +30,69 @@ export async function GET(req: NextRequest) {
     }
 
     if (view === "low-stock") {
-      // Available (onHand - reserved) below reorder point = avgDailySales*leadTime + safety(20%)
-      const balances = await prisma.inventoryBalance.findMany({
-        where: { location: locationWhere, variant: { active: true } },
-        include: { variant: { select: { sku: true, product: { select: { name: true } } } }, location: { select: { name: true } } },
-      });
+      // P2-1: available/reorder-point used to compute in JS over every
+      // balance in scope. CTE the 30d sales rate and filter/order in SQL.
       const since = new Date(Date.now() - 30 * 86400_000);
-      const sales = await prisma.inventoryMovement.groupBy({
-        by: ["variantId", "locationId"],
-        where: { type: "SALE", createdAt: { gte: since } },
-        _sum: { quantity: true },
-      });
-      const rateMap = new Map(sales.map((s) => [`${s.variantId}:${s.locationId}`, Math.abs(s._sum.quantity ?? 0) / 30]));
-      const lowStock = balances
-        .map((b) => {
-          const daily = rateMap.get(`${b.variantId}:${b.locationId}`) ?? 0;
-          const available = b.onHand - b.reserved;
-          return { ...b, _daily: daily, available, reorderPoint: Math.ceil(daily * 7 * 1.2) };
-        })
-        .filter((b) => b.available <= b.reorderPoint && (b.reorderPoint > 0 || b.available <= 5))
-        .sort((a, b) => a.available - a.reorderPoint - (b.available - b.reorderPoint))
-        .slice(0, 100);
-      return ok({ lowStock: lowStock.map((row) => { const { _daily, ...rest } = row; void _daily; return rest; }) });
+      const storeFilter = scope ? Prisma.sql`AND l."storeId" IN (${Prisma.join(scope)})` : Prisma.empty;
+      const locFilter = locationId ? Prisma.sql`AND b."locationId" = ${locationId}` : Prisma.empty;
+      const rows = await prisma.$queryRaw<{
+        variantId: string; locationId: string; sku: string; product: string;
+        location: string; onHand: number; reserved: number;
+        available: number; reorderPoint: number;
+      }[]>`
+        WITH sales AS (
+          SELECT "variantId", "locationId", ABS(SUM(quantity)) / 30.0 AS daily
+          FROM "InventoryMovement"
+          WHERE type = 'SALE' AND "createdAt" >= ${since}
+          GROUP BY "variantId", "locationId"
+        )
+        SELECT b."variantId", b."locationId", v.sku,
+               pr.name AS product, l.name AS location,
+               b."onHand" AS "onHand", b.reserved AS reserved,
+               (b."onHand" - b.reserved)::int AS available,
+               CEIL(COALESCE(s.daily, 0) * 7 * 1.2)::int AS "reorderPoint"
+        FROM "InventoryBalance" b
+        JOIN "ProductVariant" v ON v.id = b."variantId"
+        JOIN "Product" pr ON pr.id = v."productId"
+        JOIN "StockLocation" l ON l.id = b."locationId"
+        LEFT JOIN sales s ON s."variantId" = b."variantId" AND s."locationId" = b."locationId"
+        WHERE v.active ${storeFilter} ${locFilter}
+          AND (b."onHand" - b.reserved) <= CEIL(COALESCE(s.daily, 0) * 7 * 1.2)
+          AND (COALESCE(s.daily, 0) > 0 OR (b."onHand" - b.reserved) <= 5)
+        ORDER BY ((b."onHand" - b.reserved) - CEIL(COALESCE(s.daily, 0) * 7 * 1.2)) ASC
+        LIMIT 100`;
+      return ok({ lowStock: rows });
     }
 
     if (view === "aging") {
-      // Aging = days since last outbound movement per variant@location; no movement → age from balance creation.
-      const balances = await prisma.inventoryBalance.findMany({
-        where: { onHand: { gt: 0 }, location: locationWhere, variantId },
-        include: { variant: { select: { sku: true, product: { select: { name: true } } } }, location: { select: { name: true } } },
-      });
-      // Bound the groupBy to a lookback window — anything older reports as
-      // "no movement in window" instead of forcing a full-ledger scan.
+      // P2-1: same treatment — last-outbound lookup + sort/slice in SQL.
       const lookbackDays = Math.min(Math.max(Number(sp.get("days")) || 180, 30), 365);
       const windowStart = new Date(Date.now() - lookbackDays * 86_400_000);
-      const lastMoves = await prisma.inventoryMovement.groupBy({
-        by: ["variantId", "locationId"],
-        where: { quantity: { lt: 0 }, createdAt: { gte: windowStart } },
-        _max: { createdAt: true },
-      });
-      const lastMap = new Map(lastMoves.map((m) => [`${m.variantId}:${m.locationId}`, m._max.createdAt]));
-      const aging = balances
-        .map((b) => ({
-          sku: b.variant.sku,
-          product: b.variant.product.name,
-          location: b.location.name,
-          onHand: b.onHand,
-          lastOutboundAt: lastMap.get(`${b.variantId}:${b.locationId}`) ?? null,
-          daysSinceMovement: lastMap.get(`${b.variantId}:${b.locationId}`)
-            ? Math.floor((Date.now() - lastMap.get(`${b.variantId}:${b.locationId}`)!.getTime()) / 86400_000)
-            : null,
-        }))
-        .sort((a, b) => (b.daysSinceMovement ?? 9999) - (a.daysSinceMovement ?? 9999))
-        .slice(0, 100);
-      return ok({ aging });
+      const storeFilter = scope ? Prisma.sql`AND l."storeId" IN (${Prisma.join(scope)})` : Prisma.empty;
+      const locFilter = locationId ? Prisma.sql`AND b."locationId" = ${locationId}` : Prisma.empty;
+      const varFilter = variantId ? Prisma.sql`AND b."variantId" = ${variantId}` : Prisma.empty;
+      const rows = await prisma.$queryRaw<{
+        sku: string; product: string; location: string; onHand: number;
+        lastOutboundAt: Date | null; daysSinceMovement: number | null;
+      }[]>`
+        WITH last_out AS (
+          SELECT "variantId", "locationId", MAX("createdAt") AS last_out
+          FROM "InventoryMovement"
+          WHERE quantity < 0 AND "createdAt" >= ${windowStart}
+          GROUP BY "variantId", "locationId"
+        )
+        SELECT v.sku, pr.name AS product, l.name AS location,
+               b."onHand" AS "onHand", o.last_out AS "lastOutboundAt",
+               (EXTRACT(EPOCH FROM (now() - o.last_out)) / 86400)::int AS "daysSinceMovement"
+        FROM "InventoryBalance" b
+        JOIN "ProductVariant" v ON v.id = b."variantId"
+        JOIN "Product" pr ON pr.id = v."productId"
+        JOIN "StockLocation" l ON l.id = b."locationId"
+        LEFT JOIN last_out o ON o."variantId" = b."variantId" AND o."locationId" = b."locationId"
+        WHERE b."onHand" > 0 ${storeFilter} ${locFilter} ${varFilter}
+        ORDER BY o.last_out NULLS FIRST
+        LIMIT 100`;
+      return ok({ aging: rows.map((r) => ({ ...r, daysSinceMovement: r.lastOutboundAt ? r.daysSinceMovement : null })) });
     }
 
     fail(400, "VALIDATION", "Unknown view");
@@ -137,7 +146,7 @@ export async function POST(req: NextRequest) {
             });
           }
           return a;
-        });
+        }, TX_OPTIONS);
         await prisma.auditLog.create({ data: { actorId: auth.userId, action: "adjustment.direct", entity: "InventoryAdjustment", entityId: adj.id, after: { number } } });
         return ok({ number: adj.number, status: adj.status }, 201);
       }
@@ -205,7 +214,7 @@ export async function PATCH(req: NextRequest) {
         });
       }
       return tx.inventoryAdjustment.findUniqueOrThrow({ where: { id: adj.id } });
-    });
+    }, TX_OPTIONS);
     await prisma.auditLog.create({ data: { actorId: auth.userId, action: "adjustment.approve", entity: "InventoryAdjustment", entityId: adj.id, after: { number: adj.number } } });
     return ok({ number: updated.number, status: updated.status });
   } catch (err) {

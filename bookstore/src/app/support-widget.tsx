@@ -79,12 +79,12 @@ export default function SupportWidget() {
       >
         {open ? <X className="w-5 h-5" aria-hidden="true" /> : <MessageCircle className="w-5 h-5" aria-hidden="true" />}
         {!open && openCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{openCount}</span>
+          <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{openCount}</span>
         )}
       </button>
 
       {open && (
-        <div id="melio-support-panel" role="dialog" aria-modal="true" aria-label="Hỗ trợ nhân viên" className="fixed bottom-20 right-4 z-50 w-96 h-[32rem] bg-white border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div id="melio-support-panel" role="dialog" aria-modal="true" aria-label="Hỗ trợ nhân viên" className="fixed bottom-20 right-4 z-50 w-[calc(100vw-2rem)] max-w-96 max-h-[70vh] h-[32rem] bg-white border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
           {!active ? (
             <>
               <div className="px-4 py-3 border-b bg-[#faf4ea] font-semibold text-sm text-[#1c1917]">Hỗ trợ ({list.length})</div>
@@ -144,5 +144,5 @@ function StatusPill({ status }: { status: "OPEN" | "ESCALATED" | "CLOSED" }) {
   const cls = status === "ESCALATED" ? "bg-amber-100 text-amber-700"
     : status === "CLOSED" ? "bg-slate-200 text-slate-600"
     : "bg-emerald-100 text-emerald-700";
-  return <span className={"ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold " + cls}>{status}</span>;
+  return <span className={"ml-2 inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold " + cls}>{status}</span>;
 }

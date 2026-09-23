@@ -13,15 +13,28 @@ function check(name: string, cond: boolean, detail?: unknown) {
   else { failures++; console.error(`❌ ${name}`, detail ?? ""); }
 }
 
-type Jar = { cookie?: string };
+type Jar = { cookie?: string; csrf?: string };
 async function api(jar: Jar, method: string, path: string, body?: unknown) {
   const res = await fetch(BASE + path, {
     method,
-    headers: { "Content-Type": "application/json", ...(jar.cookie ? { cookie: jar.cookie } : {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(jar.cookie ? { cookie: jar.cookie } : {}),
+      // Per-session CSRF contract (proxy.ts fail-closed): mutations with a
+      // staff session cookie need x-csrf-check. Mirror csrf-client.ts: the
+      // token comes from GET /api/auth and is bound to the session cookie.
+      ...(jar.cookie && jar.csrf && method !== "GET" ? { "x-csrf-check": jar.csrf } : {}),
+    },
     body: body ? JSON.stringify(body) : undefined,
   });
   const setCookie = res.headers.get("set-cookie");
-  if (setCookie) jar.cookie = setCookie.split(";")[0];
+  if (setCookie) {
+    jar.cookie = setCookie.split(";")[0];
+    // Fresh login rotates the session → refetch the bound CSRF token.
+    const tokenRes = await fetch(BASE + "/api/auth", { headers: { cookie: jar.cookie } });
+    const tokenData = (await tokenRes.json().catch(() => null)) as { csrfToken?: string } | null;
+    if (tokenData?.csrfToken) jar.csrf = tokenData.csrfToken;
+  }
   let data: Record<string, unknown> = {};
   try { data = await res.json(); } catch { /* empty */ }
   return { status: res.status, data };
