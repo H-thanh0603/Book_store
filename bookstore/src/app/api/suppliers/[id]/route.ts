@@ -24,7 +24,10 @@ export async function PUT(
   if (!existing) return apiError({ status: 404, code: "NOT_FOUND", message: "Supplier not found" });
 
   const supplier = await prisma.supplier.update({
-    where: { id },
+    // Defense in depth (audit Q34): the guard above 404s cross-tenant ids,
+    // but the write re-asserts the org boundary so a future refactor that
+    // drops the guard cannot turn this into an IDOR.
+    where: withOrg(auth, { id }),
     data: {
       name: body.name?.trim() || existing.name,
       taxCode: body.taxCode !== undefined ? (body.taxCode?.trim() || null) : existing.taxCode,
@@ -59,7 +62,7 @@ export async function DELETE(
   const existing = await prismaRead.supplier.findUnique({ where: withOrg(auth, { id }) });
   if (!existing) return apiError({ status: 404, code: "NOT_FOUND", message: "Supplier not found" });
 
-  await prisma.supplier.update({ where: { id }, data: { active: false } });
+  await prisma.supplier.update({ where: withOrg(auth, { id }), data: { active: false } });
   return ok({ message: "Supplier deactivated" });
 }
 

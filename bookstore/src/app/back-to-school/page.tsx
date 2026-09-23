@@ -126,7 +126,7 @@ export default function BackToSchoolPage() {
       <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 gradient-animated text-white px-4 py-2 text-xs font-bold shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-white text-emerald-800 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black">
+            <span className="bg-white text-emerald-800 px-2.5 py-0.5 rounded-full text-[11px] uppercase font-black">
               MÙA TỰU TRƯỜNG 2026
             </span>
             <span className="drop-shadow-xs">🎒 Trọn bộ dụng cụ học tập, vở ô ly, bút Thiên Long &amp; Balo chống gù giảm đến 40%</span>
@@ -149,11 +149,11 @@ export default function BackToSchoolPage() {
                 <span className="font-black text-2xl text-slate-900 tracking-tight leading-none">
                   Melio
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-500 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                <span className="text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-500 text-white px-2 py-0.5 rounded-full shadow-2xs">
                   School Hub
                 </span>
               </div>
-              <p className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">Hành Trang Đến Trường</p>
+              <p className="text-[11px] text-emerald-700 font-bold uppercase tracking-wider">Hành Trang Đến Trường</p>
             </div>
           </Link>
 
@@ -208,7 +208,7 @@ export default function BackToSchoolPage() {
         <section id="combo-checklist" className="rounded-3xl bg-white p-6 sm:p-8 shadow-xs border border-emerald-100 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-100 pb-4">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
+              <span className="text-[11px] font-black uppercase tracking-widest text-emerald-700">
                 Chuẩn Bị Nhanh Trong 1 Phút
               </span>
               <h2 className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
@@ -262,7 +262,7 @@ export default function BackToSchoolPage() {
         <section className="rounded-3xl bg-white p-6 sm:p-8 shadow-xs border border-emerald-100 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-emerald-100 pb-4">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
+              <span className="text-[11px] font-black uppercase tracking-widest text-emerald-700">
                 Tủ Đồ Dùng Học Tập
               </span>
               <h2 className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
@@ -297,14 +297,14 @@ export default function BackToSchoolPage() {
                   <div className="relative aspect-square rounded-2xl bg-white p-4 flex flex-col items-center justify-center text-center border border-slate-100">
                     <PenTool className="w-10 h-10 text-emerald-600 group-hover:scale-110 transition-transform" />
                     {p.brand?.name && (
-                      <span className="mt-3 px-2.5 py-0.5 rounded-full bg-slate-900 text-white text-[10px] font-black uppercase">
+                      <span className="mt-3 px-2.5 py-0.5 rounded-full bg-slate-900 text-white text-[11px] font-black uppercase">
                         {p.brand.name}
                       </span>
                     )}
                   </div>
 
                   <div className="mt-3 space-y-1.5">
-                    <span className="text-[10px] font-bold text-emerald-700 uppercase">
+                    <span className="text-[11px] font-bold text-emerald-700 uppercase">
                       {p.category.name}
                     </span>
                     <h3 className="font-bold text-xs sm:text-sm text-slate-900 line-clamp-2 min-h-10">

@@ -214,7 +214,7 @@ export default function InventoryCountPage() {
                     <div key={c.id} className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-slate-50/60">
                       <div>
                         <p className="text-xs font-bold text-slate-900">{c.number}</p>
-                        <p className="text-[10px] text-slate-500">{c.location.name} · {counted}/{c.items.length} đã đếm</p>
+                        <p className="text-[11px] text-slate-500">{c.location.name} · {counted}/{c.items.length} đã đếm</p>
                       </div>
                       <div className="flex items-center gap-1">
                         <button onClick={() => viewCountDetail(c)} className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors">
@@ -249,7 +249,7 @@ export default function InventoryCountPage() {
                     <div key={c.id} className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-slate-50/60">
                       <div>
                         <p className="text-xs font-bold text-slate-900">{c.number}</p>
-                        <p className="text-[10px] text-slate-500">{c.location.name} · {adjustments} điều chỉnh · {c.postedAt ? new Date(c.postedAt).toLocaleString("vi-VN") : ""}</p>
+                        <p className="text-[11px] text-slate-500">{c.location.name} · {adjustments} điều chỉnh · {c.postedAt ? new Date(c.postedAt).toLocaleString("vi-VN") : ""}</p>
                       </div>
                       <button onClick={() => viewCountDetail(c)} className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">
                         <Eye className="w-3.5 h-3.5" />

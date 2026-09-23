@@ -131,7 +131,10 @@ export async function runJob(kind: JobKind, runId?: string) {
   }
 }
 
-/** One scheduler tick: due PENDING runs (retries included) execute sequentially. */
+/** One scheduler tick: due PENDING runs (retries included) execute sequentially.
+ *  ponytail: no SKIP LOCKED — runJob() re-claims each run conditionally, so
+ *  overlapping ticks race-safe lose except for wasted work; add it past
+ *  multi-worker scheduling. */
 export async function tickScheduler() {
   const due = await prisma.jobRun.findMany({
     where: { OR: [

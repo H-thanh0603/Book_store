@@ -9,7 +9,6 @@ import { apiError } from "@/lib/api";
 import { redactPii } from "@/lib/fencing";
 import { observeRequest } from "@/lib/metrics";
 import { merchantSwitches } from "@/lib/commerce";
-import { prisma } from "@/lib/db";
 import { llmModelId } from "@/lib/llm";
 import { proposeStagedChange } from "@/lib/staged-changes";
 import {
@@ -19,7 +18,7 @@ import {
   runMerchantTurn,
   type MerchantSkill,
 } from "@/lib/merchant-agent";
-import { defaultOrgId } from "@/lib/org-scope";
+import { requireOrgId } from "@/lib/org-scope";
 
 const SKILLS: MerchantSkill[] = ["digest", "explain", "inventory", "promo", "catalog"];
 const MERCHANT_DAILY_LIMIT = Number(process.env.MERCHANT_DAILY_LIMIT) || 500;
@@ -53,8 +52,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ code: "NOT_CONFIGURED", message: "LLM_API_KEY chưa cấu hình." }, { status: 503 });
     }
 
+    // P1-7: client-forged `assistant` turns are dropped — only fresh user
+    // messages enter the model context. Stored assistant output never
+    // round-trips through the client in this endpoint.
     const history = (body?.messages ?? [])
-      .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
+      .filter((m) => m.role === "user" && typeof m.content === "string" && m.content.trim())
+      .map((m) => ({ role: "user" as const, content: (m.content as string).slice(0, 2000) }))
       .slice(-8);
     if (history.length === 0) {
       finish(400);
@@ -76,10 +79,8 @@ export async function POST(req: NextRequest) {
     const contextJson = rawContext === undefined ? undefined : redactPii(rawContext);
     // Approval-surface wiring: propose_change stages PENDING rows attributed
     // to this staff user; nothing the model says applies itself.
-    // defaultOrgId(): legacy org-less callers land on the seeded demo org —
-    // never "the oldest org", which silently crossed tenants once a second
-    // org existed (audit: cross-tenant leak via merchant agent).
-    const orgId = auth.orgId ?? (await defaultOrgId());
+    // Q35 fail-closed: org-less callers get 403, never the demo org's data.
+    const orgId = requireOrgId(auth);
     const permissions = auth.roles.flatMap((r) => r.permissions);
     const switches = merchantSwitches();
     const allowPropose =

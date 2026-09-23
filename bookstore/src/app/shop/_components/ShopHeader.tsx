@@ -54,11 +54,11 @@ export default function ShopHeader({
               <span className="font-serif font-black text-2xl text-slate-900 tracking-tight leading-none group-hover:text-[#8c2d19] transition-colors">
                 Melio
               </span>
-              <span className="text-[10px] font-black uppercase tracking-wider bg-[#1c1917] text-[#ffd56a] px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-black uppercase tracking-wider bg-[#1c1917] text-[#ffd56a] px-2 py-0.5 rounded-full">
                 Flagship
               </span>
             </div>
-            <p className="text-[10px] text-[#574431] font-semibold tracking-wide flex items-center gap-1">
+            <p className="text-[11px] text-[#574431] font-semibold tracking-wide flex items-center gap-1">
               <span>Hiệu Sách &amp; Không Gian Sống</span>
             </p>
           </div>

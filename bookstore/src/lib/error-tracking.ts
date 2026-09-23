@@ -19,6 +19,7 @@ type ErrorContext = {
   component?: string;
   action?: string;
   userId?: string;
+  requestId?: string;
   metadata?: Record<string, unknown>;
 };
 
@@ -127,6 +128,7 @@ function sentryEnvelope(
       component: context.component,
       action: context.action,
       userId: context.userId,
+      requestId: context.requestId,
       ...context.metadata,
       url: typeof window !== "undefined" ? window.location.href : undefined,
       userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
@@ -195,6 +197,7 @@ export function trackError(
       context.component ? `component: \`${context.component}\`` : null,
       context.action ? `action: \`${context.action}\`` : null,
       context.userId ? `user: \`${context.userId}\`` : null,
+      context.requestId ? `request: \`${context.requestId}\`` : null,
     ].filter(Boolean);
     void postJson(webhookUrl, {
       // Slack incoming-webhook shape; generic JSON POSTs work for

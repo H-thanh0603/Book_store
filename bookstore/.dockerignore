@@ -1,0 +1,18 @@
+# (audit Q10) Keep secrets out of any future container image.
+.env*
+.git/
+*.pem
+*.key
+*.p12
+*.pfx
+*.sql
+*.dump
+credentials.json
+service-account*.json
+id_rsa*
+var/
+backups/
+logs/
+node_modules/
+.next/
+coverage/

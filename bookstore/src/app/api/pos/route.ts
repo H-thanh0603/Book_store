@@ -6,11 +6,21 @@ import { apiError, ok, fail, toMoney } from "@/lib/api";
 import { completeSale, openShift, closeShift, refundSale, quoteSale } from "@/lib/pos";
 import { withCheckoutSlot } from "@/lib/throttle";
 
-// PUT /api/pos — full refund of a completed transaction (spec Module 18: POS return)
+// PUT /api/pos — full or partial refund of a completed transaction.
+// { txNumber, shiftId, items?: [{variantId, quantity}] } — omit items = whole.
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
     if (!body.txNumber || !body.shiftId) fail(400, "VALIDATION", "txNumber and shiftId required");
+    const items = Array.isArray(body.items)
+      ? body.items.map((i: { variantId?: unknown; quantity?: unknown }) => {
+          if (typeof i.variantId !== "string" || !i.variantId)
+            fail(400, "VALIDATION", "each refund item needs variantId");
+          if (!Number.isInteger(i.quantity) || (i.quantity as number) <= 0)
+            fail(400, "VALIDATION", "each refund item needs a positive integer quantity");
+          return { variantId: i.variantId, quantity: i.quantity as number };
+        })
+      : undefined;
     const auth = await requirePermission("pos.refund");
     const target = await prisma.posTransaction.findUnique({
       where: { number: body.txNumber }, select: { storeId: true },
@@ -19,14 +29,15 @@ export async function PUT(req: NextRequest) {
     assertStoreAccess(auth, target.storeId, "pos.refund");
     const refund = await refundSale(body.txNumber, body.shiftId, auth.userId, {
       storeId: target.storeId, reason: typeof body.reason === "string" ? body.reason : undefined,
+      items,
     });
     await prisma.auditLog.create({
       data: {
         actorId: auth.userId, action: "pos.refund", entity: "PosTransaction", entityId: refund.id,
-        after: { refundedTx: body.txNumber, reason: body.reason ?? null },
+        after: { refundedTx: body.txNumber, reason: body.reason ?? null, partial: Boolean(items) },
       },
     });
-    return ok({ number: refund.number, total: Number(-refund.total), status: "RETURNED" }, 201);
+    return ok({ number: refund.number, total: Number(-refund.total), status: "RETURNED", partial: Boolean(items) }, 201);
   } catch (err) {
     return apiError(err);
   }

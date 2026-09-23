@@ -14,14 +14,15 @@ const hoisted = vi.hoisted(() => {
   // Raw GROUP BY results per report type, set by each test.
   const sqlResults: Record<string, any[]> = {};
   const queryRaw = vi.fn(async (_tag: TemplateStringsArray, ..._rest: any[]) => {
-    // Distinguish the three reports by the table they mention first.
+    // Distinguish the reports by a marker unique to each query.
     const sql = String(_tag);
     if (sql.includes("latest_cost")) return sqlResults.storePnl ?? [];
     if (sql.includes('FROM "Store" s')) return sqlResults.revenueByStore ?? [];
     if (sql.includes('FROM "PosTransaction"')) return sqlResults.topStaff ?? [];
-    if (sql.includes('FROM "InventoryBalance" b')) return sqlResults.slowStock ?? [];
+    if (sql.includes("NOT EXISTS")) return sqlResults.slowStock ?? [];
     if (sql.includes("AS category")) return sqlResults.revenueByCategory ?? [];
     if (sql.includes("LIMIT 50")) return sqlResults.topSku ?? [];
+    if (sql.includes('FROM "InventoryBalance" b')) return sqlResults.stockOnHand ?? [];
     return [];
   });
   return { store, findMany, sqlResults, queryRaw };
@@ -104,11 +105,13 @@ describe("topSku", () => {
 });
 
 describe("stockOnHand", () => {
-  it("rolls up by SKU+store+location and computes value", async () => {
-    // Mock matches the fixed stockOnHand select: onHand + current retail
-    // price row (the old `quantity`/`variant.price` columns never existed).
-    store.set("b1", { onHand: 10, variant: { sku: "S1", product: { name: "A" }, prices: [{ amount: 1000n }] }, location: { name: "Shelf", store: { name: "Q1", code: "Q1" } } });
-    store.set("b2", { onHand: 5, variant: { sku: "S1", product: { name: "A" }, prices: [{ amount: 1000n }] }, location: { name: "Stock", store: { name: "Q1", code: "Q1" } } });
+  it("maps grouped SQL rows and totals value", async () => {
+    // P2-1: stockOnHand is GROUP BY in SQL now — the mock returns grouped
+    // rows shaped as Postgres would (aggregated qty/value).
+    sqlResults.stockOnHand = [
+      { sku: "S1", name: "A", store: "Q1", loc: "Shelf", qty: 10, value: 10000n },
+      { sku: "S1", name: "A", store: "Q1", loc: "Stock", qty: 5, value: 5000n },
+    ];
     const r = await stockOnHand(P);
     expect(r.rows[0]).toEqual(["S1", "A", "Q1", "Shelf", 10, 10000]);
     expect(r.rows[1]).toEqual(["S1", "A", "Q1", "Stock", 5, 5000]);
@@ -141,17 +144,16 @@ describe("topStaff (N5b)", () => {
 });
 
 describe("slowStock (N5c)", () => {
-  it("keeps only rows with no recent sale and values them", async () => {
-    const old = new Date("2026-01-01");
-    const recent = new Date("2026-08-20");
+  it("passes SQL-filtered slow rows through and values them", async () => {
+    // P2-1: the 60-day cutoff lives in SQL (NOT EXISTS) now — the mock
+    // returns rows already filtered, each carrying its computed value.
     sqlResults.slowStock = [
-      { sku: "S1", name: "A", store: "Q1", qty: 10, price: 20000n, lastSale: old },
-      { sku: "S2", name: "B", store: "Q1", qty: 3, price: 5000n, lastSale: recent },
-      { sku: "S3", name: "C", store: "Q1", qty: 2, price: 10000n, lastSale: null },
+      { sku: "S1", name: "A", store: "Q1", qty: 10, price: 20000n, lastSale: new Date("2026-01-01"), value: 200000n },
+      { sku: "S3", name: "C", store: "Q1", qty: 2, price: 10000n, lastSale: null, value: 20000n },
     ];
     const r = await slowStock(P);
     expect(r.rows.map((x) => x[0])).toEqual(["S1", "S3"]);
-    expect(r.summary).toMatchObject({ slowSkus: 2, slowValue: 10 * 20000 + 2 * 10000 });
+    expect(r.summary).toMatchObject({ slowSkus: 2, slowValue: 220000 });
   });
 });
 

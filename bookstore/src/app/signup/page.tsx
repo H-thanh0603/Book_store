@@ -7,7 +7,7 @@ export default function SignupPage() {
     <main className="min-h-screen bg-[#fbf9f5] flex items-center justify-center p-4 font-serif">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
-          <span className="text-[10px] uppercase tracking-widest text-[#8c2d19] bg-[#faf4ea] px-2.5 py-0.5 rounded font-bold border border-[#e8dac5]">
+          <span className="text-[11px] uppercase tracking-widest text-[#8c2d19] bg-[#faf4ea] px-2.5 py-0.5 rounded font-bold border border-[#e8dac5]">
             Dùng thử 14 ngày miễn phí
           </span>
           <h1 className="font-black text-2xl sm:text-3xl text-slate-900 mt-3">Mở nhà sách trên Melio</h1>

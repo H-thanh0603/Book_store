@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     await prisma.$transaction([
       prisma.supportMessage.create({ data: { conversationId: id, kind: "STAFF", body: text } }),
       prisma.supportConversation.update({
-        where: { id },
+        where: withOrg(auth, { id }),
         data: { lastMessageAt: now, status: conversation.status === "CLOSED" ? "CLOSED" : "ESCALATED" },
       }),
     ]);

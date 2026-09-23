@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { requirePermission, assertStoreAccess, audit } from "@/lib/auth";
 import { apiError, fail, nextBusinessNumber, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
@@ -26,6 +26,10 @@ export async function POST(req: NextRequest) {
         // inventory from nothing) and refunded money for goods never delivered.
         if (order.status === "CANCELLED")
           fail(400, "INVALID_STATUS_TRANSITION", "Cannot return items on a CANCELLED order");
+        // Over-return race: two concurrent creates both read priorReturns
+        // before either commits. Lock the order row so the loser waits,
+        // then re-reads committed returns and fails the guard correctly.
+        await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${order.id} FOR UPDATE`;
         // Cumulative over-return guard: total returned per order item (all returns,
         // any status except REJECTED) can never exceed the ordered quantity.
         const priorReturned = new Map<string, number>();
@@ -56,7 +60,7 @@ export async function POST(req: NextRequest) {
         });
         await audit(auth.userId, "return.create", "Return", ret.id, { number: ret.number }, tx);
         return ret;
-      });
+      }, TX_OPTIONS);
       return ok({ id: result.id, number: result.number, status: result.status }, 201);
     }
 
@@ -79,10 +83,60 @@ export async function POST(req: NextRequest) {
           where: { id: current.id },
           data: { payments: { create: { method, amount: current.refundTotal, receivedBy: auth.userId } } },
         });
-        await audit(auth.userId, "return.refund", "Return", current.id, { amount: Number(current.refundTotal), method }, tx);
-        return updated;
-      });
-      return ok({ number: ret.number, status: ret.status, refundTotal: Number(ret.refundTotal) });
+        // P1: claw back loyalty earned by the original order (refType order).
+        // Same guarded pattern as POS refundSale: fail if points already spent.
+        let loyaltyClawed = 0;
+        const orderForLoyalty = current.orderId
+          ? await tx.order.findUnique({ where: { id: current.orderId }, select: { customerId: true } })
+          : null;
+        if (orderForLoyalty?.customerId && current.orderId) {
+          const earnedRows = await tx.loyaltyTransaction.findMany({
+            where: { refType: "order", refId: current.orderId, type: "EARN" },
+            select: { points: true, accountId: true },
+          });
+          const totalEarned = earnedRows.reduce((s, r) => s + r.points, 0);
+          if (totalEarned > 0) {
+            const acct = await tx.loyaltyAccount.findUnique({ where: { customerId: orderForLoyalty.customerId } });
+            if (acct) {
+              const adjusted = await tx.loyaltyAccount.updateMany({
+                where: { id: acct.id, points: { gte: totalEarned } },
+                data: { points: { decrement: totalEarned } },
+              });
+              if (adjusted.count !== 1)
+                fail(400, "VALIDATION", "Customer no longer has enough points to revoke");
+              const after = await tx.loyaltyAccount.findUniqueOrThrow({ where: { id: acct.id } });
+              await tx.loyaltyTransaction.create({
+                data: {
+                  accountId: acct.id, points: -totalEarned, balanceAfter: after.points,
+                  type: "REDEEM", refType: "return", refId: current.id,
+                },
+              });
+              loyaltyClawed = totalEarned;
+            }
+          }
+        }
+        // Tax compliance (EINV-001 follow-up): a refunded sale with an ISSUED
+        // e-invoice must surface it — flag the row so staff cancel/adjust at
+        // T-VAN instead of silently keeping a fiscal invoice for returned goods.
+        // No auto-cancel: cancellation is a legal act needing human review.
+        let einvoiceFlag: string | null = null;
+        if (current.orderId) {
+          const inv = await tx.eInvoice.findFirst({
+            where: { orderId: current.orderId, status: "ISSUED" },
+            select: { id: true, invoiceNumber: true },
+          });
+          if (inv) {
+            einvoiceFlag = inv.invoiceNumber ?? inv.id;
+            await tx.eInvoice.update({
+              where: { id: inv.id },
+              data: { errorMessage: `REFUND_PENDING: return ${current.number} refunded — cancel/adjust at T-VAN` },
+            });
+          }
+        }
+        await audit(auth.userId, "return.refund", "Return", current.id, { amount: Number(current.refundTotal), method, einvoiceFlag, loyaltyClawed }, tx);
+        return { ...updated, einvoiceFlag, loyaltyClawed };
+      }, TX_OPTIONS);
+      return ok({ number: ret.number, status: ret.status, refundTotal: Number(ret.refundTotal), einvoiceFlag: ret.einvoiceFlag, loyaltyClawed: ret.loyaltyClawed });
     }
     if (body.action !== "receive") fail(400, "VALIDATION", "Unknown action");
 
@@ -110,7 +164,7 @@ export async function POST(req: NextRequest) {
       const updated = await tx.return.findUniqueOrThrow({ where: { id: current.id } });
       await audit(auth.userId, "return.receive", "Return", current.id, { number: current.number }, tx);
       return updated;
-    });
+    }, TX_OPTIONS);
     return ok({ number: ret.number, status: ret.status });
   } catch (err) {
     return apiError(err);

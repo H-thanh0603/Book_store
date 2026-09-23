@@ -49,6 +49,16 @@ export async function POST(req: NextRequest) {
       const phone = typeof body.phone === "string" ? body.phone.trim() : "";
       const name = typeof body.name === "string" ? body.name.trim() : "";
       const password = typeof body.password === "string" ? body.password : "";
+      // A4 growth: optional birthday (YYYY-MM-DD) feeds the nightly birthday
+      // voucher job. Stored dateless at UTC noon by convention (loyalty-birthday.ts).
+      let birthday: Date | null = null;
+      if (typeof body.birthday === "string" && body.birthday.trim()) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(body.birthday.trim());
+        if (!m) fail(400, "VALIDATION", "birthday must be YYYY-MM-DD");
+        const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12));
+        if (Number.isNaN(d.getTime()) || d > new Date()) fail(400, "VALIDATION", "birthday invalid");
+        birthday = d;
+      }
       if (!name || name.length > 120) fail(400, "VALIDATION", "name required (max 120)");
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail(400, "VALIDATION", "valid email required");
       if (!/^[0-9+\-\s()]{8,20}$/.test(phone)) fail(400, "VALIDATION", "valid phone required");
@@ -81,6 +91,7 @@ export async function POST(req: NextRequest) {
               name,
               phone,
               email,
+              birthday,
               orgId,
               passwordHash: null,
               emailVerifyTokenHash: token.hash,

@@ -30,6 +30,7 @@ import {
   Stamp,
   Tags,
   Star,
+  Zap,
 } from "lucide-react";
 import SupportWidget from "./support-widget";
 import { csrfHeaders } from "@/lib/csrf-client";
@@ -37,8 +38,40 @@ import { csrfHeaders } from "@/lib/csrf-client";
 type AuthUser = {
   userId?: string;
   email?: string;
-  roles?: { role: string; storeId: string | null }[];
+  roles?: { role: string; storeId: string | null; permissions?: string[] }[];
   anonymous?: boolean;
+};
+
+// P2-6: hide nav entries the caller can't open. Backend still enforces —
+// this only removes the confusing full-admin menu for scoped roles and
+// anonymous visitors. Unknown hrefs stay visible (fail-open in UI, the
+// API remains the authority).
+const NAV_PERMISSION: Record<string, string> = {
+  "/pos": "pos.sell",
+  "/orders": "pos.sell",
+  "/invoices": "invoices.view",
+  "/products": "product.view",
+  "/categories": "product.view",
+  "/reviews": "product.view",
+  "/products/barcodes": "product.view",
+  "/products/health": "product.view",
+  "/inventory": "inventory.view",
+  "/inventory/counts": "inventory.view",
+  "/inventory/suggestions": "reports.store.view",
+  "/purchase-orders": "purchase.create",
+  "/suppliers": "purchase.create",
+  "/transfers": "inventory.manage",
+  "/stores": "admin.stores",
+  "/customers": "customer.view",
+  "/promotions": "promotion.view",
+  "/gift-cards": "giftcard.view",
+  "/dashboard": "reports.store.view",
+  "/actions": "reports.store.view",
+  "/approvals": "promotion.manage",
+  "/reports": "reports.store.view",
+  "/team": "admin.users",
+  "/audit-logs": "audit.view",
+  "/settings/payments": "payments.refund",
 };
 
 type NavGroup = {
@@ -95,6 +128,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: ShieldCheck,
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/actions", label: "AI Action Center", icon: Zap },
       { href: "/approvals", label: "Duyệt AI", icon: Stamp },
       { href: "/reports", label: "Báo cáo", icon: Activity },
       { href: "/team", label: "Nhân sự", icon: Users },
@@ -138,6 +172,19 @@ export default function Nav() {
 
   const roleName = user?.roles?.[0]?.role ?? "STAFF";
 
+  // P2-6: permission-filtered groups. Anonymous sees nothing (login only);
+  // staff sees only entries whose permission appears in any of their roles.
+  const myPermissions = new Set((user?.roles ?? []).flatMap((r) => r.permissions ?? []));
+  const visibleGroups: NavGroup[] = !user
+    ? []
+    : NAV_GROUPS.map((g) => ({
+        ...g,
+        items: g.items.filter((item) => {
+          const needed = NAV_PERMISSION[item.href];
+          return !needed || myPermissions.has(needed);
+        }),
+      })).filter((g) => g.items.length > 0);
+
   return (
     <header className="sticky top-0 z-40 bg-[#fbf8f3]/95 backdrop-blur-md border-b border-[#ede5d8] shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -154,7 +201,7 @@ export default function Nav() {
               <div>
                 <span className="font-bold text-lg text-[#1c1917] tracking-tight flex items-center gap-1.5">
                   Melio Books
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#faf4ea] text-[#8c2d19] border border-[#ede5d8]">
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-[#faf4ea] text-[#8c2d19] border border-[#ede5d8]">
                     PRO
                   </span>
                 </span>
@@ -167,7 +214,7 @@ export default function Nav() {
 
           {/* Desktop Nav - Grouped */}
           <nav className="hidden xl:flex items-center gap-1 overflow-x-auto py-1">
-            {NAV_GROUPS.map((group) => {
+            {visibleGroups.map((group) => {
               const isGroupActive = group.items.some((item) => path === item.href);
               const isGroupOpen = openGroup === group.label;
               const GroupIcon = group.icon;
@@ -255,7 +302,7 @@ export default function Nav() {
                   <span className="text-xs font-semibold text-[#1c1917] max-w-[140px] truncate">
                     {user.email}
                   </span>
-                  <span className="text-[10px] text-[#8c2d19] font-medium uppercase tracking-wider">
+                  <span className="text-[11px] text-[#8c2d19] font-medium uppercase tracking-wider">
                     {roleName}
                   </span>
                 </div>
@@ -296,9 +343,9 @@ export default function Nav() {
 
         {/* Sub-nav bar for large screens under XL */}
         <nav aria-label="Điều hướng phụ" className="hidden md:flex xl:hidden overflow-x-auto gap-1 py-2 border-t border-[#ede5d8]">
-          {NAV_GROUPS.map((group) => (
+          {visibleGroups.map((group) => (
             <div key={group.label} className="flex items-center gap-1">
-              <span className="text-[10px] font-bold text-[#574431]/60 uppercase tracking-wider px-1.5">
+              <span className="text-[11px] font-bold text-[#574431]/60 uppercase tracking-wider px-1.5">
                 {group.label}
               </span>
               {group.items.map((item) => {
@@ -330,11 +377,11 @@ export default function Nav() {
       {/* Mobile drawer */}
       {mobileOpen && (
         <div id="melio-mobile-nav" className="xl:hidden bg-[#fbf8f3] border-b border-[#ede5d8] px-4 pt-2 pb-4 space-y-1">
-          {NAV_GROUPS.map((group) => {
+          {visibleGroups.map((group) => {
             const GroupIcon = group.icon;
             return (
               <div key={group.label} className="mb-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-[#574431]/60 uppercase tracking-wider">
+                <div className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold text-[#574431]/60 uppercase tracking-wider">
                   <GroupIcon className="w-3 h-3" />
                   {group.label}
                 </div>

@@ -85,15 +85,15 @@ export default function PurchaseOrdersPage() {
   const currentPoTotal = items.reduce((s, i) => s + i.unitCost * i.quantity, 0);
 
   return (
-    <main className="min-h-screen bg-slate-50/60 pb-16">
+    <main className="min-h-screen bg-[#faf7f2] pb-16">
       <Nav />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
         {/* Header Bar */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              <h1 className="text-2xl font-bold text-[#1c1917] tracking-tight">
                 Nhập Hàng Nhà Cung Cấp (Purchase Orders)
               </h1>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
@@ -120,28 +120,28 @@ export default function PurchaseOrdersPage() {
               {msg.type === "success" ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-red-600" />}
               <span>{msg.text}</span>
             </div>
-            <button onClick={() => setMsg(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            <button onClick={() => setMsg(null)} className="text-slate-400 hover:text-[#574431] font-bold">✕</button>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Form: Create PO (4 cols) */}
-          <div className="lg:col-span-5 bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+          <div className="lg:col-span-5 bg-white rounded-3xl p-5 border border-[#ede5d8] shadow-xs space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-[#ede5d8]">
               <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
                 <Plus className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="font-bold text-slate-900 text-sm">Lập Đơn Đặt Hàng (PO) Mới</h2>
+                <h2 className="font-bold text-[#1c1917] text-sm">Lập Đơn Đặt Hàng (PO) Mới</h2>
                 <p className="text-[11px] text-slate-400">Chọn NCC và kho tiếp nhận</p>
               </div>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Nhà cung cấp (NCC)</label>
+                <label className="block text-xs font-semibold text-[#574431] mb-1">Nhà cung cấp (NCC)</label>
                 <select
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-2 text-xs text-[#1c1917] focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   value={supplierId}
                   onChange={(e) => setSupplierId(e.target.value)}
                 >
@@ -155,9 +155,9 @@ export default function PurchaseOrdersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Kho nhận hàng</label>
+                <label className="block text-xs font-semibold text-[#574431] mb-1">Kho nhận hàng</label>
                 <select
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3 py-2 text-xs text-[#1c1917] focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   value={warehouseId}
                   onChange={(e) => setWarehouseId(e.target.value)}
                 >
@@ -170,10 +170,10 @@ export default function PurchaseOrdersPage() {
                 </select>
               </div>
 
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2.5">
-                <label className="block text-xs font-semibold text-slate-700">Thêm mặt hàng vào PO</label>
+              <div className="p-3.5 bg-[#faf7f2] rounded-2xl border border-[#ede5d8] space-y-2.5">
+                <label className="block text-xs font-semibold text-[#574431]">Thêm mặt hàng vào PO</label>
                 <select
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="w-full bg-white border border-[#ede5d8] rounded-xl px-3 py-2 text-xs text-[#1c1917] focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   value={variantId}
                   onChange={(e) => setVariantId(e.target.value)}
                 >
@@ -187,22 +187,22 @@ export default function PurchaseOrdersPage() {
 
                 <div className="flex gap-2">
                   <div className="w-24">
-                    <span className="block text-[10px] text-slate-500 mb-0.5">Số lượng</span>
+                    <span className="block text-[11px] text-slate-500 mb-0.5">Số lượng</span>
                     <input
                       type="number"
                       min={1}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900"
+                      className="w-full bg-white border border-[#ede5d8] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#1c1917]"
                       value={qty}
                       onChange={(e) => setQty(Number(e.target.value))}
                     />
                   </div>
                   <div className="flex-1">
-                    <span className="block text-[10px] text-slate-500 mb-0.5">Đơn giá nhập (₫)</span>
+                    <span className="block text-[11px] text-slate-500 mb-0.5">Đơn giá nhập (₫)</span>
                     <input
                       type="number"
                       min={0}
                       step={1000}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900"
+                      className="w-full bg-white border border-[#ede5d8] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#1c1917]"
                       value={cost}
                       onChange={(e) => setCost(Number(e.target.value))}
                     />
@@ -225,23 +225,23 @@ export default function PurchaseOrdersPage() {
                 {items.map((i, idx) => {
                   const v = variants.find((x) => x.id === i.variantId);
                   return (
-                    <div key={idx} className="flex justify-between items-center text-xs p-2 bg-slate-50 rounded-xl border border-slate-100">
+                    <div key={idx} className="flex justify-between items-center text-xs p-2 bg-[#faf7f2] rounded-xl border border-[#ede5d8]">
                       <div>
-                        <span className="font-semibold text-slate-900 font-mono">{v?.sku}</span>
+                        <span className="font-semibold text-[#1c1917] font-mono">{v?.sku}</span>
                         <span className="text-[11px] text-slate-500 block truncate max-w-[180px]">{v?.product.name}</span>
                       </div>
                       <div className="text-right">
-                        <span className="font-bold text-slate-900">{vnd(i.unitCost * i.quantity)}</span>
-                        <span className="block text-[10px] text-slate-500">×{i.quantity} ({vnd(i.unitCost)})</span>
+                        <span className="font-bold text-[#1c1917]">{vnd(i.unitCost * i.quantity)}</span>
+                        <span className="block text-[11px] text-slate-500">×{i.quantity} ({vnd(i.unitCost)})</span>
                       </div>
                     </div>
                   );
                 })}
               </div>
 
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+              <div className="pt-2 border-t border-[#ede5d8] flex items-center justify-between">
                 <span className="text-xs text-slate-500 font-medium">Tổng giá trị PO:</span>
-                <span className="text-base font-black text-slate-900">
+                <span className="text-base font-black text-[#1c1917]">
                   {vnd(currentPoTotal)}
                 </span>
               </div>
@@ -252,7 +252,7 @@ export default function PurchaseOrdersPage() {
                   post({ action: "create", supplierId, warehouseId, items });
                   setItems([]);
                 }}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-white/50 text-white font-semibold text-xs shadow-md shadow-indigo-600/20 transition-all hover:scale-[1.01]"
+                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-[#ede5d8] disabled:text-white/50 text-white font-semibold text-xs shadow-md shadow-indigo-600/20 transition-all hover:scale-[1.01]"
               >
                 Tạo Đơn Hàng PO
               </button>
@@ -260,14 +260,14 @@ export default function PurchaseOrdersPage() {
           </div>
 
           {/* Right Section: PO List (7 cols) */}
-          <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
-            <div className="p-5 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-sm">Danh Sách Đơn Hàng Nhà Cung Cấp</h3>
+          <div className="lg:col-span-7 bg-white rounded-3xl border border-[#ede5d8] shadow-xs overflow-hidden">
+            <div className="p-5 border-b border-[#ede5d8]">
+              <h3 className="font-bold text-[#1c1917] text-sm">Danh Sách Đơn Hàng Nhà Cung Cấp</h3>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
+                <thead className="bg-[#faf7f2] border-b border-[#ede5d8] text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
                   <tr>
                     <th className="p-4">Mã PO</th>
                     <th className="p-4">Nhà cung cấp</th>
@@ -276,14 +276,14 @@ export default function PurchaseOrdersPage() {
                     <th className="p-4 text-right">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[#ede5d8]">
                   {pos.map((po) => (
-                    <tr key={po.id} className="hover:bg-slate-50/60 transition-colors">
+                    <tr key={po.id} className="hover:bg-[#faf7f2] transition-colors">
                       <td className="p-4 font-bold text-indigo-700">{po.number}</td>
-                      <td className="p-4 font-semibold text-slate-800">{po.supplier?.name ?? "—"}</td>
+                      <td className="p-4 font-semibold text-[#1c1917]">{po.supplier?.name ?? "—"}</td>
                       <td className="p-4 space-y-1">
                         {po.items.map((i, k) => (
-                          <div key={k} className="text-[11px] text-slate-700">
+                          <div key={k} className="text-[11px] text-[#574431]">
                             <span className="font-mono font-semibold">{i.variant?.sku}</span>: {i.quantity} sp (Đã nhận: <b className="text-emerald-700">{i.receivedQty}</b>) · {vnd(Number(i.unitCost))}
                           </div>
                         ))}
