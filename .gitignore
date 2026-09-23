@@ -1,5 +1,6 @@
 node_modules/
 .impeccable/
+.pi/
 
 # runtime-generated exports (MISA zips etc.)
 bookstore/var/
