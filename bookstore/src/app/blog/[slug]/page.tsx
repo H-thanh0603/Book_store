@@ -56,7 +56,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
     <main className="min-h-screen bg-[#fbf9f5] text-slate-900 pb-24">
       <div className="bg-[#1c1917] text-white px-4 py-2 text-xs font-bold">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <span className="uppercase tracking-widest text-[10px] text-[#ffd56a]">Tạp chí văn hóa đọc · Melio</span>
+          <span className="uppercase tracking-widest text-[11px] text-[#ffd56a]">Tạp chí văn hóa đọc · Melio</span>
           <Link href="/shop" className="hover:underline text-[11px] text-white/90">← Về cửa hàng</Link>
         </div>
       </div>
@@ -100,7 +100,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
                 href={`/blog/${r.id}`}
                 className="p-5 rounded-2xl bg-white border border-[#ede5d8] hover:border-[#8c2d19]/40 hover:shadow-md transition-all group"
               >
-                <span className="text-[10px] font-bold text-[#8c2d19] bg-[#faf4ea] px-2 py-0.5 rounded-full">{r.category}</span>
+                <span className="text-[11px] font-bold text-[#8c2d19] bg-[#faf4ea] px-2 py-0.5 rounded-full">{r.category}</span>
                 <h3 className="font-bold text-sm mt-2 group-hover:text-[#8c2d19] leading-snug">{r.title}</h3>
                 <span className="text-[11px] text-slate-400 mt-1 block">{r.readTime} · {r.date}</span>
               </Link>

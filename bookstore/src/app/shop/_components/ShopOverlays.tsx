@@ -1,7 +1,7 @@
 // Sections 17 + 18 + 20: WISHLIST DRAWER, CART DRAWER, ORDER SUCCESS MODAL
 // + STORE-SWITCH CONFIRM MODAL
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight, Check, CheckCircle2, Copy, Heart, MapPin, Minus, Plus, ShoppingBag, Trash2, Truck, X,
 } from "lucide-react";
@@ -140,10 +140,13 @@ export function CartDrawer({
   storeName,
   freeShippingThreshold,
   progressToFreeShipping,
+  shipEstimate,
+  allProducts,
   money,
   onClose,
   onChangeQuantity,
   onRemoveLine,
+  onAddToCart,
   onCheckout,
 }: {
   open: boolean;
@@ -153,10 +156,13 @@ export function CartDrawer({
   storeName: string;
   freeShippingThreshold: number;
   progressToFreeShipping: number;
+  shipEstimate: { fee: number; freeShip: boolean; threshold: number } | null;
+  allProducts: Product[];
   money: (v: number) => string;
   onClose: () => void;
   onChangeQuantity: (variantId: string, delta: number) => void;
   onRemoveLine: (variantId: string) => void;
+  onAddToCart: (p: Product) => void;
   onCheckout: () => void;
 }) {
   useEscapeClose(open, onClose);
@@ -278,9 +284,29 @@ export function CartDrawer({
         {/* Cart Footer */}
         {cart.length > 0 && (
           <div className="p-5 border-t border-[#ede5d8] bg-white space-y-3">
-            <div className="flex items-center justify-between text-xs text-slate-600">
-              <span>Tạm tính giỏ hàng:</span>
-              <span className="text-lg font-black text-[#8c2d19]">{money(subtotal)}</span>
+            <CartUpsell cart={cart} allProducts={allProducts} money={money} onAddToCart={onAddToCart} />
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs text-slate-600">
+                <span>Tạm tính giỏ hàng:</span>
+                <span className="font-bold text-slate-900">{money(subtotal)}</span>
+              </div>
+              {/* Early shipping estimate — removes the fee surprise that
+                  kills checkout conversion. Quote at checkout stays authoritative. */}
+              <div className="flex items-center justify-between text-xs text-slate-600">
+                <span>Phí giao hàng (dự kiến):</span>
+                <span className={`font-bold ${shipEstimate?.freeShip ? "text-[#14532d]" : ""}`}>
+                  {!shipEstimate ? "…" : shipEstimate.freeShip ? "Miễn phí" : `~${money(shipEstimate.fee)}`}
+                </span>
+              </div>
+              {shipEstimate && !shipEstimate.freeShip && (
+                <p className="text-[11px] text-slate-400">Phí chính xác theo địa chỉ ở bước thanh toán.</p>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-700">Tổng dự kiến:</span>
+              <span className="text-lg font-black text-[#8c2d19]">
+                {shipEstimate ? money(subtotal + (shipEstimate.freeShip ? 0 : shipEstimate.fee)) : money(subtotal)}
+              </span>
             </div>
 
             <button
@@ -385,7 +411,7 @@ export function OrderSuccessModal({  success,
         </div>
 
         <div className="p-4 rounded-2xl bg-gradient-to-r from-[#2b2118] via-[#3a2e24] to-[#4a3b2c] text-white space-y-1 shadow-md">
-          <span className="text-[10px] text-white/80 font-mono font-bold">MÃ ĐƠN HÀNG CỦA BẠN</span>
+          <span className="text-[11px] text-white/80 font-mono font-bold">MÃ ĐƠN HÀNG CỦA BẠN</span>
           <div className="flex items-center justify-center gap-2">
             <span className="font-mono text-xl font-black text-yellow-200 tracking-wider">{success.number}</span>
             <button
@@ -429,6 +455,60 @@ export function OrderSuccessModal({  success,
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Cart upsell: "mua cùng" for the first cart line, one-tap add.
+ *  Best-effort — hides on any failure or when nothing matches. */
+function CartUpsell({
+  cart, allProducts, money, onAddToCart,
+}: {
+  cart: CartLine[];
+  allProducts: Product[];
+  money: (v: number) => string;
+  onAddToCart: (p: Product) => void;
+}) {
+  type Reco = { id: string; sku: string; name: string; reason: string };
+  const [recos, setRecos] = useState<Reco[] | null>(null);
+  const firstVariant = cart[0]?.variantId;
+  useEffect(() => {
+    if (!firstVariant) return;
+    setRecos(null);
+    fetch(`/api/storefront/recommendations?variantId=${encodeURIComponent(firstVariant)}&take=2`)
+      .then(async (r) => {
+        if (!r.ok) return;
+        const d = await r.json();
+        const list = (d.recommendations as Reco[]) ?? [];
+        const inCart = new Set(cart.map((l) => l.variantId));
+        const matched = list
+          .filter((rec) => !inCart.has(rec.id))
+          .map((rec) => ({ rec, product: allProducts.find((p) => p.variants.some((v) => v.id === rec.id)) }))
+          .filter((x): x is { rec: Reco; product: Product } => Boolean(x.product));
+        if (matched.length) setRecos(matched.map((m) => m.rec));
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run on cart head change
+  }, [firstVariant]);
+  if (!recos || !recos.length) return null;
+  const withProducts = recos
+    .map((rec) => ({ rec, product: allProducts.find((p) => p.variants.some((v) => v.id === rec.id)) }))
+    .filter((x): x is { rec: Reco; product: Product } => Boolean(x.product));
+  if (!withProducts.length) return null;
+  return (
+    <div className="rounded-2xl bg-[#faf4ea] border border-[#e8dac5] p-3 space-y-2">
+      <p className="text-[11px] font-bold text-[#8c2d19] uppercase tracking-wider">Thường mua cùng</p>
+      {withProducts.map(({ rec, product }) => (
+        <div key={rec.id} className="flex items-center justify-between gap-2">
+          <span className="text-xs text-slate-700 truncate flex-1">{rec.name}</span>
+          <button
+            onClick={() => onAddToCart(product)}
+            className="shrink-0 px-3 py-1.5 rounded-xl bg-[#1c1917] hover:bg-[#8c2d19] text-white text-[11px] font-bold cursor-pointer"
+          >
+            + {money(product.variants[0]?.price ?? 0)}
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

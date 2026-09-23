@@ -10,7 +10,19 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "./db";
 import { fail } from "./api";
 
-const CREATE_URL = "https://test-payment.momo.vn/v2/gateway/api/create";
+// Gateway create-URL is env-selectable: MOMO_CREATE_URL unset → sandbox
+// default (dev-safe); production sets the live URL
+// https://payment.momo.vn/v2/gateway/api/create.
+export const MOMO_SANDBOX_URL = "https://test-payment.momo.vn/v2/gateway/api/create";
+export const MOMO_LIVE_URL = "https://payment.momo.vn/v2/gateway/api/create";
+
+export function momoCreateUrl(): string {
+  return process.env.MOMO_CREATE_URL || MOMO_SANDBOX_URL;
+}
+
+export function momoLive(): boolean {
+  return momoCreateUrl() === MOMO_LIVE_URL;
+}
 
 export function momoConfigured() {
   return Boolean(
@@ -64,7 +76,7 @@ export async function buildMomoUrl(order: { id: string; number: string; total: b
   });
   // (hmac → momoHmac: buildMomoUrl referenced a name that didn't exist — pre-existing runtime crash)
   const signature = momoHmac(process.env.MOMO_SECRET_KEY!, raw);
-  const res = await fetch(CREATE_URL, {
+  const res = await fetch(momoCreateUrl(), {
     method: "POST",
     // PERF-001: no default timeout in undici — a hung MoMo endpoint would
     // pin the checkout worker indefinitely.

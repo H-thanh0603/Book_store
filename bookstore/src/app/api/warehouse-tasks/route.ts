@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { assertStoreAccess, requirePermission } from "@/lib/auth";
 import { apiError, fail, nextBusinessNumber, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
           if (completed.count !== 1) fail(409, "INVALID_STATUS_TRANSITION", "Task was already updated");
         }
         return done;
-      });
+      }, TX_OPTIONS);
       const task = await prisma.warehouseTask.findUnique({ where: { id: item.taskId } });
       return ok({ taskItemId: item.id, processedQty, taskStatus: task?.status });
     }
@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
         }
       }
       return tx.warehouseTask.findUniqueOrThrow({ where: { id: current.id } });
-    });
+    }, TX_OPTIONS);
     return ok({ task });
   } catch (err) {
     return apiError(err);

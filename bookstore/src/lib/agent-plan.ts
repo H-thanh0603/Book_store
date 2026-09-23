@@ -6,6 +6,8 @@
 //
 // Execution stays gated: the plan is a declaration, not a capability — every
 // step still executes through the fixed allowlisted tools.
+import { sanitizeUntrusted } from "./fencing";
+
 export type PlanStepStatus = "pending" | "doing" | "done";
 
 export type PlanStep = { title: string; status: PlanStepStatus };
@@ -33,9 +35,12 @@ export function normalizePlan(input: unknown): PlanStep[] | null {
   return steps.length > 0 ? steps : null;
 }
 
-/** Render a plan block for the model context (resume-after-reload). */
+/** Render a plan block for the model context (resume-after-reload).
+ *  P1-7: titles are model-writable and persisted — sanitize at render so a
+ *  planted "system: ..." in a plan step cannot pose as system content on
+ *  later turns (self-injection across reloads). */
 export function renderPlanBlock(plan: PlanStep[]): string {
   if (plan.length === 0) return "";
   const icon = (s: PlanStepStatus) => (s === "done" ? "✓" : s === "doing" ? "→" : "○");
-  return `\n\n## Kế hoạch hiện tại (do chính mình đặt ở lượt trước — tiếp tục, đừng lập lại từ đầu):\n${plan.map((p) => `- [${icon(p.status)}] ${p.title}`).join("\n")}`;
+  return `\n\n## Kế hoạch hiện tại (do chính mình đặt ở lượt trước — tiếp tục, đừng lập lại từ đầu):\n${plan.map((p) => `- [${icon(p.status)}] ${sanitizeUntrusted(p.title)}`).join("\n")}`;
 }

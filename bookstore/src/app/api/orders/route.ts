@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { assertStoreAccess, requirePermission, resolveStoreScope } from "@/lib/auth";
 import { apiError, ok, fail, optPage } from "@/lib/api";
 import { createReservedOrder, type CreateOrderInput } from "@/lib/orders";
+import type { OrderStatus } from "@/generated/prisma/client";
 
 // POST /api/orders — create order (WEB/APP), reserve stock at store/warehouse
 export async function POST(req: NextRequest) {
@@ -53,15 +54,34 @@ export async function GET(req: NextRequest) {
     // Store is nullable (warehouse orders), so OR both paths under org.
     // Legacy org-less callers are denied: an empty filter would list every tenant.
     if (!auth.orgId) fail(403, "FORBIDDEN", "Order listing requires an org-scoped account");
+    // L2 server filter: the old client-side search/status filter ran over the
+    // current page only — page 2+ rows never matched. Filter here instead.
+    const q = (sp.get("q") ?? "").trim().slice(0, 80);
+    const status = sp.get("status") ?? "ALL";
+    const statusGroups: Record<string, OrderStatus[]> = {
+      PROCESSING: ["PAID", "CONFIRMED", "ALLOCATED", "PICKING", "PACKED", "READY"],
+      SHIPPED: ["SHIPPED"], DELIVERED: ["DELIVERED"], CANCELLED: ["CANCELLED"],
+    };
     const orgFilter = {
       OR: [
         { store: { region: { orgId: auth.orgId } } },
         { storeId: null, customer: { orgId: auth.orgId } },
       ],
     };
+    // NOTE: a single `where` object can't hold two OR keys — the search OR
+    // must nest inside AND with the org filter, not beside it.
     const where = {
-      ...orgFilter,
-      ...(scope ? { storeId: { in: scope } } : {}),
+      AND: [
+        orgFilter,
+        ...(scope ? [{ storeId: { in: scope } }] : []),
+        ...(q ? [{
+          OR: [
+            { number: { contains: q, mode: "insensitive" as const } },
+            { customer: { name: { contains: q, mode: "insensitive" as const } } },
+          ],
+        }] : []),
+        ...(status !== "ALL" && statusGroups[status] ? [{ status: { in: statusGroups[status] } }] : []),
+      ],
     };
     const { page, pageSize, skip } = optPage(sp);
     const [orders, total] = await Promise.all([

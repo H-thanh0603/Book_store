@@ -23,6 +23,7 @@ import { normalizePlan, renderPlanBlock, type PlanStep } from "@/lib/agent-plan"
 import { randomUUID } from "crypto";
 import { saveServerCart } from "@/lib/server-cart";
 import { callLlm, llmConfigured, llmModelId, type LlmMessage } from "@/lib/llm";
+import { checkoutGated, intentRouterModel, routeIntent, type IntentRoute } from "@/lib/intent-router";
 import { enforceRateLimit, clientIp } from "@/lib/rate-limit";
 import { agentRateLimit, finishAgentCall, type ResolvedAgentKey } from "@/lib/agent-auth";
 import { apiError } from "@/lib/api";
@@ -165,6 +166,45 @@ const PLAN_COMBO_TOOL = {
   },
 };
 
+// Side-by-side comparison over REAL catalog rows: the model passes 2-4
+// variantIds (from search results) and gets back price/stock/category per
+// item — all from the DB, so a comparison never invents specs or prices.
+const COMPARE_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "compare_products",
+    description:
+      "So sánh 2-4 sản phẩm cạnh nhau (giá, tồn kho, thể loại, tác giả). Chỉ dùng variantId từ kết quả search_products. Dùng khi khách hỏi 'loại nào tốt', 'khác nhau thế nào', 'so sánh'.",
+    parameters: {
+      type: "object",
+      properties: {
+        variantIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "2-4 variantId từ kết quả search",
+        },
+      },
+      required: ["variantIds"],
+    },
+  },
+};
+
+// Customer's usable vouchers: active org promos with a code, not exhausted,
+// within time window. Lets the model apply a real coupon instead of
+// inventing one ("mã GIAM10" that doesn't exist).
+const VOUCHER_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "get_user_vouchers",
+    description:
+      "Lấy danh sách mã giảm giá khách đang dùng được (mã, giá trị, điều kiện). Gọi khi khách hỏi 'có mã nào không', trước khi chốt đơn, hoặc khi prepare_checkout không kèm coupon.",
+    parameters: {
+      type: "object",
+      properties: {},
+    },
+  },
+};
+
 // Self-authored task plan: the model declares multi-step work (max 5 steps
 // via lib/agent-plan), so progress survives across turns and reloads.
 // A plan is a declaration only — every step still executes through the
@@ -210,7 +250,12 @@ const SYSTEM_PROMPT = `Bạn là "Thư Thủ AI" của Melio Bookstore — nhà 
 
 ## Khi khách chưa biết chọn gì (nghiên cứu trước khi mua)
 - Khách hỏi "loại nào tốt", "khác nhau thế nào": trình bày 3-4 tiêu chí chọn (gạch đầu dòng ngắn), RỒI mới search_products và áp tiêu chí vào sản phẩm thật có bán.
+- So sánh cụ thể 2-4 món: gọi compare_products với variantId từ kết quả search — giá/tồn kho/mô tả do tool trả, KHÔNG tự bịa thông số.
 - Nêu assumption còn thiếu (VD: "giả sử cho bé trai 6-8 tuổi").
+
+## Mã giảm giá (khi có tool get_user_vouchers)
+- Khách hỏi "có mã nào không" hoặc chuẩn bị chốt đơn: gọi get_user_vouchers lấy mã thật đang dùng được, rồi đưa mã + điều kiện cho khách.
+- KHÔNG BAO GIỜ bịa mã ("GIAM10", "SALE50"...). Không có mã phù hợp thì nói rõ, đừng hứa.
 
 ## Sau khi mua (chăm sóc khách)
 - Câu hỏi trạng thái đơn: chỉ nói "bạn có thể xem tại trang Theo dõi đơn hàng (/track) với mã đơn", KHÔNG bịa trạng thái, KHÔNG giả vờ tra được đơn.
@@ -366,7 +411,8 @@ export async function POST(req: NextRequest) {
     const storedDialogue = storedTurns
       .filter((t) => (t.role === "user" || t.role === "assistant") && t.content.trim())
       .map((t) => ({ role: t.role as "user" | "assistant", content: t.content.slice(0, 2000) }));
-    const history = (storedTurns.length > 0 ? [...storedDialogue, ...clientMsgs.map((m) => ({ role: m.role, content: m.content }))] : clientMsgs).slice(-8);
+    const freshClientMsgs = clientMsgs.filter((m) => m.role === "user").map((m) => ({ role: m.role, content: m.content }));
+    const history = (storedTurns.length > 0 ? [...storedDialogue, ...freshClientMsgs] : clientMsgs.filter((m) => m.role === "user")).slice(-8);
     // Resume the model-authored plan from the latest stored plan row.
     let currentPlan: PlanStep[] | null = null;
     for (let i = storedTurns.length - 1; i >= 0; i--) {
@@ -457,9 +503,11 @@ export async function POST(req: NextRequest) {
     // and prompt on every path — never a dead tool the model can call.
     // UPDATE_PLAN_TOOL is always offered: planning is intrinsic, not a
     // business system — but it only declares intent, never grants action.
-    const tools = [
+    // `let`: the Jev intent router below may drop PREPARE_CHECKOUT for the
+    // turn when the verdict says this turn must not check out.
+    let tools = [
       UPDATE_PLAN_TOOL,
-      ...(switches.enableSearch ? [SEARCH_TOOL] : []),
+      ...(switches.enableSearch ? [SEARCH_TOOL, COMPARE_TOOL, VOUCHER_TOOL] : []),
       ...(switches.enableMemory && subject ? [REMEMBER_TOOL] : []),
       ...(switches.enableCheckout ? [PREPARE_CHECKOUT_TOOL, SYNC_CART_TOOL, WATCH_STOCK_TOOL, PLAN_COMBO_TOOL] : []),
     ];
@@ -469,6 +517,64 @@ export async function POST(req: NextRequest) {
       hasSubject: subject !== null, toolCount: tools.length,
       memory: switches.enableMemory, checkout: switches.enableCheckout,
     }));
+
+    // ── Jev intent router (fail-open pre-LLM classification) ──
+    // One cheap Choice+Noul call on the latest user text. High-confidence
+    // deterministic intents skip the LLM entirely; checkout gating drops
+    // PREPARE_CHECKOUT for the turn unless the verdict allows it. Any
+    // router miss (null / low confidence / timeout) falls through to the
+    // full tool loop below — behavior unchanged from before the router.
+    const lastUserText = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
+    let intentRoute: IntentRoute | null = null;
+    try {
+      intentRoute = await routeIntent(lastUserText);
+    } catch {
+      intentRoute = null;
+    }
+    const gatedCheckout = checkoutGated(intentRoute);
+    if (intentRoute) {
+      console.info(JSON.stringify({
+        level: "info", event: "concierge_intent", model: intentRouterModel(),
+        intent: intentRoute.intent, confidence: intentRoute.confidence,
+        checkoutReady: intentRoute.checkoutReady, gatedCheckout,
+        ...(intentRoute.usage ? { usage: intentRoute.usage } : {}),
+      }));
+    }
+    async function fastReply(text: string): Promise<ReturnType<typeof NextResponse.json>> {
+      finish(200);
+      await finishAgentCall(req, "ask_concierge", agentKey, startedAt);
+      await persistTurn(text);
+      return NextResponse.json({
+        chatId,
+        ...(currentPlan ? { plan: currentPlan } : {}),
+        text,
+        items: [],
+        provenance: {
+          "@context": "https://www.w3.org/ns/prov#",
+          "prov:wasGeneratedBy": "melio-concierge-intent",
+          "prov:generatedAtTime": new Date().toISOString(),
+          humanVerified: false,
+        },
+      });
+    }
+    if (intentRoute && intentRoute.confidence >= 0.7) {
+      if (intentRoute.intent === "track_order") {
+        return fastReply("Bạn xem trạng thái đơn tại trang Theo dõi đơn hàng (/track) với mã đơn nhé. Cần hỗ trợ thêm thì cho mình mã đơn.");
+      }
+      if (intentRoute.intent === "return_policy") {
+        return fastReply("Chính sách chung: đổi trả theo quy định cửa hàng, hàng lỗi liên hệ hỗ trợ kèm ảnh/mã đơn. Hoàn tiền chỉ xác nhận qua kênh hỗ trợ, mình không hứa hoàn ngay trong chat.");
+      }
+      if (intentRoute.intent === "chitchat") {
+        return fastReply("Chào bạn! Mình là Thủ Thư AI của Melio. Bạn đang tìm sách, quà tặng hay đồ dùng học tập gì hôm nay?");
+      }
+    }
+    if (!gatedCheckout && intentRoute && intentRoute.intent !== "prepare_checkout" && intentRoute.confidence >= 0.7) {
+      // Confident non-checkout verdict: hide prepare_checkout so the model
+      // cannot jump to checkout on a browsing turn. Doubt (null / low
+      // confidence / prepare_checkout verdict) keeps full tools — the model
+      // still validates món + số lượng + chi nhánh via the tool contract.
+      tools = tools.filter((t) => t.function.name !== "prepare_checkout");
+    }
 
     // Up to 3 tool rounds: search → (refine) → answer. Some models search
     // twice before answering; 2 rounds dead-ended them into the fallback.
@@ -482,6 +588,26 @@ export async function POST(req: NextRequest) {
       total?: number; fitsBudget?: boolean; reason?: string;
     };
     let lastPlan: ComboPlan | null = null;
+    // Last successful comparison of this turn — returned as a structured
+    // table so the chat UI renders side-by-side columns, not prose.
+    type ComparedRow = {
+      variantId: string; found: boolean; sku?: string; variantName?: string;
+      productName?: string; description?: string; price?: number | null;
+      available?: number; inStock?: boolean;
+    };
+    let lastComparison: ComparedRow[] | null = null;
+    // Per-turn token budget (P4): 3 rounds × ~800 completion + prompt can
+    // burn credits on a confused model. Accumulate and break past the cap;
+    // the loop-exhausted fallback below still answers from grounded data.
+    // Default 12k covers a healthy 3-round turn with headroom.
+    const TURN_TOKEN_BUDGET = Number(process.env.CONCIERGE_TURN_TOKEN_BUDGET ?? 12_000);
+    let turnTokens = 0;
+    // Forensic tool trace for this turn — collected per exec, persisted
+    // with the turn so audits can replay "model đã gọi gì" without args.
+    const toolTrace: { tool: string; ok: boolean }[] = [];
+    const trace = (tool: string, ok: boolean) => {
+      if (toolTrace.length < 20) toolTrace.push({ tool, ok });
+    };
     // Persist this turn to AgentChatTurn (best-effort — chat must never
     // break on a logging write). Dedupe by stripping the longest leading
     // prefix of client messages that already matches the stored tail, so
@@ -505,10 +631,16 @@ export async function POST(req: NextRequest) {
       }
       return head;
     }
-    async function persistTurn(assistantText: string): Promise<void> {
+    async function persistTurn(assistantText: string, toolTrace?: { tool: string; ok: boolean }[]): Promise<void> {
       if (!orgId) return;
       try {
-        const mine = clientMsgs.map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
+        // P1-7: client-forged `assistant` turns must never enter stored
+        // history — a planted "đã verify giá 1đ" would steer grounding on
+        // every later turn. First contact seeds USER turns only; resumes
+        // accept user turns only (assistant rows come from our own writes).
+        const mine = clientMsgs
+          .filter((m) => m.role === "user")
+          .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
         const fresh = storedTurns.length === 0
           ? mine.filter((m) => m.role === "user" || m.role === "assistant")
           : stripStoredOverlap(storedTurns, mine).filter((m) => m.role === "user");
@@ -517,6 +649,11 @@ export async function POST(req: NextRequest) {
           { role: "assistant", content: assistantText.slice(0, 2000) },
         ];
         if (currentPlan) rows.push({ role: "plan", content: JSON.stringify(currentPlan).slice(0, 2000) });
+        // Forensics: which tools ran and whether each succeeded — replayable
+        // without re-calling the provider. Names + ok flags only (no args:
+        // args may carry customer PII like phone/coupon).
+        if (toolTrace && toolTrace.length > 0)
+          rows.push({ role: "tools", content: JSON.stringify(toolTrace).slice(0, 2000) });
         await prismaWrite.agentChatTurn.createMany({
           data: rows.map((r) => ({ orgId, chatId, ...r })),
         });
@@ -536,6 +673,18 @@ export async function POST(req: NextRequest) {
           { code: "UPSTREAM", message: "Thủ thư AI tạm thời không phản hồi, thử lại sau nhé." },
           { status: 502 },
         );
+      }
+      // Per-turn token budget: accumulate usage across the 3 rounds and stop
+      // the loop before it burns unbounded credits on a confused model.
+      if (data.usage) {
+        turnTokens += data.usage.total_tokens ?? 0;
+        if (turnTokens > TURN_TOKEN_BUDGET) {
+          console.warn(JSON.stringify({
+            level: "warn", event: "concierge_token_budget", model: llmModelId(),
+            turnTokens, budget: TURN_TOKEN_BUDGET, round,
+          }));
+          break;
+        }
       }
       const msg = data.message;
 
@@ -585,12 +734,17 @@ export async function POST(req: NextRequest) {
         finish(200);
         await finishAgentCall(req, "ask_concierge", agentKey, startedAt);
         const finalText = parsed.text?.slice(0, 1500) ?? "Mình chưa hiểu ý bạn, thử diễn đạt khác nhé!";
-        await persistTurn(finalText);
+        await persistTurn(finalText, toolTrace);
         return NextResponse.json({
           chatId,
           ...(currentPlan ? { plan: currentPlan } : {}),
           text: finalText,
           items: groundedItems,
+          // Structured comparison table for side-by-side UI rendering.
+          ...(lastComparison && lastComparison.length >= 2 ? { comparison: lastComparison } : {}),
+          // Shared-cart signal: the agent rewrote the server cart this turn —
+          // the shop UI pulls fresh lines instead of showing stale ones.
+          ...(toolTrace.some((t) => t.tool === "sync_cart" && t.ok) ? { cartUpdated: true } : {}),
           // Checkout handoff: the card renders the validated cart; the HOST
           // completes it — the agent never creates the order itself.
           ...(parsed.checkout === true && checkoutCard ? { checkoutCard } : {}),
@@ -627,6 +781,7 @@ export async function POST(req: NextRequest) {
           } catch {
             planned = { ok: false, reason: "tool failed" };
           }
+          trace("update_plan", (planned as {ok?: boolean})?.ok === true);
           messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(planned) });
           continue;
         }
@@ -638,6 +793,7 @@ export async function POST(req: NextRequest) {
           } catch {
             saved = { saved: false, reason: "tool failed" };
           }
+          trace("remember_preference", (saved as {saved?: boolean})?.saved === true);
           messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(saved) });
           continue;
         }
@@ -671,6 +827,7 @@ export async function POST(req: NextRequest) {
           } catch {
             card = { ok: false, reason: "tool failed" };
           }
+          trace("prepare_checkout", (card as {ok?: boolean})?.ok === true);
           messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(card) });
           continue;
         }
@@ -701,6 +858,7 @@ export async function POST(req: NextRequest) {
           } catch {
             synced = { ok: false, reason: "tool failed" };
           }
+          trace("sync_cart", true);
           messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(synced) });
           continue;
         }
@@ -736,6 +894,7 @@ export async function POST(req: NextRequest) {
           } catch {
             watched = { ok: false, reason: "tool failed" };
           }
+          trace("watch_stock", (watched as {ok?: boolean})?.ok !== false);
           messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(watched) });
           continue;
         }
@@ -803,9 +962,102 @@ export async function POST(req: NextRequest) {
             plan = { ok: false, reason: "tool failed" };
           }
           lastPlan = plan as ComboPlan;
+          trace("plan_combo", (plan as {ok?: boolean})?.ok === true);
           messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(plan) });
           continue;
         }
+        if (call.function.name === "compare_products") {
+          let compared: unknown;
+          try {
+            const args = JSON.parse(call.function.arguments || "{}") as { variantIds?: unknown };
+            const ids = Array.isArray(args.variantIds)
+              ? (args.variantIds as unknown[]).filter((v): v is string => typeof v === "string").slice(0, 4)
+              : [];
+            if (ids.length < 2) {
+              compared = { ok: false, reason: "cần 2-4 variantId từ kết quả search" };
+            } else {
+              const rows = await prismaRead.productVariant.findMany({
+                where: { id: { in: ids }, active: true },
+                select: {
+                  id: true, sku: true, name: true,
+                  product: { select: { id: true, name: true, description: true } },
+                  prices: {
+                    where: { priceList: { kind: { in: ["online", "retail"] } } },
+                    select: { amount: true, priceList: { select: { kind: true } } },
+                    orderBy: { validFrom: "desc" },
+                    take: 2,
+                  },
+                  balances: { select: { onHand: true, reserved: true } },
+                },
+              });
+              const byId = new Map(rows.map((r) => [r.id, r]));
+              compared = {
+                ok: true,
+                items: ids.map((id) => {
+                  const r = byId.get(id);
+                  if (!r) return { variantId: id, found: false };
+                  const price = r.prices.find((p) => p.priceList.kind === "online")
+                    ?? r.prices.find((p) => p.priceList.kind === "retail");
+                  const available = r.balances.reduce((s, b) => s + b.onHand - b.reserved, 0);
+                  return fenceToolResult({
+                    variantId: r.id, sku: r.sku, variantName: r.name,
+                    productName: r.product.name,
+                    description: (r.product.description ?? "").slice(0, 300),
+                    price: price ? Number(price.amount) : null,
+                    available, inStock: available > 0,
+                  });
+                }),
+              };
+            }
+          } catch {
+            compared = { ok: false, reason: "tool failed" };
+          }
+          trace("compare_products", (compared as {ok?: boolean})?.ok === true);
+          if ((compared as { ok?: boolean })?.ok === true)
+            lastComparison = ((compared as { items?: ComparedRow[] }).items ?? []).filter((i) => i.found);
+          messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(compared).slice(0, 6000) });
+          continue;
+        }
+        if (call.function.name === "get_user_vouchers") {
+          let vouchers: unknown;
+          try {
+            const now = new Date();
+            const rows = await prismaRead.promotion.findMany({
+              where: {
+                active: true,
+                code: { not: null },
+                startAt: { lte: now },
+                OR: [{ endAt: null }, { endAt: { gt: now } }],
+                ...(orgId ? { orgId } : {}),
+              },
+              select: {
+                code: true, name: true, type: true, value: true,
+                minQty: true, usageLimit: true, usedCount: true,
+                perCustomerLimit: true, endAt: true,
+              },
+              orderBy: { priority: "desc" },
+              take: 10,
+            });
+            vouchers = {
+              ok: true,
+              vouchers: rows
+                .filter((p) => p.usageLimit == null || p.usedCount < p.usageLimit)
+                .map((p) => ({
+                  code: p.code, name: p.name, type: p.type,
+                  value: Number(p.value),
+                  minQty: p.minQty,
+                  perCustomerLimit: p.perCustomerLimit,
+                  endAt: p.endAt,
+                })),
+            };
+          } catch {
+            vouchers = { ok: false, reason: "tool failed" };
+          }
+          trace("get_user_vouchers", (vouchers as {ok?: boolean})?.ok === true);
+          messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(vouchers).slice(0, 4000) });
+          continue;
+        }
+        // Default: catalog search (the original search_products handler).
         let result: CatalogItem[];
         try {
           const args = JSON.parse(call.function.arguments || "{}") as { query?: string };
@@ -814,6 +1066,7 @@ export async function POST(req: NextRequest) {
           result = [];
         }
         catalog = result;
+        trace("search_products", true);
         messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ products: result }) });
       }
       // Ops signal for provider differences: which tools each model round used.
@@ -839,7 +1092,7 @@ export async function POST(req: NextRequest) {
       finish(200);
       await finishAgentCall(req, "ask_concierge", agentKey, startedAt);
       const comboText = `Combo dưới ${lastPlan.budget?.toLocaleString("vi-VN")}₫ của mình: ${lastPlan.items.map((p) => `${p.name} (${p.price.toLocaleString("vi-VN")}₫)`).join(" + ")}. Tổng đã kiểm tra: ${lastPlan.total?.toLocaleString("vi-VN")}₫${lastPlan.fitsBudget ? " — vừa ngân sách!" : " — vượt ngân sách, mình gợi ý bớt món nhé."}`;
-      await persistTurn(comboText);
+      await persistTurn(comboText, toolTrace);
       return NextResponse.json({
         chatId,
         ...(currentPlan ? { plan: currentPlan } : {}),
@@ -866,7 +1119,7 @@ export async function POST(req: NextRequest) {
     const fallbackText = fallbackItems.length > 0
       ? `Mình tìm thấy ${fallbackItems.length} món hợp với mô tả của bạn trong danh sách bên dưới nhé!`
       : "Mình cần thêm thông tin nhé — bạn mô tả cụ thể hơn được không?";
-    await persistTurn(fallbackText);
+    await persistTurn(fallbackText, toolTrace);
     return NextResponse.json({
       chatId,
       ...(currentPlan ? { plan: currentPlan } : {}),

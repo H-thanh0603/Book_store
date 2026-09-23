@@ -126,7 +126,11 @@ export async function getAuth(): Promise<AuthContext | null> {
 /** Org-status gate shared by requirePermission and requireOrgActive. Exported
  *  for out-of-session checks (async export worker re-validates the requester). */
 export function assertOrgUsable(auth: AuthContext) {
-  if (!auth.orgId) return; // legacy user — bypass
+  // Q35: no legacy bypass — an account without an org is mis-provisioned
+  // (every signup/invite/seed path sets orgId) and must fail closed, not
+  // roam across tenants. requirePermission calls this on every route.
+  if (!auth.orgId)
+    throw Object.assign(new Error("Forbidden: caller has no organization"), { status: 403 });
   if (auth.orgStatus === "ACTIVE") return;
   if (auth.orgStatus === "TRIAL" && auth.trialEndsAt && auth.trialEndsAt > new Date()) return;
   throw Object.assign(new Error(`Forbidden: org ${auth.orgStatus}`), { status: 403 });
@@ -229,9 +233,9 @@ export async function requireAuth(): Promise<AuthContext> {
 
 /**
  * Enforce that the caller's org is usable. Trial is allowed until
- * trialEndsAt; ACTIVE always passes; everything else rejects. Owner role
- * (legacy superuser without orgId) bypasses so the existing admin path
- * keeps working through the migration window.
+ * trialEndsAt; ACTIVE always passes; everything else rejects.
+ * Org-less callers are rejected by assertOrgUsable (Q35) — there is no
+ * superuser bypass; admin scripts run outside HTTP routes instead.
  */
 export async function requireOrgActive(): Promise<AuthContext> {
   const auth = await requireAuth();

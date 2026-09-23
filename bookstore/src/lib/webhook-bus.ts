@@ -99,6 +99,8 @@ export async function emit(event: WebhookEvent): Promise<{ delivered: number; qu
  * second worker (or a second scheduler instance) reading the same batch sees
  * those rows as not-due and skips them. At-most-once per tick; a crashed
  * worker's rows become due again when the claim lease lapses.
+ * ponytail: no SKIP LOCKED — findMany+conditional-claim already dedups
+ * correctly; add a SKIP LOCKED variant only past ~100 deliveries/s.
  */
 export async function processPendingDeliveries(): Promise<{ processed: number; delivered: number; deadLettered: number }> {
   const due = await prisma.webhookDelivery.findMany({

@@ -1,17 +1,19 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, resolveStoreScope } from "@/lib/auth";
+import { requireOrgId } from "@/lib/org-scope";
 import { apiError, ok } from "@/lib/api";
 
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth();
+    const orgId = requireOrgId(auth); // Q35 fail-closed
     const storeId = req.nextUrl.searchParams.get("storeId") ?? undefined;
     const scope = resolveStoreScope(auth, storeId);
     // Tenant isolation (#7): org-wide role must not see other orgs' terminals.
     const terminals = await prisma.posTerminal.findMany({
       where: {
-        ...(auth.orgId ? { store: { orgId: auth.orgId } } : {}),
+        store: { orgId },
         ...(scope ? { storeId: { in: scope } } : storeId ? { storeId } : {}),
       },
       // Consistency cap (audit perf): terminals per org are tens, not millions.

@@ -65,7 +65,9 @@ done
 if [[ -n "${SENTRY_DSN:-}" || -n "${ERROR_WEBHOOK_URL:-}" ]]; then
   pass "error tracking configured"
 else
-  warn "no SENTRY_DSN / ERROR_WEBHOOK_URL — errors live only in PM2 logs"
+  # (audit Q139) Error tracking is a launch gate, not a nice-to-have:
+  # log-only prod means silent money bugs. Missing tracking FAILS go-live.
+  fail "no SENTRY_DSN / ERROR_WEBHOOK_URL — errors would live only in PM2 logs"
 fi
 if [[ -n "${SMTP_HOST:-}" ]]; then
   pass "SMTP configured ($SMTP_HOST)"
@@ -77,6 +79,21 @@ if [[ -n "${CARRIER_WEBHOOK_SECRET:-}" ]]; then
 else
   warn "CARRIER_WEBHOOK_SECRET unset — GHTK/VTP status pushes disabled"
 fi
+
+echo "══ 4b. Payment gateway hosts (audit Q155) ══"
+# Sandbox hosts must never serve real money. Each gateway host is
+# env-selectable (sandbox default, dev-safe); prod MUST point at live.
+for pair in "VNP_PAY_HOST|https://www.vnpayment.vn/paymentv2/vpcpay.html" "MOMO_CREATE_URL|https://payment.momo.vn/v2/gateway/api/create" "ZALOPAY_CREATE_URL|https://openapi.zalopay.vn/v2/create"; do
+  var="${pair%%|*}"; live="${pair##*|}"
+  val="${!var:-}"
+  if [[ -z "$val" ]]; then
+    warn "$var unset — gateway runs SANDBOX (dev-safe, no real money)"
+  elif [[ "$val" == "$live" ]]; then
+    pass "$var points at LIVE host"
+  else
+    fail "$var points at non-live host ($val) — expected $live"
+  fi
+done
 
 echo "══ 5. App health ══"
 APP_URL="${APP_URL:-http://127.0.0.1:3000}"

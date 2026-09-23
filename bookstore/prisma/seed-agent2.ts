@@ -47,7 +47,9 @@ async function main() {
   // SEC-004: Customer.orgId is required — Phase-1 seed owns the org.
   for (let i = 31; i <= 100; i++) {
     const code = `CUS-${String(i).padStart(6, "0")}`;
-    const existing = await prisma.customer.findUnique({ where: { code } });
+    // Org-scoped lookup (same reason as Phase-1 seed): global lookup
+    // would mistake another tenant's row for ours and skip creation.
+    const existing = await prisma.customer.findFirst({ where: { code, orgId: org.id } });
     if (existing) continue;
     const c = await prisma.customer.create({
       data: {
