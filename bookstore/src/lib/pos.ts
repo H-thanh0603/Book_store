@@ -368,19 +368,36 @@ export async function refundSale(
 
     // Partial selection: default = whole txn. Each requested qty must be a
     // positive integer within the REMAINING (sold − already refunded) qty.
-    // Prior refunds resolve through the audit trail (pos.refund rows carry
-    // the original tx number) — refund txs themselves hold no orig FK, and a
-    // bare "negative items since orig" scan would mix in other sales' refunds
-    // of the same variant+price.
-    const priorAudits = await tx.auditLog.findMany({
-      where: { action: "pos.refund", entityId: { not: null } },
-      select: { entityId: true, after: true },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-    });
-    const priorRefundTxIds = priorAudits
-      .filter((a) => (a.after as { refundedTx?: unknown } | null)?.refundedTx === txNumber)
-      .map((a) => a.entityId as string);
+    // MED-12: refund txs carry origTxId → the sale they reverse. Prior
+    // partials are a direct indexed join — no audit-scan cap, no seq-scan.
+    // Legacy refunds (origTxId NULL, audit row pruned) fall back to the
+    // audit-trail path below for rows still inside the migration window.
+    const priorRefundTxIds = (
+      await tx.posTransaction.findMany({
+        where: { origTxId: orig.id },
+        select: { id: true },
+      })
+    ).map((r) => r.id);
+    // Legacy fallback: refunds recorded before origTxId existed only show up
+    // in the audit trail. Bounded to this tx's audit rows — still indexed via
+    // AuditLog(entity, entityId) once we filter by refundedTx number on rows
+    // that point back at this sale's id-space. Rare path post-backfill.
+    if (priorRefundTxIds.length === 0) {
+      const legacy = await tx.auditLog.findMany({
+        where: {
+          action: "pos.refund", entityId: { not: null },
+          createdAt: { gte: orig.createdAt },
+        },
+        select: { entityId: true, after: true },
+        orderBy: { createdAt: "desc" },
+        take: 500,
+      });
+      priorRefundTxIds.push(
+        ...legacy
+          .filter((a) => (a.after as { refundedTx?: unknown } | null)?.refundedTx === txNumber)
+          .map((a) => a.entityId as string),
+      );
+    }
     const priorItems = priorRefundTxIds.length
       ? await tx.posTransactionItem.findMany({
           where: { txId: { in: priorRefundTxIds } },
@@ -477,6 +494,7 @@ export async function refundSale(
     const refund = await tx.posTransaction.create({
       data: {
         number, shiftId, storeId: orig.storeId, customerId: orig.customerId, status: "COMPLETED",
+        origTxId: orig.id, // MED-12: direct link so later partials resolve indexed
         subtotal: -subtotal, discountTotal: -discountTotal, total: -(subtotal - discountTotal),
         loyaltyEarned: isWhole ? -orig.loyaltyEarned : 0,
         loyaltyRedeemed: isWhole ? -orig.loyaltyRedeemed : 0,

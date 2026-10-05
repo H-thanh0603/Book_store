@@ -94,6 +94,33 @@ for pair in "VNP_PAY_HOST|https://www.vnpayment.vn/paymentv2/vpcpay.html" "MOMO_
     fail "$var points at non-live host ($val) — expected $live"
   fi
 done
+# VNPay specifically: if credentials are set but the host isn't live, go-live
+# would silently collect nothing — escalate from warn to FAIL (audit HIGH-2).
+if [[ -n "${VNP_TMN_CODE:-}" && -n "${VNP_HASH_SECRET:-}" && "${VNP_PAY_HOST:-}" != "https://www.vnpayment.vn/paymentv2/vpcpay.html" ]]; then
+  fail "VNPay credentials set but VNP_PAY_HOST is not the LIVE host — real payments would 404"
+fi
+
+echo "══ 4c. Secrets handling (audit HIGH-1, HIGH-6) ══"
+# HIGH-1: real secrets must not sit plaintext in a group/world-readable .env.
+# Prod should use a secret store / systemd EnvironmentFile outside the repo;
+# when .env exists it must at least be owner-only.
+if [[ -f "$ENV_FILE" ]]; then
+  PERMS=$(stat -c '%a' "$ENV_FILE" 2>/dev/null || stat -f '%Lp' "$ENV_FILE" 2>/dev/null || echo 0)
+  if [[ "$PERMS" == "600" || "$PERMS" == "400" ]]; then
+    pass ".env permissions $PERMS (owner-only)"
+  else
+    fail ".env permissions $PERMS — chmod 600 $ENV_FILE (secrets readable by other users)"
+  fi
+else
+  pass "no .env in worktree — secrets come from the environment"
+fi
+# HIGH-6: offsite backups carry full PII. backup-offsite.sh encrypts only when
+# BACKUP_ENCRYPT_KEY is set — unset means plaintext dumps leave the box.
+if [[ -n "${BACKUP_ENCRYPT_KEY:-}" ]]; then
+  pass "BACKUP_ENCRYPT_KEY set — offsite backups are encrypted"
+else
+  fail "BACKUP_ENCRYPT_KEY unset — nightly offsite dumps are plaintext PII"
+fi
 
 echo "══ 5. App health ══"
 APP_URL="${APP_URL:-http://127.0.0.1:3000}"

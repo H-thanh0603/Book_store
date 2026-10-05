@@ -1128,6 +1128,11 @@ model PosTransaction {
   customerId  String?
   customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict) // sales history must not be orphaned
   status      PosTxStatus @default(COMPLETED)
+  // MED-12: a refund tx points at the sale it reverses — prior partials are
+  // a direct indexed lookup instead of an AuditLog scan.
+  origTxId    String?
+  origTx      PosTransaction? @relation("Refunds", fields: [origTxId], references: [id], onDelete: SetNull)
+  refunds     PosTransaction[] @relation("Refunds")
   subtotal    BigInt
   discountTotal BigInt @default(0)
   total       BigInt
@@ -1137,6 +1142,7 @@ model PosTransaction {
   payments    Payment[]
   createdAt   DateTime @default(now())
   @@index([shiftId])
+  @@index([origTxId])
   @@index([storeId, status, createdAt])
 }
 
