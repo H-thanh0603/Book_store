@@ -10,6 +10,7 @@ import { runDailyMisaExport } from "./exports/misa-job";
 import { suspendOverdueOrgs } from "./billing";
 import { scanRefundRequired } from "./payment-refunds";
 import { pruneAuditLogs, pruneWebhookDeliveries, pruneShopperNotifications, pruneCustomerMemories, pruneAgentChatTurns } from "./prune";
+import { pruneExpiredCustomerSessions } from "./customer-auth";
 import { runExportBuilds, pruneExportJobs } from "./exports/async-job";
 import { runCycleCounts, scanLowStockMail } from "./inventory-jobs";
 import { issueBirthdayVouchers } from "./loyalty-birthday";
@@ -30,6 +31,7 @@ export const JOB_KINDS = {
   "prune.shopper_notifications": pruneShopperNotifications,
   "prune.customer_memories": pruneCustomerMemories,
   "prune.agent_chat_turns": pruneAgentChatTurns,
+  "prune.customer_sessions": pruneExpiredCustomerSessions,
   "misa.export": runDailyMisaExport,
   "billing.suspend_overdue": suspendOverdueOrgs,
   "payments.refund_scan": scanRefundRequired,
@@ -153,7 +155,7 @@ export async function tickScheduler() {
  * expiry) get one slot per scheduler tick (5 min). Slot ids make both idempotent.
  * Called by the instrumentation interval; safe to call repeatedly.
  */
-const NIGHTLY: JobKind[] = ["replenishment.generate", "loss.scan", "partitions.rotate", "partitions.detach_old", "prune.audit_logs", "prune.webhook_deliveries", "prune.shopper_notifications", "prune.customer_memories", "prune.agent_chat_turns", "misa.export", "billing.suspend_overdue", "inventory.cycle_count", "inventory.low_stock_scan", "loyalty.birthday_rewards", "shopper.notify"];
+const NIGHTLY: JobKind[] = ["replenishment.generate", "loss.scan", "partitions.rotate", "partitions.detach_old", "prune.audit_logs", "prune.webhook_deliveries", "prune.shopper_notifications", "prune.customer_memories", "prune.agent_chat_turns", "prune.customer_sessions", "misa.export", "billing.suspend_overdue", "inventory.cycle_count", "inventory.low_stock_scan", "loyalty.birthday_rewards", "shopper.notify"];
 const FREQUENT: JobKind[] = ["order.expire_reservations", "einvoice.issue", "einvoice.poll", "webhook.deliver", "payments.refund_scan", "export.build"];
 const TICK_MS = 5 * 60_000;
 
