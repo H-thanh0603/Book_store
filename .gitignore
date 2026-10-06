@@ -14,6 +14,8 @@ bookstore/var/
 *.p12
 *.pfx
 *.sql
+# Prisma migrations are version-controlled SQL — never ignore those.
+!bookstore/prisma/migrations/**/*.sql
 *.dump
 credentials.json
 service-account*.json
