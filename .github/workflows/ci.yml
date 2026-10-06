@@ -21,13 +21,17 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          # Matches bookstore/.nvmrc and the engines range in package.json.
+          node-version: 26
           cache: npm
           cache-dependency-path: bookstore/package-lock.json
       - run: npm ci
       - name: Generate Next route types (LayoutProps etc. live in .next/types)
         run: npx next typegen
       - run: npm run lint
+      # Dead-code ratchet (--max-issues, see bookstore/docs/KNIP_BACKLOG.md):
+      # new unused exports/files/deps fail CI until the count is lowered.
+      - run: npm run knip
       - run: npx tsc --noEmit
       - run: npm run test:unit
       - run: npm run test:coverage

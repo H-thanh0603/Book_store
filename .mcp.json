@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "postgres-readonly": {
+      "command": "bash",
+      "args": ["bookstore/scripts/ops/mcp-postgres.sh"]
+    }
+  }
+}
