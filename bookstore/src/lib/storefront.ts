@@ -686,7 +686,7 @@ export async function checkoutStorefrontOrder(
         address: address ?? undefined,
         phone: phone ?? undefined,
       };
-      const msg = orderConfirmationEmail(emailData);
+      const msg = await orderConfirmationEmail(emailData);
       sendMail({ to: email, ...msg }).catch(() => {});
     }
 

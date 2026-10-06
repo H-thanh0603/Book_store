@@ -17,14 +17,14 @@ describe('orderConfirmationEmail', () => {
     phone: '0901234567',
   }
 
-  it('generates correct subject', () => {
-    const result = orderConfirmationEmail(testData)
+  it('generates correct subject', async () => {
+    const result = await orderConfirmationEmail(testData)
     expect(result.subject).toContain('ORD-2026-000001')
     expect(result.subject).toContain('Melio Bookstore')
   })
 
-  it('generates text version with all details', () => {
-    const result = orderConfirmationEmail(testData)
+  it('generates text version with all details', async () => {
+    const result = await orderConfirmationEmail(testData)
     expect(result.text).toContain('Nguyễn Văn A')
     expect(result.text).toContain('ORD-2026-000001')
     expect(result.text).toContain('Atomic Habits')
@@ -33,9 +33,9 @@ describe('orderConfirmationEmail', () => {
     expect(result.text).toContain('123 Nguyễn Huệ')
   })
 
-  it('generates HTML version', () => {
-    const result = orderConfirmationEmail(testData)
-    expect(result.html).toContain('<!DOCTYPE html>')
+  it('generates HTML version', async () => {
+    const result = await orderConfirmationEmail(testData)
+    expect(result.html).toContain('<!DOCTYPE html')
     expect(result.html).toContain('Melio Bookstore')
     expect(result.html).toContain('Đặt hàng thành công!')
     expect(result.html).toContain('ORD-2026-000001')
@@ -43,17 +43,17 @@ describe('orderConfirmationEmail', () => {
     expect(result.html).toContain('305.000')
   })
 
-  it('shows pickup fulfillment correctly', () => {
+  it('shows pickup fulfillment correctly', async () => {
     const pickupData = { ...testData, fulfillment: 'pickup', address: undefined }
-    const result = orderConfirmationEmail(pickupData)
+    const result = await orderConfirmationEmail(pickupData)
     expect(result.text).toContain('Nhận tại cửa hàng')
     expect(result.html).toContain('Nhận tại cửa hàng')
     expect(result.text).not.toContain('Địa chỉ:')
   })
 
-  it('hides discount when zero', () => {
+  it('hides discount when zero', async () => {
     const noDiscount = { ...testData, discountTotal: 0 }
-    const result = orderConfirmationEmail(noDiscount)
+    const result = await orderConfirmationEmail(noDiscount)
     expect(result.text).toContain('Giảm giá: 0 ₫')
     expect(result.html).not.toContain('Giảm giá')
   })
@@ -68,15 +68,15 @@ describe('lowStockAlertEmail', () => {
     storeName: 'Melio Bookstore - Q1',
   }
 
-  it('generates alert subject', () => {
-    const result = lowStockAlertEmail(testData)
+  it('generates alert subject', async () => {
+    const result = await lowStockAlertEmail(testData)
     expect(result.subject).toContain('Cảnh báo tồn thấp')
     expect(result.subject).toContain('Atomic Habits')
     expect(result.subject).toContain('BOOK-ATOMIC-001')
   })
 
-  it('generates text with stock info', () => {
-    const result = lowStockAlertEmail(testData)
+  it('generates text with stock info', async () => {
+    const result = await lowStockAlertEmail(testData)
     expect(result.text).toContain('Atomic Habits')
     expect(result.text).toContain('BOOK-ATOMIC-001')
     expect(result.text).toContain('3')
@@ -84,8 +84,8 @@ describe('lowStockAlertEmail', () => {
     expect(result.text).toContain('Melio Bookstore - Q1')
   })
 
-  it('generates HTML with warning styling', () => {
-    const result = lowStockAlertEmail(testData)
+  it('generates HTML with warning styling', async () => {
+    const result = await lowStockAlertEmail(testData)
     expect(result.html).toContain('Cảnh báo tồn kho thấp')
     expect(result.html).toContain('#dc2626') // red color for low stock
     expect(result.html).toContain('BOOK-ATOMIC-001')
