@@ -21,6 +21,7 @@
 // { users: 1 }) before creating the seat.
 
 import { prisma } from "./db";
+import { orgFeatureOverride } from "./feature-flags";
 import type { AuthContext } from "./auth";
 
 function limitError(limit: string, current: number, max: number, planCode: string): never {
@@ -36,6 +37,13 @@ function featureError(feature: string, planCode: string): never {
   throw Object.assign(
     new Error(`Gói ${planCode} không bao gồm tính năng "${feature}". Nâng cấp gói để sử dụng.`),
     { status: 403, code: "PLAN_LIMIT" }
+  );
+}
+
+function flagError(feature: string): never {
+  throw Object.assign(
+    new Error(`Tính năng "${feature}" hiện đang bị tắt cho tổ chức của bạn.`),
+    { status: 403, code: "FEATURE_DISABLED" }
   );
 }
 
@@ -100,8 +108,13 @@ export async function assertWithinPlanLimits(auth: AuthContext, increment: PlanL
  * Assert a boolean plan feature (features JSON: { webhooks: true, ... }).
  * Unknown/missing features default to allowed — plans opt OUT of things,
  * they don't have to enumerate everything they include.
+ * An explicit per-org OrgFeatureFlag row overrides the plan in both
+ * directions (pilot enable / kill-switch) — see feature-flags.ts.
  */
 export async function assertPlanFeature(auth: AuthContext, feature: string): Promise<void> {
+  const override = await orgFeatureOverride(auth.orgId, feature);
+  if (override === false) flagError(feature);
+  if (override === true) return;
   const plan = await loadPlan(auth.orgId);
   if (!plan) return;
   const features = (plan.features ?? {}) as Record<string, unknown>;
@@ -120,9 +133,12 @@ function featureNumber(features: unknown, key: string, fallback: number): number
  * so they can't use assertPlanFeature(auth). Returns false when the org's plan
  * excludes the feature — the caller must skip quietly (log, never throw:
  * billing gates must not break paid sales). Orgs without a subscription are
- * unlimited, same rule as the request path.
+ * unlimited, same rule as the request path. Per-org flag overrides apply
+ * here too, identically to the request path.
  */
 export async function planHasFeature(orgId: string | null | undefined, feature: string): Promise<boolean> {
+  const override = await orgFeatureOverride(orgId, feature);
+  if (override !== null) return override;
   const plan = await loadPlan(orgId);
   if (!plan) return true;
   const features = (plan.features ?? {}) as Record<string, unknown>;

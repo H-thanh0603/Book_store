@@ -39,6 +39,23 @@ model Organization {
   shopperNotifications ShopperNotification[]
   agentFeedback AgentFeedback[]
   agentChatTurns AgentChatTurn[]
+  featureFlags OrgFeatureFlag[]
+}
+
+// Runtime, per-org feature toggles (pattern: twentyhq/twenty workspace flags).
+// An explicit row overrides the org's plan default in BOTH directions: enable
+// a plan-excluded feature for a pilot org, or kill-switch a feature without a
+// deploy. No row -> the plan decides (see src/lib/feature-flags.ts).
+model OrgFeatureFlag {
+  id        String       @id @default(uuid())
+  orgId     String
+  feature   String       // matches the plan features JSON keys, e.g. "webhooks"
+  enabled   Boolean
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, feature])
 }
 
 enum OrgStatus {

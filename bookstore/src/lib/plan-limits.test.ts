@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockPrisma = vi.hoisted(() => ({
+  // Default null = no per-org override; override-path tests live in
+  // feature-flags.test.ts.
+  orgFeatureFlag: { findUnique: vi.fn().mockResolvedValue(null) },
   subscription: { findUnique: vi.fn() },
   store: { count: vi.fn() },
   user: { count: vi.fn() },
