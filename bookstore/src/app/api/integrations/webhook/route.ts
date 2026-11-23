@@ -5,29 +5,49 @@ import { apiError, fail, ok } from "@/lib/api";
 import { createReservedOrder, type CreateOrderInput } from "@/lib/orders";
 import { claimIntegrationJob } from "@/lib/integration-jobs";
 import { openSecret } from "@/lib/secret-box";
+import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 
 /**
  * Agent 4: signed inbound webhook for marketplace connectors.
  * Auth = HMAC-SHA256 over the raw body with the provider's webhookSecret,
  * sent as `X-Signature: <hex>`. No session — providers cannot log in.
- * Idempotent per (provider, eventId) through IntegrationJob.idempotencyKey.
+ * Scoped per-org (optional ?orgId= or matched by HMAC across active providers
+ * with that name). Idempotent per (orgId, provider, eventId).
  */
 export async function POST(req: NextRequest) {
   try {
+    await enforceRateLimit("integration-webhook-ip", clientIp(req.headers), 120, 60_000);
     const providerName = req.nextUrl.searchParams.get("provider") ?? "";
+    const orgIdParam = req.nextUrl.searchParams.get("orgId") ?? undefined;
     const raw = await req.text();
-    const provider = await prisma.integrationProvider.findUnique({ where: { name: providerName } });
-    // One generic message before the signature verifies — distinct errors would
-    // let unauthenticated callers enumerate configured provider slugs.
-    if (!provider || !provider.active || !provider.webhookSecret) fail(401, "VALIDATION", "Authentication failed");
-
-    const expected = createHmac("sha256", openSecret(provider.webhookSecret)).update(raw).digest("hex");
     const got = req.headers.get("x-signature") ?? "";
-    const a = Buffer.from(expected), b = Buffer.from(got);
-    if (a.length !== b.length || !timingSafeEqual(a, b))
-      fail(401, "VALIDATION", "Authentication failed");
+    if (!providerName || !got) fail(401, "VALIDATION", "Authentication failed");
 
-    const body = JSON.parse(raw) as { eventId?: string; event?: string; data?: unknown };
+    const candidates = await prisma.integrationProvider.findMany({
+      where: {
+        name: providerName,
+        active: true,
+        webhookSecret: { not: null },
+        ...(orgIdParam ? { orgId: orgIdParam } : {}),
+      },
+    });
+    const gotBuf = Buffer.from(got);
+    const provider = candidates.find((p) => {
+      if (!p.webhookSecret) return false;
+      const expected = createHmac("sha256", openSecret(p.webhookSecret)).update(raw).digest("hex");
+      const expBuf = Buffer.from(expected);
+      return expBuf.length === gotBuf.length && timingSafeEqual(expBuf, gotBuf);
+    });
+    // One generic message before the signature verifies — distinct errors would
+    // let unauthenticated callers enumerate configured provider slugs or orgIds.
+    if (!provider) fail(401, "VALIDATION", "Authentication failed");
+
+    let body: { eventId?: string; event?: string; data?: unknown };
+    try {
+      body = JSON.parse(raw) as { eventId?: string; event?: string; data?: unknown };
+    } catch {
+      fail(400, "VALIDATION", "Invalid JSON payload");
+    }
     if (typeof body.eventId !== "string" || typeof body.event !== "string" || !body.data)
       fail(400, "VALIDATION", "eventId, event and data required");
 
@@ -37,9 +57,10 @@ export async function POST(req: NextRequest) {
       : body.eventId;
     if (!externalId) fail(400, "VALIDATION", "order.created requires data.externalId");
     const idempotencyKey = body.event === "order.created"
-      ? `${provider.name}:marketplace-order:${externalId}`
-      : `${provider.name}:webhook:${body.eventId}`;
+      ? `${provider.orgId}:${provider.name}:marketplace-order:${externalId}`
+      : `${provider.orgId}:${provider.name}:webhook:${body.eventId}`;
     const { job, claimed } = await claimIntegrationJob({
+      orgId: provider.orgId,
       provider: provider.name, kind: `WEBHOOK_${body.event.toUpperCase()}`,
       externalId, idempotencyKey, payload: body.data as object,
     });

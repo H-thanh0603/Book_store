@@ -56,6 +56,7 @@ const nextConfig: NextConfig = {
         // CSP; this rule only loosens directives for the bookshelf surface.
         source: "/bookshelf(.*)",
         headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
           {
             key: "Content-Security-Policy",
             value: [

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission } from "@/lib/auth";
+import { requirePlatformAdmin } from "@/lib/auth";
 import { apiError, fail, ok } from "@/lib/api";
 import { JOB_KINDS, runJob, tickScheduler, type JobKind } from "@/lib/jobs";
 import { JobStatus } from "@/generated/prisma/client";
@@ -8,7 +8,7 @@ import { JobStatus } from "@/generated/prisma/client";
 // GET /api/jobs?status=&kind= — scheduled-work visibility (Agent 4 deliverable 1).
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission("admin.config");
+    await requirePlatformAdmin();
     const status = req.nextUrl.searchParams.get("status");
     const kind = req.nextUrl.searchParams.get("kind");
     const runs = await prisma.jobRun.findMany({
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 // POST /api/jobs { action:"run", kind } | { action:"retry", runId } | { action:"tick" }
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requirePermission("admin.config");
+    const auth = await requirePlatformAdmin();
     const body = await req.json();
     if (body.action === "run") {
       if (!(body.kind in JOB_KINDS)) fail(400, "VALIDATION", `kind must be one of ${Object.keys(JOB_KINDS).join(", ")}`);

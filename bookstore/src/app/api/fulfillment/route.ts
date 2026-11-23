@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma, TX_OPTIONS } from "@/lib/db";
 import { requirePermission, assertStoreAccess, audit } from "@/lib/auth";
+import { requireOrgId } from "@/lib/org-scope";
 import { apiError, fail, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { MovementType, type OrderStatus } from "@/generated/prisma/client";
@@ -10,6 +11,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const auth = await requirePermission("inventory.adjust");
+    const orgId = requireOrgId(auth);
     if (!body.orderId) fail(400, "VALIDATION", "orderId required");
 
     // R1: book a carrier shipment via provider API (GHTK / ViettelPost).
@@ -27,10 +29,13 @@ export async function POST(req: NextRequest) {
           shipment: true,
           items: true,
           webPayments: { select: { status: true } },
-          store: { select: { name: true, region: { select: { orgId: true } } } },
+          customer: { select: { orgId: true } },
+          store: { select: { name: true, orgId: true } },
         },
       });
       if (!order) fail(404, "NOT_FOUND", "Order not found");
+      if ((order.store?.orgId ?? order.customer.orgId) !== orgId)
+        fail(403, "FORBIDDEN", "Order belongs to another organization");
       assertStoreAccess(auth, order.storeId, "inventory.adjust");
       if (order.type === "pickup") fail(409, "INVALID_STATUS_TRANSITION", "Pickup orders need no carrier");
       if (!order.shipment) fail(400, "VALIDATION", "Ship the order first (creates the recipient address)");
@@ -56,8 +61,13 @@ export async function POST(req: NextRequest) {
 
     if (body.action === "deliver") {
       const order = await prisma.$transaction(async (tx) => {
-        const current = await tx.order.findUnique({ where: { id: body.orderId }, include: { shipment: true } });
+        const current = await tx.order.findUnique({
+          where: { id: body.orderId },
+          include: { shipment: true, store: { select: { orgId: true } }, customer: { select: { orgId: true } } },
+        });
         if (!current) fail(404, "NOT_FOUND", "Order not found");
+        if ((current.store?.orgId ?? current.customer.orgId) !== orgId)
+          fail(403, "FORBIDDEN", "Order belongs to another organization");
         assertStoreAccess(auth, current.storeId, "inventory.adjust");
         // Delivery is only valid from SHIPPED (or pickup READY flow).
         if (!["SHIPPED", "READY"].includes(current.status))
@@ -80,8 +90,13 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({ where: { id: body.orderId }, include: { items: true } });
+      const order = await tx.order.findUnique({
+        where: { id: body.orderId },
+        include: { items: true, store: { select: { orgId: true } }, customer: { select: { orgId: true } } },
+      });
       if (!order) fail(404, "NOT_FOUND", "Order not found");
+      if ((order.store?.orgId ?? order.customer.orgId) !== orgId)
+        fail(403, "FORBIDDEN", "Order belongs to another organization");
       assertStoreAccess(auth, order.storeId, "inventory.adjust");
 
       if (body.action === "cancel") {

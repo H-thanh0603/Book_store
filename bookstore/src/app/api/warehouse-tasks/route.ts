@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma, TX_OPTIONS } from "@/lib/db";
-import { assertStoreAccess, requirePermission } from "@/lib/auth";
+import { assertStoreAccess, requirePermission, resolveStoreScope } from "@/lib/auth";
+import { requireOrgId } from "@/lib/org-scope";
 import { apiError, fail, nextBusinessNumber, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { WarehouseTaskStatus, WarehouseTaskType } from "@/generated/prisma/client";
@@ -14,11 +15,22 @@ export async function GET(req: NextRequest) {
   try {
     const storeId = req.nextUrl.searchParams.get("storeId") ?? undefined;
     const auth = await requirePermission("inventory.view", storeId);
-    const hasGlobalScope = auth.roles.some((role) => role.permissions.includes("inventory.view") && role.storeId === null);
-    const scopedStoreIds = auth.roles.filter((role) => role.permissions.includes("inventory.view") && role.storeId).map((role) => role.storeId!);
-    const locationScope = storeId ? { storeId } : hasGlobalScope ? undefined : { storeId: { in: scopedStoreIds } };
+    const orgId = requireOrgId(auth);
+    const scope = resolveStoreScope(auth, storeId, "inventory.view") ?? [];
     const tasks = await prisma.warehouseTask.findMany({
-      where: { location: locationScope },
+      where: {
+        location: {
+          OR: [
+            ...(scope.length > 0 ? [{ storeId: { in: scope } }] : []),
+            ...(storeId ? [] : [{ storeId: null }]),
+          ],
+        },
+        // Ensure warehouse (storeId: null) tasks only surface if their items belong to caller's org.
+        OR: [
+          { location: { store: { orgId } } },
+          { items: { some: { variant: { orgId } } } },
+        ],
+      },
       include: {
         location: true,
         items: { include: { variant: { include: { product: true } } } }, // bin-level detail

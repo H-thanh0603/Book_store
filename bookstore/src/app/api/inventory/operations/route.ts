@@ -3,6 +3,7 @@
 import { NextRequest } from "next/server";
 import { prisma, TX_OPTIONS } from "@/lib/db";
 import { assertStoreAccess, requirePermission, resolveStoreScope } from "@/lib/auth";
+import { requireOrgId } from "@/lib/org-scope";
 import { apiError, ok, fail, nextBusinessNumber } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { MovementType, Prisma } from "@/generated/prisma/client";
@@ -10,18 +11,19 @@ import { MovementType, Prisma } from "@/generated/prisma/client";
 // GET /api/inventory/operations?view=movements|low-stock|aging&locationId=&variantId=&days=
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission("inventory.view");
+    const auth = await requirePermission("inventory.view");
+    const orgId = requireOrgId(auth);
     const sp = req.nextUrl.searchParams;
     const view = sp.get("view") ?? "movements";
     const locationId = sp.get("locationId") ?? undefined;
     const variantId = sp.get("variantId") ?? undefined;
-    // Store-scoped roles only see balances/movements in their own stores.
-    const scope = await resolveStoreScope(await requirePermission("inventory.view"), sp.get("storeId"), "inventory.view");
-    const locationWhere = { ...(locationId ? { id: locationId } : {}), ...(scope ? { storeId: { in: scope } } : {}) };
+    // Always bounded to caller's org stores (even for unscoped roles).
+    const scope = resolveStoreScope(auth, sp.get("storeId"), "inventory.view") ?? [];
+    const locationWhere = { ...(locationId ? { id: locationId } : {}), ...(scope.length > 0 ? { storeId: { in: scope } } : { storeId: { in: [] as string[] } }) };
 
     if (view === "movements") {
       const movements = await prisma.inventoryMovement.findMany({
-        where: { variantId, location: locationWhere },
+        where: { variantId, variant: { orgId }, location: locationWhere },
         include: { variant: { select: { sku: true, product: { select: { name: true } } } }, location: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
         take: 200,
@@ -30,10 +32,11 @@ export async function GET(req: NextRequest) {
     }
 
     if (view === "low-stock") {
+      if (scope.length === 0) return ok({ lowStock: [] });
       // P2-1: available/reorder-point used to compute in JS over every
       // balance in scope. CTE the 30d sales rate and filter/order in SQL.
       const since = new Date(Date.now() - 30 * 86400_000);
-      const storeFilter = scope ? Prisma.sql`AND l."storeId" IN (${Prisma.join(scope)})` : Prisma.empty;
+      const storeFilter = Prisma.sql`AND l."storeId" IN (${Prisma.join(scope)})`;
       const locFilter = locationId ? Prisma.sql`AND b."locationId" = ${locationId}` : Prisma.empty;
       const rows = await prisma.$queryRaw<{
         variantId: string; locationId: string; sku: string; product: string;
@@ -56,7 +59,7 @@ export async function GET(req: NextRequest) {
         JOIN "Product" pr ON pr.id = v."productId"
         JOIN "StockLocation" l ON l.id = b."locationId"
         LEFT JOIN sales s ON s."variantId" = b."variantId" AND s."locationId" = b."locationId"
-        WHERE v.active ${storeFilter} ${locFilter}
+        WHERE v.active AND pr."orgId" = ${orgId} ${storeFilter} ${locFilter}
           AND (b."onHand" - b.reserved) <= CEIL(COALESCE(s.daily, 0) * 7 * 1.2)
           AND (COALESCE(s.daily, 0) > 0 OR (b."onHand" - b.reserved) <= 5)
         ORDER BY ((b."onHand" - b.reserved) - CEIL(COALESCE(s.daily, 0) * 7 * 1.2)) ASC
@@ -65,10 +68,11 @@ export async function GET(req: NextRequest) {
     }
 
     if (view === "aging") {
+      if (scope.length === 0) return ok({ aging: [] });
       // P2-1: same treatment — last-outbound lookup + sort/slice in SQL.
       const lookbackDays = Math.min(Math.max(Number(sp.get("days")) || 180, 30), 365);
       const windowStart = new Date(Date.now() - lookbackDays * 86_400_000);
-      const storeFilter = scope ? Prisma.sql`AND l."storeId" IN (${Prisma.join(scope)})` : Prisma.empty;
+      const storeFilter = Prisma.sql`AND l."storeId" IN (${Prisma.join(scope)})`;
       const locFilter = locationId ? Prisma.sql`AND b."locationId" = ${locationId}` : Prisma.empty;
       const varFilter = variantId ? Prisma.sql`AND b."variantId" = ${variantId}` : Prisma.empty;
       const rows = await prisma.$queryRaw<{
@@ -89,7 +93,7 @@ export async function GET(req: NextRequest) {
         JOIN "Product" pr ON pr.id = v."productId"
         JOIN "StockLocation" l ON l.id = b."locationId"
         LEFT JOIN last_out o ON o."variantId" = b."variantId" AND o."locationId" = b."locationId"
-        WHERE b."onHand" > 0 ${storeFilter} ${locFilter} ${varFilter}
+        WHERE b."onHand" > 0 AND pr."orgId" = ${orgId} ${storeFilter} ${locFilter} ${varFilter}
         ORDER BY o.last_out NULLS FIRST
         LIMIT 100`;
       return ok({ aging: rows.map((r) => ({ ...r, daysSinceMovement: r.lastOutboundAt ? r.daysSinceMovement : null })) });
@@ -109,6 +113,7 @@ export async function POST(req: NextRequest) {
 
     if (body.action === "create" || body.action === "submit" || body.action === "direct") {
       const auth = await requirePermission("inventory.adjust");
+      const orgId = requireOrgId(auth);
       if (!body.locationId || !Array.isArray(body.items) || body.items.length === 0)
         fail(400, "VALIDATION", "locationId and items required");
       const ids: string[] = body.items.map((i: { variantId: string }) => i.variantId);
@@ -117,6 +122,8 @@ export async function POST(req: NextRequest) {
         if (!item.variantId || !Number.isInteger(item.countedQty) || item.countedQty < 0)
           fail(400, "VALIDATION", "each item needs variantId and non-negative integer countedQty");
       }
+      const ownedCount = await prisma.productVariant.count({ where: { id: { in: ids }, orgId } });
+      if (ownedCount !== ids.length) fail(403, "FORBIDDEN", "One or more variants belong to another organization");
       const location = await prisma.stockLocation.findUnique({ where: { id: body.locationId } });
       if (!location) fail(404, "NOT_FOUND", "Inventory location not found");
       assertStoreAccess(auth, location.storeId, "inventory.adjust");

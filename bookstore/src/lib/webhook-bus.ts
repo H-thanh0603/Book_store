@@ -18,7 +18,7 @@
 
 import { prisma } from "./db";
 import { hmacSign } from "./einvoice";
-import { assertSafeWebhookTarget } from "./ssrf";
+import { assertSafeWebhookTarget, pinnedWebhookPost } from "./ssrf";
 import { randomUUID } from "crypto";
 
 const BATCH_SIZE = 25;
@@ -154,15 +154,10 @@ async function deliverOne(row: WebhookDeliveryRow): Promise<Outcome> {
   let status: number | null = null;
   let error: string | null = null;
   try {
-    // SEC-006: re-check the resolved IP right before fetching — endpoints
-    // created before the URL guard (or DNS rebinds) must not reach internal
-    // targets from the worker. Treated as a normal failed attempt so the
-    // row follows the usual retry/dead-letter path.
-    await assertSafeWebhookTarget(row.endpoint.url);
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
-    const res = await fetch(row.endpoint.url, {
-      method: "POST",
+    // SEC-006: resolve + validate every IP once, pin the connection to the
+    // validated IP (anti-DNS-rebinding), and reject all HTTP redirects.
+    const pinned = await assertSafeWebhookTarget(row.endpoint.url);
+    const res = await pinnedWebhookPost(row.endpoint.url, pinned, {
       headers: {
         "content-type": "application/json",
         "x-melio-event-id": row.eventId,
@@ -170,9 +165,8 @@ async function deliverOne(row: WebhookDeliveryRow): Promise<Outcome> {
         "x-melio-signature": sigHeader,
       },
       body,
-      signal: ctrl.signal,
+      timeoutMs: REQUEST_TIMEOUT_MS,
     });
-    clearTimeout(t);
     status = res.status;
     if (!res.ok) error = `HTTP ${res.status}`;
   } catch (e) {

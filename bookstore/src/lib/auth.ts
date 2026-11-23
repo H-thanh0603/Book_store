@@ -86,6 +86,7 @@ export type AuthContext = {
   userId: string;
   email: string;
   orgId: string | null;
+  orgStoreIds?: string[];
   orgStatus: "TRIAL" | "ACTIVE" | "PAST_DUE" | "SUSPENDED" | "CANCELLED" | null;
   trialEndsAt: Date | null;
   roles: { role: string; storeId: string | null; permissions: string[] }[];
@@ -100,7 +101,7 @@ export async function getAuth(): Promise<AuthContext | null> {
     include: {
       user: {
         include: {
-          org: true,
+          org: { include: { stores: { select: { id: true } } } },
           roles: {
             include: { role: { include: { permissions: { include: { permission: true } } } } },
           },
@@ -113,6 +114,7 @@ export async function getAuth(): Promise<AuthContext | null> {
     userId: session.user.id,
     email: session.user.email,
     orgId: session.user.orgId,
+    orgStoreIds: session.user.org?.stores.map((s) => s.id) ?? [],
     orgStatus: session.user.org?.status ?? null,
     trialEndsAt: session.user.org?.trialEndsAt ?? null,
     roles: session.user.roles.map((ur) => ({
@@ -149,6 +151,20 @@ export async function requirePermission(
   const auth = await getAuth();
   if (!auth) throw Object.assign(new Error("Unauthorized"), { status: 401 });
   if (!opts?.allowSuspended) assertOrgUsable(auth);
+  // Cross-tenant boundary: if a specific storeId is targeted, it MUST belong
+  // to the caller's own organization — even for unscoped (storeId === null) roles.
+  if (typeof storeId === "string" && storeId.length > 0 && auth.orgId) {
+    const orgStores = auth.orgStoreIds ?? [];
+    if (!orgStores.includes(storeId)) {
+      const owned = await prisma.store.findFirst({
+        where: { id: storeId, orgId: auth.orgId },
+        select: { id: true },
+      });
+      if (!owned)
+        throw Object.assign(new Error(`Forbidden: store ${storeId} outside organization`), { status: 403 });
+      auth.orgStoreIds = [...orgStores, storeId];
+    }
+  }
   const allowed = auth.roles.some(
     (r) =>
       r.permissions.includes(code) &&
@@ -162,13 +178,32 @@ export async function requirePermission(
 }
 
 /**
+ * Platform-level super-admin gate for global operational endpoints (/api/jobs,
+ * /api/metrics). Tenant owners/admins must NEVER access global job ledgers or
+ * cross-tenant error telemetry.
+ * Authorized via PLATFORM_ADMIN_EMAILS (comma-separated) or `platform.admin` permission.
+ */
+export async function requirePlatformAdmin(): Promise<AuthContext> {
+  const auth = await getAuth();
+  if (!auth) throw Object.assign(new Error("Unauthorized"), { status: 401 });
+  const allowedEmails = (process.env.PLATFORM_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const byEmail = allowedEmails.includes(auth.email.toLowerCase());
+  const byPerm = auth.roles.some((r) => r.permissions.includes("platform.admin"));
+  if (!byEmail && !byPerm)
+    throw Object.assign(new Error("Forbidden: platform admin required"), { status: 403 });
+  return auth;
+}
+
+/**
  * Central store-scoping for list/query filters (deliverable 1).
  * Returns the storeIds the caller may see:
- *  - null            → unscoped role, no filter (all stores)
- *  - string[]        → clamp to these stores
- * A store-scoped role requesting another store — or an unscoped request that
- * can't be satisfied — gets 403. Omitted storeId is clamped to the caller's
- * own stores, never widened to "all".
+ *  - string[]        → clamp to these stores (always bounded to auth.orgId when orgId is set)
+ *  - null            → only when auth.orgId is null and orgStoreIds is omitted (legacy unit tests)
+ * A store-scoped role requesting another store — or an unscoped role requesting
+ * a store outside auth.orgId — gets 403.
  */
 export function resolveStoreScope(
   auth: AuthContext,
@@ -179,8 +214,24 @@ export function resolveStoreScope(
     ? auth.roles.filter((r) => r.permissions.includes(permission))
     : auth.roles;
   const unscoped = relevant.some((r) => r.storeId === null);
-  if (unscoped) return requestedStoreId ? [requestedStoreId] : null;
-  const mine = [...new Set(relevant.map((r) => r.storeId).filter((s): s is string => !!s))];
+  if (unscoped) {
+    if (auth.orgId || auth.orgStoreIds !== undefined) {
+      const orgStores = auth.orgStoreIds ?? [];
+      if (requestedStoreId) {
+        if (!orgStores.includes(requestedStoreId))
+          throw Object.assign(new Error(`Forbidden: store ${requestedStoreId}`), { status: 403 });
+        return [requestedStoreId];
+      }
+      return orgStores;
+    }
+    return requestedStoreId ? [requestedStoreId] : null;
+  }
+  const orgStores = auth.orgStoreIds ? new Set(auth.orgStoreIds) : null;
+  const mine = [...new Set(
+    relevant
+      .map((r) => r.storeId)
+      .filter((s): s is string => !!s && (!orgStores || orgStores.has(s)))
+  )];
   if (mine.length === 0)
     throw Object.assign(new Error("Forbidden: no store scope"), { status: 403 });
   if (requestedStoreId) {
@@ -200,9 +251,19 @@ export function assertStoreAccess(
   dataStoreId: string | null | undefined,
   permission?: string
 ) {
+  if (!dataStoreId) {
+    // Org-wide / warehouse resource (storeId === null): only unscoped roles pass.
+    // Callers MUST still verify orgId ownership on the target record.
+    const relevant = permission
+      ? auth.roles.filter((r) => r.permissions.includes(permission))
+      : auth.roles;
+    if (!relevant.some((r) => r.storeId === null))
+      throw Object.assign(new Error("Forbidden: store scope"), { status: 403 });
+    return;
+  }
   const scope = resolveStoreScope(auth, dataStoreId, permission);
   if (scope === null) return;
-  if (!dataStoreId || !scope.includes(dataStoreId))
+  if (!scope.includes(dataStoreId))
     throw Object.assign(new Error("Forbidden: store scope"), { status: 403 });
 }
 

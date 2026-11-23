@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma, TX_OPTIONS } from "@/lib/db";
 import { requirePermission, assertStoreAccess, audit } from "@/lib/auth";
+import { requireOrgId } from "@/lib/org-scope";
 import { apiError, fail, nextBusinessNumber, ok } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 import { MovementType } from "@/generated/prisma/client";
@@ -10,6 +11,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const auth = await requirePermission("inventory.adjust");
+    const orgId = requireOrgId(auth);
 
     if (body.action === "create") {
       if (!body.orderId || !body.locationId || !Array.isArray(body.items) || body.items.length === 0)
@@ -18,20 +20,29 @@ export async function POST(req: NextRequest) {
       if (!location) fail(404, "NOT_FOUND", "Return location not found");
       await requirePermission("inventory.adjust", location.storeId);
       const result = await prisma.$transaction(async (tx) => {
-        const order = await tx.order.findUnique({ where: { id: body.orderId }, include: { items: true } });
+        const order = await tx.order.findUnique({
+          where: { id: body.orderId },
+          include: {
+            items: true,
+            store: { select: { orgId: true } },
+            customer: { select: { orgId: true } },
+          },
+        });
         if (!order) fail(404, "NOT_FOUND", "Order not found");
+        if ((order.store?.orgId ?? order.customer.orgId) !== orgId)
+          fail(403, "FORBIDDEN", "Order belongs to another organization");
         assertStoreAccess(auth, order.storeId, "inventory.adjust");
-        // Audit 2026-08-30 RET-001: a return on a CANCELLED order re-credited
-        // stock the reservation-expiry job had already released (creating
-        // inventory from nothing) and refunded money for goods never delivered.
-        if (order.status === "CANCELLED")
-          fail(400, "INVALID_STATUS_TRANSITION", "Cannot return items on a CANCELLED order");
+        // Only DELIVERED orders may be returned — prevents returning unfulfilled/unpaid
+        // (NEW, CONFIRMED, PAID, ALLOCATED, PICKING, PACKED, READY, SHIPPED, CANCELLED) orders.
+        if (order.status !== "DELIVERED")
+          fail(400, "INVALID_STATUS_TRANSITION", `Cannot return items on a ${order.status} order`);
         // Over-return race: two concurrent creates both read priorReturns
         // before either commits. Lock the order row so the loser waits,
         // then re-reads committed returns and fails the guard correctly.
         await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${order.id} FOR UPDATE`;
         // Cumulative over-return guard: total returned per order item (all returns,
-        // any status except REJECTED) can never exceed the ordered quantity.
+        // any status except REJECTED) plus earlier lines in THIS request can never
+        // exceed the ordered quantity.
         const priorReturned = new Map<string, number>();
         const priorReturns = await tx.return.findMany({
           where: { orderId: order.id, status: { not: "REJECTED" } },
@@ -47,6 +58,8 @@ export async function POST(req: NextRequest) {
           const already = item ? priorReturned.get(item.id) ?? 0 : 0;
           if (!item || already + input.quantity > item.quantity)
             fail(400, "VALIDATION", `Invalid returned order item quantity (ordered ${item?.quantity ?? 0}, already returned ${already})`);
+          // Accumulate within the same request so duplicate orderItemId entries cannot over-return.
+          priorReturned.set(item.id, already + input.quantity);
           const refundAmount = (item.unitPrice * BigInt(input.quantity)) - (item.discount * BigInt(input.quantity) / BigInt(item.quantity));
           return { orderItemId: item.id, variantId: item.variantId, quantity: input.quantity, disposition: input.disposition === "DAMAGED" ? "DAMAGED" : "RESTOCK", refundAmount };
         });
@@ -67,10 +80,14 @@ export async function POST(req: NextRequest) {
     if (!body.returnId) fail(400, "VALIDATION", "returnId required");
     if (body.action === "refund") {
       const ret = await prisma.$transaction(async (tx) => {
-        const current = await tx.return.findUnique({ where: { id: body.returnId } });
+        const current = await tx.return.findUnique({
+          where: { id: body.returnId },
+          include: { customer: { select: { orgId: true } }, location: { include: { store: { select: { orgId: true } } } } },
+        });
         if (!current) fail(404, "NOT_FOUND", "Return not found");
-        const loc = await tx.stockLocation.findUnique({ where: { id: current.locationId } });
-        assertStoreAccess(auth, loc?.storeId, "inventory.adjust");
+        const retOrgId = current.location.store?.orgId ?? current.customer?.orgId ?? null;
+        if (retOrgId !== orgId) fail(403, "FORBIDDEN", "Return belongs to another organization");
+        assertStoreAccess(auth, current.location.storeId, "inventory.adjust");
         // Only a RECEIVED return can be refunded, and only once.
         if (current.status !== "RECEIVED")
           fail(409, "INVALID_STATUS_TRANSITION", `Cannot refund a return in status ${current.status}`);
@@ -141,11 +158,15 @@ export async function POST(req: NextRequest) {
     if (body.action !== "receive") fail(400, "VALIDATION", "Unknown action");
 
     const ret = await prisma.$transaction(async (tx) => {
-      const current = await tx.return.findUnique({ where: { id: body.returnId }, include: { items: true } });
+      const current = await tx.return.findUnique({
+        where: { id: body.returnId },
+        include: { items: true, customer: { select: { orgId: true } }, location: { include: { store: { select: { orgId: true } } } } },
+      });
       if (!current) fail(404, "NOT_FOUND", "Return not found");
-      const location = await tx.stockLocation.findUnique({ where: { id: current.locationId } });
-      await requirePermission("inventory.adjust", location?.storeId ?? null);
-      assertStoreAccess(auth, location?.storeId, "inventory.adjust");
+      const retOrgId = current.location.store?.orgId ?? current.customer?.orgId ?? null;
+      if (retOrgId !== orgId) fail(403, "FORBIDDEN", "Return belongs to another organization");
+      await requirePermission("inventory.adjust", current.location.storeId);
+      assertStoreAccess(auth, current.location.storeId, "inventory.adjust");
       if (current.status !== "REQUESTED") fail(409, "INVALID_STATUS_TRANSITION", "Return was already processed");
       const claimed = await tx.return.updateMany({
         where: { id: current.id, status: "REQUESTED" },

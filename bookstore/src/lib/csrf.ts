@@ -11,22 +11,12 @@
 // fallback that loudly warns in production.
 
 function csrfSecret(): string {
-  const s =
-    process.env.CSRF_SECRET ??
-    process.env.INTEGRATION_ENCRYPTION_KEY ??
-    "dev-only-csrf-secret";
-  if (
-    process.env.NODE_ENV === "production" &&
-    !process.env.CSRF_SECRET &&
-    !process.env.INTEGRATION_ENCRYPTION_KEY
-  ) {
-    console.warn(
-      JSON.stringify({
-        level: "warn",
-        event: "csrf_secret_fallback",
-        message: "Set CSRF_SECRET in production — CSRF tokens use a dev fallback.",
-      })
-    );
+  const s = process.env.CSRF_SECRET ?? process.env.INTEGRATION_ENCRYPTION_KEY;
+  if (!s) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("CSRF_SECRET (or INTEGRATION_ENCRYPTION_KEY) must be set in production");
+    }
+    return "dev-only-csrf-secret";
   }
   return s;
 }

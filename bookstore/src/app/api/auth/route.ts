@@ -74,8 +74,11 @@ export async function POST(req: NextRequest) {
             expiresAt: new Date(Date.now() + 30 * 60_000),
           },
         });
-        const origin = process.env.APP_ORIGIN ?? new URL(req.url).origin;
-        const link = `${origin}/login?reset=${token}`;
+        const origin = process.env.APP_ORIGIN?.replace(/\/$/, "");
+        if (!origin && process.env.NODE_ENV === "production")
+          fail(500, "CONFIG_ERROR", "APP_ORIGIN must be configured in production");
+        const safeOrigin = origin || new URL(req.url).origin;
+        const link = `${safeOrigin}/login?reset=${token}`;
         const { sendMail } = await import("@/lib/mail");
         void sendMail({
           to: user.email,

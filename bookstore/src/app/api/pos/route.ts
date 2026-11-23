@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { PaymentMethod } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { assertStoreAccess, requirePermission } from "@/lib/auth";
+import { requireOrgId } from "@/lib/org-scope";
 import { apiError, ok, fail, toMoney } from "@/lib/api";
 import { completeSale, openShift, closeShift, refundSale, quoteSale } from "@/lib/pos";
 import { withCheckoutSlot } from "@/lib/throttle";
@@ -22,11 +23,21 @@ export async function PUT(req: NextRequest) {
         })
       : undefined;
     const auth = await requirePermission("pos.refund");
+    const orgId = requireOrgId(auth);
     const target = await prisma.posTransaction.findUnique({
-      where: { number: body.txNumber }, select: { storeId: true },
+      where: { number: body.txNumber },
+      select: { storeId: true, shift: { select: { terminal: { select: { store: { select: { orgId: true } } } } } } },
     });
     if (!target) fail(404, "NOT_FOUND", "Transaction not found");
+    if (target.shift.terminal.store.orgId !== orgId)
+      fail(403, "FORBIDDEN", "Transaction belongs to another organization");
     assertStoreAccess(auth, target.storeId, "pos.refund");
+    const refundShift = await prisma.posShift.findUnique({
+      where: { id: body.shiftId },
+      select: { terminal: { select: { storeId: true } } },
+    });
+    if (!refundShift || refundShift.terminal.storeId !== target.storeId)
+      fail(400, "VALIDATION", "Refund shift does not belong to transaction store");
     const refund = await refundSale(body.txNumber, body.shiftId, auth.userId, {
       storeId: target.storeId, reason: typeof body.reason === "string" ? body.reason : undefined,
       items,
@@ -80,8 +91,13 @@ export async function POST(req: NextRequest) {
     if (body.action === "quote") {
       // N1: price preview so the counter can apply a voucher and charge the
       // discounted total — the client never guesses totals (server is truth).
-      // requirePermission is awaited for its 401/403 side effect only.
-      await requirePermission("pos.sell", body.storeId ?? undefined);
+      if (!body.storeId) fail(400, "VALIDATION", "storeId required");
+      const auth = await requirePermission("pos.sell", body.storeId);
+      const orgId = requireOrgId(auth);
+      if (body.customerId) {
+        const cust = await prisma.customer.findFirst({ where: { id: body.customerId, orgId }, select: { id: true } });
+        if (!cust) fail(404, "NOT_FOUND", "Customer not found");
+      }
       if (!Array.isArray(body.items) || body.items.length === 0)
         fail(400, "VALIDATION", "items required");
       const q = await quoteSale({

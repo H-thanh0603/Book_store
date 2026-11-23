@@ -40,6 +40,9 @@ model Organization {
   agentFeedback AgentFeedback[]
   agentChatTurns AgentChatTurn[]
   featureFlags OrgFeatureFlag[]
+  integrationProviders IntegrationProvider[]
+  integrationJobs IntegrationJob[]
+  lossAlerts LossAlert[]
 }
 
 // Runtime, per-org feature toggles (pattern: twentyhq/twenty workspace flags).
@@ -1498,6 +1501,8 @@ enum IntegrationJobStatus {
 
 model IntegrationJob {
   id             String @id @default(uuid())
+  orgId          String
+  org            Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   provider       String
   kind           String
   externalId     String?
@@ -1509,14 +1514,16 @@ model IntegrationJob {
   error          String?
   createdAt      DateTime @default(now())
   completedAt    DateTime?
-  @@index([provider, status])
+  @@index([orgId, provider, status])
 }
 
 // Agent 4: connector registration — per-provider credentials, webhook signing
 // secret, and last-sync watermarks for catalog/stock/order reconciliation.
 model IntegrationProvider {
   id            String @id @default(uuid())
-  name          String @unique // shopee | lazada | maman | quickbooks...
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name          String // shopee | lazada | maman | quickbooks...
   kind          String // marketplace | accounting
   active        Boolean @default(true)
   credentials   Json? // API keys/tokens; never returned by GET
@@ -1525,6 +1532,8 @@ model IntegrationProvider {
   lastStockSyncAt   DateTime?
   lastOrderSyncAt   DateTime?
   createdAt     DateTime @default(now())
+  @@unique([orgId, name])
+  @@index([orgId])
 }
 
 enum WarehouseTaskType {
@@ -1633,6 +1642,8 @@ enum LossAlertStatus {
 
 model LossAlert {
   id          String @id @default(uuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   rule        String
   severity    String
   status      LossAlertStatus @default(OPEN)
@@ -1643,8 +1654,8 @@ model LossAlert {
   detectedAt  DateTime @default(now())
   reviewedAt  DateTime?
   reviewedBy  String?
-  @@unique([rule, entityType, entityId])
-  @@index([status, severity])
+  @@unique([orgId, rule, entityType, entityId])
+  @@index([orgId, status, severity])
 }
 
 // Per-org override of the SystemConfig thresholds. When the row exists

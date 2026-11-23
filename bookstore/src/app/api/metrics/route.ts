@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requirePermission } from "@/lib/auth";
+import { requirePlatformAdmin } from "@/lib/auth";
 import { apiError } from "@/lib/api";
 import { snapshotMerged } from "@/lib/metrics";
 import { prismaRead } from "@/lib/db";
@@ -15,7 +15,7 @@ import { prismaRead } from "@/lib/db";
  */
 export async function GET() {
   try {
-    await requirePermission("admin.config");
+    await requirePlatformAdmin();
     const metrics = await snapshotMerged();
 
     const failedRuns = await prismaRead.jobRun.findMany({

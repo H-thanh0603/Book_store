@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission } from "@/lib/auth";
+import { assertStoreAccess, requirePermission } from "@/lib/auth";
+import { requireOrgId } from "@/lib/org-scope";
 import { apiError, fail, ok } from "@/lib/api";
 import { createReservedOrder, type CreateOrderInput } from "@/lib/orders";
 import { claimIntegrationJob } from "@/lib/integration-jobs";
@@ -15,10 +16,12 @@ function providerName(value: unknown) {
 
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission("admin.config");
+    const auth = await requirePermission("admin.config");
+    const orgId = requireOrgId(auth);
     if (req.nextUrl.searchParams.get("resource") === "providers") {
       // Credentials and webhook secrets are write-only — never returned.
       const providers = await prisma.integrationProvider.findMany({
+        where: { orgId },
         select: { id: true, name: true, kind: true, active: true, lastCatalogSyncAt: true, lastStockSyncAt: true, lastOrderSyncAt: true, createdAt: true },
       });
       return ok({ providers });
@@ -28,7 +31,7 @@ export async function GET(req: NextRequest) {
     const status = requestedStatus && Object.values(IntegrationJobStatus).includes(requestedStatus as IntegrationJobStatus)
       ? requestedStatus as IntegrationJobStatus : undefined;
     const jobs = await prisma.integrationJob.findMany({
-      where: { provider, status }, orderBy: { createdAt: "desc" }, take: 200,
+      where: { orgId, provider, status }, orderBy: { createdAt: "desc" }, take: 200,
     });
     return ok({ jobs });
   } catch (err) {
@@ -39,19 +42,20 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const auth = await requirePermission("admin.config");
+    const orgId = requireOrgId(auth);
     const body = await req.json();
     const provider = providerName(body.provider);
 
-    // Connector registration: upsert credentials + webhook secret (Agent 4).
+    // Connector registration: upsert credentials + webhook secret scoped to orgId.
     if (body.action === "register_provider") {
       if (!["marketplace", "accounting"].includes(body.kind))
         fail(400, "VALIDATION", "kind must be marketplace or accounting");
       if (body.webhookSecret !== undefined && (typeof body.webhookSecret !== "string" || body.webhookSecret.length < 16))
         fail(400, "VALIDATION", "webhookSecret must be at least 16 characters");
       const saved = await prisma.integrationProvider.upsert({
-        where: { name: provider },
+        where: { orgId_name: { orgId, name: provider } },
         create: {
-          name: provider, kind: body.kind,
+          orgId, name: provider, kind: body.kind,
           credentials: body.credentials === undefined ? undefined : sealJson(body.credentials),
           webhookSecret: body.webhookSecret === undefined ? null : sealSecret(body.webhookSecret),
         },
@@ -70,8 +74,7 @@ export async function POST(req: NextRequest) {
       fail(501, "NOT_IMPLEMENTED", "Outbound sync is disabled until a connector worker is configured");
     }
 
-    // Reconciliation: compare local vs external order ids for the window; report
-    // missing either way. Read-only — mismatches become IntegrationJobs by hand.
+    // Reconciliation: compare local vs external order ids for the caller's org only.
     if (body.action === "reconcile") {
       const start = body.startAt ? new Date(body.startAt) : new Date(Date.now() - 86_400_000);
       const end = body.endAt ? new Date(body.endAt) : new Date();
@@ -83,15 +86,17 @@ export async function POST(req: NextRequest) {
       if (externalIds.length === 0)
         fail(400, "VALIDATION", "externalOrderIds (non-empty string array) required for reconcile");
       const localOrders = await prisma.order.findMany({
-        where: { channel: "MARKETPLACE", createdAt: { gte: start, lt: end } },
+        where: {
+          channel: "MARKETPLACE",
+          createdAt: { gte: start, lt: end },
+          OR: [{ store: { orgId } }, { storeId: null, customer: { orgId } }],
+        },
         select: { id: true, number: true, externalId: true },
       });
       const localExternal = new Set<string>(localOrders.map((o) => o.externalId).filter((v): v is string => !!v));
       return ok({
         period: { startAt: start.toISOString(), endAt: end.toISOString() },
-        // Known externally but never imported.
         missingLocally: externalIds.filter((id) => !localExternal.has(id)),
-        // Imported locally but the provider's window no longer lists them.
         missingExternally: [...localExternal].filter((id) => !externalIds.includes(id)),
       });
     }
@@ -99,10 +104,13 @@ export async function POST(req: NextRequest) {
     if (body.action === "import_marketplace_order") {
       if (typeof body.externalId !== "string" || !body.externalId.trim() || !body.order)
         fail(400, "VALIDATION", "externalId and order required");
+      if (body.order.storeId) {
+        assertStoreAccess(auth, body.order.storeId, "admin.config");
+      }
       const externalId = body.externalId.trim();
-      const idempotencyKey = `${provider}:marketplace-order:${externalId}`;
+      const idempotencyKey = `${orgId}:${provider}:marketplace-order:${externalId}`;
       const { job, claimed } = await claimIntegrationJob({
-        provider, kind: "MARKETPLACE_ORDER_IMPORT", externalId, idempotencyKey, payload: body.order,
+        orgId, provider, kind: "MARKETPLACE_ORDER_IMPORT", externalId, idempotencyKey, payload: body.order,
       });
       if (!claimed) return ok({ job, duplicate: true }, job.status === "SUCCEEDED" ? 200 : 202);
       try {
@@ -135,13 +143,29 @@ export async function POST(req: NextRequest) {
       const end = body.endAt ? new Date(body.endAt) : new Date();
       if (Number.isNaN(start.valueOf()) || Number.isNaN(end.valueOf()) || start >= end)
         fail(400, "VALIDATION", "Invalid accounting export period");
-      const idempotencyKey = body.idempotencyKey ?? `${provider}:accounting:${start.toISOString()}:${end.toISOString()}`;
+      const rawKey = body.idempotencyKey ?? `${provider}:accounting:${start.toISOString()}:${end.toISOString()}`;
+      const idempotencyKey = `${orgId}:${rawKey}`;
       const existing = await prisma.integrationJob.findUnique({ where: { idempotencyKey } });
       if (existing) return ok({ job: existing, duplicate: true });
       const [pos, orders, refunds] = await Promise.all([
-        prisma.posTransaction.aggregate({ where: { status: "COMPLETED", createdAt: { gte: start, lt: end } }, _sum: { subtotal: true, discountTotal: true, total: true }, _count: true }),
-        prisma.order.aggregate({ where: { status: "DELIVERED", createdAt: { gte: start, lt: end } }, _sum: { subtotal: true, discountTotal: true, total: true }, _count: true }),
-        prisma.return.aggregate({ where: { status: "REFUNDED", createdAt: { gte: start, lt: end } }, _sum: { refundTotal: true }, _count: true }),
+        prisma.posTransaction.aggregate({
+          where: { status: "COMPLETED", createdAt: { gte: start, lt: end }, shift: { terminal: { store: { orgId } } } },
+          _sum: { subtotal: true, discountTotal: true, total: true }, _count: true,
+        }),
+        prisma.order.aggregate({
+          where: {
+            status: "DELIVERED", createdAt: { gte: start, lt: end },
+            OR: [{ store: { orgId } }, { storeId: null, customer: { orgId } }],
+          },
+          _sum: { subtotal: true, discountTotal: true, total: true }, _count: true,
+        }),
+        prisma.return.aggregate({
+          where: {
+            status: "REFUNDED", createdAt: { gte: start, lt: end },
+            OR: [{ location: { store: { orgId } } }, { customer: { orgId } }],
+          },
+          _sum: { refundTotal: true }, _count: true,
+        }),
       ]);
       const payload = {
         startAt: start.toISOString(), endAt: end.toISOString(),
@@ -150,7 +174,7 @@ export async function POST(req: NextRequest) {
         refunds: { count: refunds._count, total: Number(refunds._sum.refundTotal ?? 0n) },
       };
       const job = await prisma.integrationJob.create({ data: {
-        provider, kind: "ACCOUNTING_EXPORT", idempotencyKey, payload,
+        orgId, provider, kind: "ACCOUNTING_EXPORT", idempotencyKey, payload,
       } });
       return ok({ job }, 202);
     }

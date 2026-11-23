@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
+import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
+import { requireOrgId } from "@/lib/org-scope";
 import { apiError, fail } from "@/lib/api";
 import { quoteSale } from "@/lib/pos";
 
@@ -7,7 +9,13 @@ import { quoteSale } from "@/lib/pos";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    if (!body.storeId) fail(400, "VALIDATION", "storeId required");
     const auth = await requirePermission("pos.sell", body.storeId);
+    const orgId = requireOrgId(auth);
+    if (body.customerId) {
+      const cust = await prisma.customer.findFirst({ where: { id: body.customerId, orgId }, select: { id: true } });
+      if (!cust) fail(404, "NOT_FOUND", "Customer not found");
+    }
     if (!Array.isArray(body.items) || body.items.length === 0)
       fail(400, "VALIDATION", "items required");
     for (const i of body.items)

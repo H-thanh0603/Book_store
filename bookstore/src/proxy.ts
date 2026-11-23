@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const SESSION_COOKIE = "bs_session";
+const CUSTOMER_COOKIE = "bs_customer";
 const MUTATIONS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 const PUBLIC_PATHS = [
@@ -62,16 +63,17 @@ async function validateCsrf(req: NextRequest): Promise<boolean> {
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Skip static assets, Next.js internals
+  // Skip static assets and Next.js internals — NEVER skip /api/* routes even
+  // when a dynamic segment contains a dot (e.g. /api/items/v1.0).
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
-    pathname.includes(".")
+    (!pathname.startsWith("/api/") && /\.[a-z0-9]+$/i.test(pathname))
   ) {
     return NextResponse.next();
   }
 
-  // CSRF check for state-changing API requests
+  // CSRF check for state-changing API requests (staff session)
   if (pathname.startsWith("/api/") && !(await validateCsrf(req))) {
     return NextResponse.json(
       { error: "CSRF validation failed. Refresh the page and retry." },
@@ -79,18 +81,41 @@ export async function proxy(req: NextRequest) {
     );
   }
 
-  // Origin check for API mutations (from original proxy.ts)
+  // Origin check for API mutations. For authenticated customer sessions
+  // (bs_customer), require a matching Origin (or same-origin Referer) and
+  // reject cross-site Fetch Metadata so CSRF cannot fire without Origin.
   if (pathname.startsWith("/api/") && MUTATIONS.has(req.method)) {
     const origin = req.headers.get("origin");
+    const referer = req.headers.get("referer");
+    const secFetchSite = req.headers.get("sec-fetch-site");
+    const hasCustomerCookie = Boolean(req.cookies.get(CUSTOMER_COOKIE)?.value);
     const host = process.env.APP_ORIGIN
       ? new URL(process.env.APP_ORIGIN).host
       : req.nextUrl.host;
+
     if (origin) {
       let originHost = "";
       try { originHost = new URL(origin).host; } catch { /* rejected below */ }
       if (!host || originHost !== host) {
         return NextResponse.json(
           { code: "FORBIDDEN", message: "Invalid request origin" },
+          { status: 403 }
+        );
+      }
+    } else if (hasCustomerCookie) {
+      if (secFetchSite === "cross-site") {
+        return NextResponse.json(
+          { code: "FORBIDDEN", message: "Cross-site customer mutation blocked" },
+          { status: 403 }
+        );
+      }
+      let refHost = "";
+      if (referer) {
+        try { refHost = new URL(referer).host; } catch { /* rejected below */ }
+      }
+      if (!host || refHost !== host) {
+        return NextResponse.json(
+          { code: "FORBIDDEN", message: "Missing or invalid origin for customer mutation" },
           { status: 403 }
         );
       }

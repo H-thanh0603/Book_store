@@ -35,15 +35,19 @@ describe("blockedIpReason", () => {
   it("classifies v4 ranges", () => {
     expect(blockedIpReason("169.254.169.254")).toMatch(/link-local/);
     expect(blockedIpReason("10.0.0.1")).toMatch(/private/);
+    expect(blockedIpReason("100.64.0.1")).toMatch(/CGNAT/);
     expect(blockedIpReason("8.8.8.8")).toBeNull();
     expect(blockedIpReason("999.1.1.1")).toMatch(/malformed/);
   });
 
-  it("classifies v6 ranges", () => {
+  it("classifies v6 ranges incl. hex v4-mapped and v4-compatible", () => {
     expect(blockedIpReason("::1")).toMatch(/loopback/);
     expect(blockedIpReason("fe80::1")).toMatch(/link-local/);
     expect(blockedIpReason("fd00::1")).toMatch(/ULA/);
     expect(blockedIpReason("::ffff:10.0.0.1")).toMatch(/private/);
+    expect(blockedIpReason("::ffff:7f00:1")).toMatch(/loopback/);
+    expect(blockedIpReason("0:0:0:0:0:ffff:7f00:1")).toMatch(/loopback/);
+    expect(blockedIpReason("::7f00:1")).toMatch(/loopback/);
     expect(blockedIpReason("2001:db8::1")).toBeNull();
   });
 });

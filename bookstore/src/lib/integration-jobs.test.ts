@@ -20,6 +20,7 @@ describe('claimIntegrationJob', () => {
   })
 
   const validInput = {
+    orgId: 'org-1',
     provider: 'shopee',
     kind: 'order.created',
     externalId: 'ext-123',

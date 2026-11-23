@@ -42,6 +42,17 @@ describe('resolveStoreScope', () => {
       const result = resolveStoreScope(unscopedAuth, 'store-1')
       expect(result).toEqual(['store-1'])
     })
+
+    it('clamps unscoped role to auth.orgStoreIds when orgId is set and rejects foreign stores', () => {
+      const orgOwner: AuthContext = {
+        ...unscopedAuth,
+        orgId: 'org-a',
+        orgStoreIds: ['store-a1', 'store-a2'],
+      }
+      expect(resolveStoreScope(orgOwner)).toEqual(['store-a1', 'store-a2'])
+      expect(resolveStoreScope(orgOwner, 'store-a1')).toEqual(['store-a1'])
+      expect(() => resolveStoreScope(orgOwner, 'store-b1')).toThrow('Forbidden: store store-b1')
+    })
   })
 
   describe('store-scoped role', () => {

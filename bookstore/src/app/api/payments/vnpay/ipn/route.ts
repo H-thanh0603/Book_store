@@ -8,62 +8,58 @@ import { prisma } from "@/lib/db";
 /**
  * VNPay IPN (server-to-server callback). Response shape is owned by the VNPay
  * contract — plain JSON {RspCode, Message}, never ok()/apiError internals.
- *
- * Also fans the result out to the generic webhook bus so any subscribed
- * endpoint (MISA sync, owner mobile, etc.) sees payment.completed /
- * payment.failed without per-provider code. eventId is keyed by the VNPay
- * transaction ref so retries from the gateway dedupe naturally.
  */
 export async function GET(req: NextRequest) {
-  await enforceRateLimit("vnpay-ipn", clientIp(req.headers), 60, 60_000);
-  const result = await settleVnpayResponse(req.nextUrl.searchParams);
-  const txnRef = req.nextUrl.searchParams.get("vnp_TxnRef") ?? "";
-  // settled reflects the WebPayment row: PAID only when money actually landed
-  // (gateway success AND — for order payments — the CONFIRMED → PAID claim won).
-  // A REFUND_REQUIRED capture (order already cancelled) is acked "00" to the
-  // gateway but never reported as completed, and never bills a subscription.
-  const completed = result.settled === "PAID";
-  // Billing-cycle WebPayments share the same VNPay gateway but have no
-  // Order. Only a real PAID capture may flip the linked BillingInvoice —
-  // a failed gateway response must leave it PENDING (audit MONEY-002).
-  if (completed && txnRef.startsWith("bill_")) {
-    settleBillingPayment(txnRef).catch((err) =>
-      console.error(JSON.stringify({ level: "error", event: "billing_settle_failed", txnRef, message: err?.message }))
+  try {
+    await enforceRateLimit("vnpay-ipn", clientIp(req.headers), 60, 60_000);
+    const result = await settleVnpayResponse(req.nextUrl.searchParams);
+    const txnRef = req.nextUrl.searchParams.get("vnp_TxnRef") ?? "";
+    const completed = result.settled === "PAID";
+
+    if (completed && txnRef.startsWith("bill_")) {
+      settleBillingPayment(txnRef).catch((err) =>
+        console.error(JSON.stringify({ level: "error", event: "billing_settle_failed", txnRef, message: err?.message }))
+      );
+    }
+
+    // Only emit webhook events when the IPN signature & amount verified cleanly
+    // (result.ok === true) and the payment actually transitioned to PAID or FAILED.
+    // Forged/invalid-signature callbacks MUST NOT emit spoofed payment.failed events.
+    if (result.ok && (result.settled === "PAID" || result.settled === "FAILED")) {
+      const org = await prisma.webPayment.findUnique({
+        where: { txnRef },
+        select: {
+          order: { select: { store: { select: { region: { select: { orgId: true } } } } } },
+          billingInvoice: { select: { orgId: true } },
+        },
+      }).catch(() => null);
+      const emitOrgId = org?.order?.store?.region?.orgId ?? org?.billingInvoice?.orgId ?? null;
+      if (emitOrgId) {
+        emit({
+          eventId: `vnpay:${completed ? "completed" : "failed"}:${txnRef}`,
+          eventType: completed ? "payment.completed" : "payment.failed",
+          orgId: emitOrgId,
+          payload: {
+            provider: "vnpay",
+            orderId: result.orderId ?? null,
+            rspCode: result.rspCode,
+            message: result.message,
+          },
+        }).catch((err) =>
+          console.error(JSON.stringify({ level: "error", event: "webhook_emit_failed", message: String(err) }))
+        );
+      }
+    }
+
+    return NextResponse.json(
+      { RspCode: result.rspCode, Message: result.message },
+      { status: result.ok ? 200 : 400 },
     );
+  } catch (err) {
+    const status = (err as { status?: number })?.status;
+    if (status === 429) {
+      return NextResponse.json({ RspCode: "99", Message: "Too many requests" }, { status: 429 });
+    }
+    return NextResponse.json({ RspCode: "99", Message: "Internal error" }, { status: 500 });
   }
-  // PAY-003 (audit 2026-08-30): emit to the owning org, not a hardcoded
-  // "default" — order payments scope via Order→Store→Region, billing-cycle
-  // payments via their BillingInvoice.orgId. Unknown refs resolve via
-  // Q35 fail-closed: IPN has no auth session; unknown refs skip the fan-out
-  // rather than landing in another tenant's endpoints.
-  const org = await prisma.webPayment.findUnique({
-    where: { txnRef },
-    select: {
-      order: { select: { store: { select: { region: { select: { orgId: true } } } } } },
-      billingInvoice: { select: { orgId: true } },
-    },
-  }).catch(() => null);
-  const emitOrgId = org?.order?.store?.region?.orgId ?? org?.billingInvoice?.orgId ?? null;
-  // Fire-and-forget: the VNPay contract is owned by the response below.
-  // emit() is itself idempotent on eventId, so a VNPay retry is safe.
-  // Q35 fail-closed: unknown refs skip fan-out.
-  if (emitOrgId) {
-    emit({
-      eventId: `vnpay:${completed ? "completed" : "failed"}:${txnRef}`,
-      eventType: completed ? "payment.completed" : "payment.failed",
-      orgId: emitOrgId,
-    payload: {
-      provider: "vnpay",
-      orderId: result.orderId ?? null,
-      rspCode: result.rspCode,
-      message: result.message,
-    },
-    }).catch((err) =>
-      console.error(JSON.stringify({ level: "error", event: "webhook_emit_failed", message: String(err) }))
-    );
-  }
-  return NextResponse.json(
-    { RspCode: result.rspCode, Message: result.message },
-    { status: result.ok ? 200 : 400 },
-  );
 }

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prismaRead } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { requirePermission } from "@/lib/auth";
+import { requireOrgId } from "@/lib/org-scope";
 import { apiError, fail, ok } from "@/lib/api";
 
 const PAGE_SIZE = 50;
@@ -12,13 +13,15 @@ const PAGE_SIZE = 50;
 // Audit browsing tolerates seconds of replica lag → replica when configured.
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission("admin.users");
+    const auth = await requirePermission("admin.users");
+    const orgId = requireOrgId(auth);
     const sp = req.nextUrl.searchParams;
     const action = sp.get("action");
     const entity = sp.get("entity");
     const cursorParam = sp.get("cursor");
 
-    const where = {
+    const where: Prisma.AuditLogWhereInput = {
+      actor: { orgId },
       ...(action ? { action: { contains: action, mode: "insensitive" as const } } : {}),
       ...(entity ? { entity: { contains: entity, mode: "insensitive" as const } } : {}),
     };

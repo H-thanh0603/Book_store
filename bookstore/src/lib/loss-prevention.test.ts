@@ -10,7 +10,7 @@ const hoisted = vi.hoisted(() => {
   const queryRaw = vi.fn(async (_tag: TemplateStringsArray, ..._rest: any[]) => {
     const sql = String(_tag);
     if (sql.includes('FROM "PosShift"')) return sqlResults.shifts ?? [];
-    if (sql.includes('FROM "PosTransaction" t')) return sqlResults.cancelledPaid ?? [];
+    if (sql.includes('JOIN "Payment"')) return sqlResults.cancelledPaid ?? [];
     return sqlResults.discountOffenders ?? [];
   });
   return { sqlResults, queryRaw };
@@ -38,7 +38,7 @@ vi.mock('./db', () => ({
       upsert: vi.fn(),
       findMany: vi.fn().mockResolvedValue([]),
     },
-    organization: { findFirst: vi.fn().mockResolvedValue(null) },
+    organization: { findMany: vi.fn().mockResolvedValue([{ id: 'org-1' }]) },
     lossPreventionRule: { findUnique: vi.fn(), findMany: vi.fn().mockResolvedValue([]) },
   },
 }))
@@ -81,7 +81,7 @@ describe('scanLossPrevention', () => {
 
     await scanLossPrevention()
     const calls = vi.mocked(prisma.lossAlert.upsert).mock.calls
-    const cashVarianceCalls = calls.filter(c => (c[0] as any).where?.rule_entityType_entityId?.rule === 'CASH_VARIANCE')
+    const cashVarianceCalls = calls.filter(c => (c[0] as any).where?.orgId_rule_entityType_entityId?.rule === 'CASH_VARIANCE')
     expect(cashVarianceCalls.length).toBe(1)
   })
 
@@ -91,7 +91,7 @@ describe('scanLossPrevention', () => {
     await scanLossPrevention()
     // Should only be called for stock shrinkage (if any), not cash variance
     const calls = vi.mocked(prisma.lossAlert.upsert).mock.calls
-    const cashVarianceCalls = calls.filter(c => (c[0] as any).where?.rule_entityType_entityId?.rule === 'CASH_VARIANCE')
+    const cashVarianceCalls = calls.filter(c => (c[0] as any).where?.orgId_rule_entityType_entityId?.rule === 'CASH_VARIANCE')
     expect(cashVarianceCalls.length).toBe(0)
   })
 })

@@ -2,6 +2,7 @@ import { Prisma } from "../generated/prisma/client";
 import { prisma } from "./db";
 
 type ClaimInput = {
+  orgId: string;
   provider: string;
   kind: string;
   externalId: string;

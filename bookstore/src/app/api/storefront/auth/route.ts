@@ -26,6 +26,15 @@ import { apiError, fail, nextBusinessNumber, ok } from "@/lib/api";
 import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 import { Prisma } from "../../../../generated/prisma/client";
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // SEC-004: customer phone/email are unique per ORG, so every lookup needs one.
 // The public storefront is single-tenant per deployment: resolve the org from
 // the first active store (same fallback listStorefrontProducts uses).
@@ -123,15 +132,20 @@ export async function POST(req: NextRequest) {
       // Fire-and-forget verify email. Failure to send is logged but
       // does not fail signup — the row is verifiable later via
       // resend (next iteration).
-      const origin = process.env.APP_ORIGIN ?? new URL(req.url).origin;
-      const link = `${origin}/shop/account?verify=${token.raw}`;
+      const origin = process.env.APP_ORIGIN?.replace(/\/$/, "");
+      if (!origin && process.env.NODE_ENV === "production")
+        fail(500, "CONFIG_ERROR", "APP_ORIGIN must be configured in production");
+      const safeOrigin = origin || new URL(req.url).origin;
+      const link = `${safeOrigin}/shop/account?verify=${token.raw}`;
       if (email) {
         const { sendMail } = await import("@/lib/mail");
+        const safeName = escapeHtml(name);
+        const safeLink = escapeHtml(link);
         void sendMail({
           to: email,
           subject: "Melio Bookstore — Xác nhận email",
           text: `Chào ${name},\n\nXác nhận email để mở khóa đầy đủ tính năng tài khoản (link 24h, dùng một lần):\n\n${link}\n\nNếu bạn không tạo tài khoản, hãy bỏ qua email này.`,
-          html: `<p>Chào ${name},</p><p><a href="${link}">Xác nhận email</a> — link có hiệu lực 24h và dùng đúng một lần.</p><p>Nếu bạn không tạo tài khoản, hãy bỏ qua email này.</p>`,
+          html: `<p>Chào ${safeName},</p><p><a href="${safeLink}">Xác nhận email</a> — link có hiệu lực 24h và dùng đúng một lần.</p><p>Nếu bạn không tạo tài khoản, hãy bỏ qua email này.</p>`,
         }).catch((mailErr: unknown) => {
           console.error(JSON.stringify({ level: "error", event: "cust_verify_mail_failed", message: String(mailErr) }));
         });
@@ -165,6 +179,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "verify_email") {
+      await enforceRateLimit("cust-verify-ip", clientIp(req.headers), 20, 15 * 60_000);
       const token = typeof body.token === "string" ? body.token : "";
       if (!token) fail(400, "VALIDATION", "token required");
       const customerId = await consumeEmailVerifyToken(token);
