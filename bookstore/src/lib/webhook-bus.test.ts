@@ -24,14 +24,20 @@ const hoisted = vi.hoisted(() => {
         updateMany: vi.fn(async () => ({ count: 1 })),
       },
     },
+    ssrfMock: {
+      assertSafeWebhookTarget: vi.fn(async () => ({ address: "93.184.216.34", family: 4 as const })),
+      pinnedWebhookPost: vi.fn(),
+    },
     setDueRows: (rows: any[]) => { lastFindMany.rows = rows; },
   };
 });
 
 vi.mock("./db", () => ({ prisma: hoisted.prismaMock }));
 vi.mock("./einvoice", () => ({ hmacSign: (s: string, b: string) => `sig-${s.length}-${b.length}` }));
+vi.mock("./ssrf", () => hoisted.ssrfMock);
 
 const prismaMock = hoisted.prismaMock;
+const ssrfMock = hoisted.ssrfMock;
 
 import { emit, processPendingDeliveries, rearmDelivery } from "./webhook-bus";
 
@@ -42,6 +48,10 @@ beforeEach(() => {
       (fn as ReturnType<typeof vi.fn>).mockReset();
     }
   }
+  ssrfMock.assertSafeWebhookTarget.mockReset();
+  ssrfMock.assertSafeWebhookTarget.mockResolvedValue({ address: "93.184.216.34", family: 4 });
+  ssrfMock.pinnedWebhookPost.mockReset();
+  prismaMock.webhookDelivery.updateMany.mockResolvedValue({ count: 1 });
 });
 
 describe("emit", () => {
@@ -93,7 +103,7 @@ describe("processPendingDeliveries", () => {
       createdAt: new Date(),
       endpoint: { id: "e1", url: "https://hook.example.com", secret: "s3cret", active: true, eventTypes: [] },
     }]);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+    ssrfMock.pinnedWebhookPost.mockResolvedValue({ ok: true, status: 200 });
     const r = await processPendingDeliveries();
     expect(r.delivered).toBe(1);
     const update = prismaMock.webhookDelivery.update.mock.calls[0][0];
@@ -111,7 +121,7 @@ describe("processPendingDeliveries", () => {
       createdAt: new Date(),
       endpoint: { id: "e1", url: "https://hook.example.com", secret: "s3cret", active: true, eventTypes: [] },
     }]);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+    ssrfMock.pinnedWebhookPost.mockResolvedValue({ ok: false, status: 500 });
     const r = await processPendingDeliveries();
     expect(r.delivered).toBe(0);
     const update = prismaMock.webhookDelivery.update.mock.calls[0][0];
@@ -130,7 +140,7 @@ describe("processPendingDeliveries", () => {
       createdAt: new Date(),
       endpoint: { id: "e1", url: "https://hook.example.com", secret: "s3cret", active: true, eventTypes: [] },
     }]);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 502 }));
+    ssrfMock.pinnedWebhookPost.mockResolvedValue({ ok: false, status: 502 });
     const r = await processPendingDeliveries();
     expect(r.deadLettered).toBe(1);
     const update = prismaMock.webhookDelivery.update.mock.calls[0][0];
@@ -165,11 +175,10 @@ describe("processPendingDeliveries", () => {
       createdAt: new Date(),
       endpoint: { id: "e1", url: "https://hook.example.com", secret: "topsecret", active: true, eventTypes: [] },
     }]);
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
-    vi.stubGlobal("fetch", fetchMock);
+    ssrfMock.pinnedWebhookPost.mockResolvedValue({ ok: true, status: 200 });
     await processPendingDeliveries();
-    const [, init] = fetchMock.mock.calls[0];
-    const headers = (init as RequestInit).headers as Record<string, string>;
+    const [, , opts] = ssrfMock.pinnedWebhookPost.mock.calls[0];
+    const headers = opts.headers as Record<string, string>;
     expect(headers["x-melio-event-id"]).toBe("evt-sig");
     expect(headers["x-melio-signature"]).toMatch(/^t=\d+,v1=sig-9-\d+$/);
   });
@@ -184,11 +193,9 @@ describe("processPendingDeliveries", () => {
       createdAt: new Date(),
       endpoint: { id: "e1", url: "https://hook.example.com", secret: "s3cret", active: true, eventTypes: [] },
     }]);
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
     prismaMock.webhookDelivery.updateMany.mockResolvedValue({ count: 0 });
     const r = await processPendingDeliveries();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(ssrfMock.pinnedWebhookPost).not.toHaveBeenCalled();
     expect(prismaMock.webhookDelivery.update).not.toHaveBeenCalled();
     expect(r).toEqual({ processed: 1, delivered: 0, deadLettered: 0 });
   });
